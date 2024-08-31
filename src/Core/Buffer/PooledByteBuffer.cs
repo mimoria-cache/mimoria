@@ -7,6 +7,7 @@ using Microsoft.Extensions.ObjectPool;
 using System.Buffers;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Varelen.Mimoria.Core.Buffer;
@@ -184,7 +185,7 @@ public sealed class PooledByteBuffer : IByteBuffer
 
         try
         {
-            int written = Encoding.ASCII.GetBytes(value, data);
+            int written = Encoding.UTF8.GetBytes(value, data);
             if (written > MaxStringSizeBytes)
             {
                 throw new ArgumentException($"Written string value length {data.Length} exceeded max allowed length {MaxStringSizeBytes}");
@@ -286,10 +287,10 @@ public sealed class PooledByteBuffer : IByteBuffer
 
         try
         {
-            this.ReadBytes(bytes.AsSpan(0, (int)length));
+            Span<byte> bytesSpan = bytes.AsSpan(0, (int)length);
+            this.ReadBytes(bytesSpan);
 
-            var value = Encoding.ASCII.GetString(new ReadOnlySpan<byte>(bytes, 0, (int)length));
-            return value;
+            return Encoding.UTF8.GetString(bytesSpan);
         }
         finally
         {
