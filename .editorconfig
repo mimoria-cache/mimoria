@@ -1,0 +1,14 @@
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+
+[*.cs]
+file_header_template = SPDX-FileCopyrightText: 2024 varelen\n\nSPDX-License-Identifier: MIT
+
+indent_style = space
+indent_size = 4
+
+# IDE0290: Use primary constructor
+dotnet_diagnostic.IDE0290.severity = silent
