@@ -67,6 +67,9 @@ public sealed class MimoriaServer : IMimoriaServer
         this.mimoriaSocketServer.SetOperationHandler(Operation.Login, this.OnLogin);
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetString, this.OnGetString);
         this.mimoriaSocketServer.SetOperationHandler(Operation.SetString, this.OnSetString);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.GetList, this.OnGetList);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.AddList, this.OnAddList);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.RemoveList, this.OnRemoveList);
         this.mimoriaSocketServer.SetOperationHandler(Operation.Exists, this.OnExists);
         this.mimoriaSocketServer.SetOperationHandler(Operation.Delete, this.OnDelete);
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetObjectBinary, this.OnGetObjectBinary);
@@ -124,6 +127,75 @@ public sealed class MimoriaServer : IMimoriaServer
         this.cache.SetString(key, value, ttlMilliseconds);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetString, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        await tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private async ValueTask OnGetList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        IEnumerable<string> value = this.cache.GetList(key);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId, StatusCode.Ok);
+
+        int writeIndexBefore = responseBuffer.WriteIndex;
+
+        // TODO: This as a var uint would be cool, but we save a list copy using the enumerator
+        responseBuffer.WriteUInt(0);
+
+        uint count = 0;
+        foreach (string s in value)
+        {
+            responseBuffer.WriteString(s);
+            count++;
+        }
+
+        int writeIndexAfter = responseBuffer.WriteIndex;
+        responseBuffer.WriteIndex = writeIndexBefore;
+        responseBuffer.WriteUInt(count);
+        responseBuffer.WriteIndex = writeIndexAfter;
+
+        responseBuffer.EndPacket();
+
+        await tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private async ValueTask OnAddList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        string? value = byteBuffer.ReadString();
+        uint ttlMilliseconds = byteBuffer.ReadUInt();
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        // TODO: Should null values not be allowed in lists?
+        if (value is null)
+        {
+            responseBuffer.Dispose();
+            throw new ArgumentException($"Cannot remove null value from list under key '{key}'");
+        }
+
+        this.cache.AddList(key, value, ttlMilliseconds);
+
+        await tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private async ValueTask OnRemoveList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        string? value = byteBuffer.ReadString();
+
+        // TODO: Should null values not be allowed in lists?
+        if (value is null)
+        {
+            throw new ArgumentException($"Cannot remove null value from list under key '{key}'");
+        }
+
+        this.cache.RemoveList(key, value);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.RemoveList, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
         await tcpConnection.SendAsync(responseBuffer);
