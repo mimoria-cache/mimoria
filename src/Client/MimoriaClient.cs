@@ -32,13 +32,13 @@ public sealed class MimoriaClient : IMimoriaClient
     public Guid? ServerId { get; private set; }
 
     public MimoriaClient(string ip, ushort port, string password = "")
-        : this(ip, port, password, null)
+        : this(ip, port, password, new MimoriaSocketClient())
     {
 
     }
 
     public MimoriaClient(string ip, ushort port, string password, IMimoriaSocketClient mimoriaSocketClient)
-        : this(ip, port, password, mimoriaSocketClient, new ExponentialRetryPolicy(250, 4, typeof(SocketException)))
+        : this(ip, port, password, mimoriaSocketClient, new ExponentialRetryPolicy(initialDelay: 250, maxRetries: 4, typeof(SocketException)))
     {
 
     }
