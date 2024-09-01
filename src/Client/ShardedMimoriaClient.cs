@@ -70,13 +70,19 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         await mimoriaClient.SetStringAsync(key, value, ttl, cancellationToken);
     }
 
-    public async IAsyncEnumerable<string> GetListAsync(string key, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string> GetListEnumerableAsync(string key, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetCacheClient(key);
-        await foreach (string s in mimoriaClient.GetListAsync(key, cancellationToken))
+        await foreach (string s in mimoriaClient.GetListEnumerableAsync(key, cancellationToken))
         {
             yield return s;
         }
+    }
+
+    public async Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetCacheClient(key);
+        return await mimoriaClient.GetListAsync(key, cancellationToken);
     }
 
     public async Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)

@@ -137,7 +137,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
-    public async IAsyncEnumerable<string> GetListAsync(string key, [EnumeratorCancellation] CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string> GetListEnumerableAsync(string key, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
@@ -156,6 +156,29 @@ public sealed class MimoriaClient : IMimoriaClient
         {
             yield return response.ReadString()!;
         }
+    }
+
+    public async Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId);
+        byteBuffer.WriteString(key);
+        byteBuffer.EndPacket();
+
+        using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+        uint count = response.ReadUInt();
+        if (count == 0)
+        {
+            return [];
+        }
+
+        var list = new List<string>((int)count);
+        for (uint i = 0; i < count; i++)
+        {
+            list.Add(response.ReadString()!);
+        }
+        return list;
     }
 
     public async Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)

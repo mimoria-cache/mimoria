@@ -33,7 +33,14 @@ public interface IMimoriaClient
     Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default);
     Task SetStringAsync(string key, string? value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
-    IAsyncEnumerable<string> GetListAsync(string key, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Gets the list at the key without allocating a new list instance.
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns></returns>
+    IAsyncEnumerable<string> GetListEnumerableAsync(string key, CancellationToken cancellationToken = default);
+    Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default);
     Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
     Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default);
     Task<bool> ContainsList(string key, string value, CancellationToken cancellationToken = default);
