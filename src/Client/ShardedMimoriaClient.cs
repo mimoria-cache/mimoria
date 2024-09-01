@@ -91,6 +91,12 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         await mimoriaClient.RemoveListAsync(key, value, cancellationToken);
     }
 
+    public async Task<bool> ContainsList(string key, string value, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetCacheClient(key);
+        return await mimoriaClient.ContainsList(key, value, cancellationToken);
+    }
+
     public async Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetCacheClient(key);

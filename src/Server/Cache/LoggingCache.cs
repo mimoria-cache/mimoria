@@ -67,6 +67,12 @@ public class LoggingCache : ICache
         cache.RemoveList(key, value);
     }
 
+    public bool ContainsList(string key, string value)
+    {
+        this.logger.LogInformation("ContainsList: {Key}={Value}", key, value);
+        return cache.ContainsList(key, value);
+    }
+
     public bool Exists(string key)
     {
         this.logger.LogInformation("Exists: {Key}", key);

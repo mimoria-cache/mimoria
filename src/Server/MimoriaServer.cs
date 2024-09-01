@@ -70,6 +70,7 @@ public sealed class MimoriaServer : IMimoriaServer
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetList, this.OnGetList);
         this.mimoriaSocketServer.SetOperationHandler(Operation.AddList, this.OnAddList);
         this.mimoriaSocketServer.SetOperationHandler(Operation.RemoveList, this.OnRemoveList);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.ContainsList, this.OnContainsList);
         this.mimoriaSocketServer.SetOperationHandler(Operation.Exists, this.OnExists);
         this.mimoriaSocketServer.SetOperationHandler(Operation.Delete, this.OnDelete);
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetObjectBinary, this.OnGetObjectBinary);
@@ -195,6 +196,26 @@ public sealed class MimoriaServer : IMimoriaServer
         this.cache.RemoveList(key, value);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.RemoveList, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnContainsList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        string? value = byteBuffer.ReadString();
+
+        // TODO: Should we just return false?
+        if (value is null)
+        {
+            throw new ArgumentException($"Cannot check if null value exist in list '{key}'");
+        }
+
+        bool contains = this.cache.ContainsList(key, value);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.ContainsList, requestId, StatusCode.Ok);
+        responseBuffer.WriteByte(contains ? (byte)1 : (byte)0);
         responseBuffer.EndPacket();
 
         return tcpConnection.SendAsync(responseBuffer);

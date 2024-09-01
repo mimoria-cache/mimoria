@@ -20,6 +20,7 @@ public interface ICache
     IEnumerable<string> GetList(string key);
     void AddList(string key, string value, uint ttlMilliseconds);
     void RemoveList(string key, string value);
+    bool ContainsList(string key, string value);
 
     bool Exists(string key);
 

@@ -36,6 +36,7 @@ public interface IMimoriaClient
     IAsyncEnumerable<string> GetListAsync(string key, CancellationToken cancellationToken = default);
     Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
     Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default);
+    Task<bool> ContainsList(string key, string value, CancellationToken cancellationToken = default);
 
     Task<T?> GetObjectBinaryAsync<T>(string key, CancellationToken cancellationToken = default) where T : IBinarySerializable, new();
     Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, CancellationToken cancellationToken = default);

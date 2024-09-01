@@ -39,15 +39,19 @@ public enum Operation : byte
     /// </summary>
     RemoveList = 7,
     /// <summary>
+    /// Gets a byte flag indicating if a value in a list exists.
+    /// </summary>
+    ContainsList = 8,
+    /// <summary>
     /// Gets a byte flag indicating if a key exists.
     /// </summary>
-    Exists = 8,
+    Exists = 9,
     /// <summary>
     /// Deletes the value stored at a key.
     /// </summary>
-    Delete = 9,
+    Delete = 10,
     /// <summary>
     /// Gets the server stats which contains information about uptime, connections and cache details (size, hits, misses, hit ratio).
     /// </summary>
-    GetStats = 10
+    GetStats = 11
 }

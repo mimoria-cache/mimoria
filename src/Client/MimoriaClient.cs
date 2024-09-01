@@ -183,6 +183,19 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    public async Task<bool> ContainsList(string key, string value, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.ContainsList, requestId);
+        byteBuffer.WriteString(key);
+        byteBuffer.WriteString(value);
+        byteBuffer.EndPacket();
+
+        using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+        return response.ReadByte() == 1;
+    }
+
     public async Task<T?> GetObjectBinaryAsync<T>(string key, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
     {
         uint requestId = this.GetNextRequestId();
