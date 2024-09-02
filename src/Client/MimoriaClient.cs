@@ -285,6 +285,45 @@ public sealed class MimoriaClient : IMimoriaClient
         await this.SetStringAsync(key, json, ttl, cancellationToken);
     }
 
+    public async Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.GetBytes, requestId);
+        byteBuffer.WriteString(key);
+        byteBuffer.EndPacket();
+
+        using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+        uint size = response.ReadVarUInt();
+        if (size == 0)
+        {
+            return null;
+        }
+
+        // TODO: How can we pool this? Problem is if we use the shared pool the caller needs to return it by hand to the pool after using it..
+        byte[] bytes = new byte[size];
+        response.ReadBytes(bytes.AsSpan());
+        return bytes;
+    }
+
+    public async Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+        uint valueLength = value is not null ? (uint)value.Length : 0;
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.SetBytes, requestId);
+        byteBuffer.WriteString(key);
+        byteBuffer.WriteVarUInt(valueLength);
+        if (valueLength > 0)
+        {
+            byteBuffer.WriteBytes(value.AsSpan());
+        }
+        byteBuffer.WriteUInt((uint)ttl.TotalMilliseconds);
+        byteBuffer.EndPacket();
+
+        using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+    }
+
     public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();

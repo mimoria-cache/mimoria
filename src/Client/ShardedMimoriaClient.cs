@@ -139,6 +139,18 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         await mimoriaClient.SetObjectJsonAsync<T>(key, t, jsonSerializerOptions, ttl, cancellationToken);
     }
 
+    public async Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetCacheClient(key);
+        return await mimoriaClient.GetBytesAsync(key, cancellationToken);
+    }
+
+    public async Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetCacheClient(key);
+        await mimoriaClient.SetBytesAsync(key, value, ttl, cancellationToken);
+    }
+
     public async Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default)
         => await this.GetStatsAsync(0, cancellationToken);
 

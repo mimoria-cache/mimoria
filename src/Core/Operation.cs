@@ -53,5 +53,13 @@ public enum Operation : byte
     /// <summary>
     /// Gets the server stats which contains information about uptime, connections and cache details (size, hits, misses, hit ratio).
     /// </summary>
-    GetStats = 11
+    GetStats = 11,
+    /// <summary>
+    /// Gets a byte array based on a key.
+    /// </summary>
+    GetBytes = 12,
+    /// <summary>
+    /// Sets a byte array for a key.
+    /// </summary>
+    SetBytes = 13
 }

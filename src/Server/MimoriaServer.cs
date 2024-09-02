@@ -76,6 +76,8 @@ public sealed class MimoriaServer : IMimoriaServer
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetObjectBinary, this.OnGetObjectBinary);
         this.mimoriaSocketServer.SetOperationHandler(Operation.SetObjectBinary, this.OnSetObjectBinary);
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetStats, this.OnGetStats);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.GetBytes, this.OnGetBytes);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.SetBytes, this.OnSetBytes);
 
         this.logger.LogTrace("Operation handlers registered");
     }
@@ -289,6 +291,48 @@ public sealed class MimoriaServer : IMimoriaServer
         responseBuffer.WriteULong(this.cache.Hits);
         responseBuffer.WriteULong(this.cache.Misses);
         responseBuffer.WriteFloat(this.cache.HitRatio);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnGetBytes(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        byte[]? value = this.cache.GetBytes(key);
+        uint valueLength = value is not null ? (uint)value.Length : 0;
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetBytes, requestId, StatusCode.Ok);
+        responseBuffer.WriteVarUInt(valueLength);
+        if (valueLength > 0)
+        {
+            responseBuffer.WriteBytes(value);
+        }
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnSetBytes(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        uint valueLength = byteBuffer.ReadVarUInt();
+        
+        if (valueLength > 0)
+        {
+            byte[] value = new byte[valueLength];
+            byteBuffer.ReadBytes(value.AsSpan());
+
+            uint ttlMilliseconds = byteBuffer.ReadUInt();
+            this.cache.SetBytes(key, value, ttlMilliseconds);
+        }
+        else
+        {
+            uint ttlMilliseconds = byteBuffer.ReadUInt();
+            this.cache.SetBytes(key, null, ttlMilliseconds);
+        }
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetBytes, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
         return tcpConnection.SendAsync(responseBuffer);

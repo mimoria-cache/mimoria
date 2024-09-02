@@ -51,6 +51,9 @@ public interface IMimoriaClient
     Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default) where T : new();
     Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default) where T : new();
 
+    Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default);
+    Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+
     Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(string key, CancellationToken cancellationToken = default);
