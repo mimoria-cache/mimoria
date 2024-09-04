@@ -29,8 +29,8 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         if (!this.operationHandlers.TryGetValue(operation, out Func<uint, TcpConnection, IByteBuffer, ValueTask>? operationHandler))
         {
             byteBuffer.Dispose();
-            await SendErrorResponseAsync(tcpConnection, operation, requestId, $"Operation '{operation}' is unsupported");
             this.logger.LogWarning("Client '{EndPoint}' sent an unsupported operation '{Operation}'", tcpConnection.Socket.RemoteEndPoint, operation);
+            await SendErrorResponseAsync(tcpConnection, operation, requestId, $"Operation '{operation}' is unsupported");
             return;
         }
 
@@ -48,6 +48,10 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         catch (ArgumentException exception)
         {
             await SendErrorResponseAsync(tcpConnection, operation, requestId, exception.Message);
+        }
+        catch (Exception exception)
+        {
+            this.logger.LogError(exception, "Error while processing handler for operation '{Operation}' and client '{Client}'", operation, tcpConnection.RemoteEndPoint);
         }
         finally
         {
