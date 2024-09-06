@@ -5,6 +5,9 @@
 using Microsoft.Extensions.ObjectPool;
 
 using System.Buffers;
+#if DEBUG
+using System.Diagnostics;
+#endif
 using System.Runtime.CompilerServices;
 using System.Text;
 
