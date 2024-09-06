@@ -265,7 +265,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
-    public async Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default) where T : new()
+    public async Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
         string? json = await this.GetStringAsync(key, cancellationToken);
         if (json is null)
@@ -276,7 +276,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return JsonSerializer.Deserialize<T>(json, jsonSerializerOptions);
     }
 
-    public async Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default) where T : new()
+    public async Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         string? json = t != null
             ? JsonSerializer.Serialize<T>(t, jsonSerializerOptions)
