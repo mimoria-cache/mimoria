@@ -52,6 +52,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         catch (Exception exception)
         {
             this.logger.LogError(exception, "Error while processing handler for operation '{Operation}' and client '{Client}'", operation, tcpConnection.RemoteEndPoint);
+            await SendErrorResponseAsync(tcpConnection, operation, requestId, $"An internal server error occurred while processing handler for operation '{operation}'. See server logs for more information.");
         }
         finally
         {
@@ -62,7 +63,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
     public void SetOperationHandler(Operation operation, Func<uint, TcpConnection, IByteBuffer, ValueTask> handler)
         => this.operationHandlers[operation] = handler;
 
-    private static async ValueTask SendErrorResponseAsync(TcpConnection tcpConnection, Operation operation, uint requestId, string errorText)
+    private static ValueTask SendErrorResponseAsync(TcpConnection tcpConnection, Operation operation, uint requestId, string errorText)
     {
         var byteBuffer = new PooledByteBuffer(operation);
         byteBuffer.WriteUInt(requestId);
@@ -70,7 +71,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         byteBuffer.WriteString(errorText);
         byteBuffer.EndPacket();
 
-        await tcpConnection.SendAsync(byteBuffer);
+        return tcpConnection.SendAsync(byteBuffer);
     }
 
     protected override void HandleOpenConnection(TcpConnection tcpConnection)
