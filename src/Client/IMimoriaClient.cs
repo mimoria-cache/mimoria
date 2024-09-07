@@ -54,7 +54,35 @@ public interface IMimoriaClient
     Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default);
     Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
-    Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Sets the counter value for the key to the value.
+    /// Overrides any value previously stored at key.
+    /// </summary>
+    /// <param name="key">The key.</param>
+    /// <param name="value">The value.</param>
+    /// <param name="cancellationToken">The cancellation token to cancel the set counter operation.</param>
+    /// <returns></returns>
+    Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Increments the counter value for the key by the given increment amount.
+    /// </summary>
+    /// <param name="key">The key where the counter is stored.</param>
+    /// <param name="increment">The increment amount.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>The new value.</returns>
+    ValueTask<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Decrements the counter value for the key by the given decrement amount.
+    /// </summary>
+    /// <param name="key">The key where the counter is stored.</param>
+    /// <param name="increment">The decrement amount.</param>
+    /// <param name="cancellationToken"></param>
+    /// <returns>The new value.</returns>
+    ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default);
+
+    ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 
     Task DeleteAsync(string key, CancellationToken cancellationToken = default);
 

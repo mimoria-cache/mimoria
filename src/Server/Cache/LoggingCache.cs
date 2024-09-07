@@ -33,7 +33,7 @@ public class LoggingCache : ICache
 
     public void SetString(string key, string? value, uint ttlMilliseconds)
     {
-        this.logger.LogInformation("SetString: {Key}={Value} (ttl={Ttl})", key, value, ttlMilliseconds);
+        this.logger.LogInformation("SetString: {Key}={Value} (ttl={Ttl})", key, value ?? "null", ttlMilliseconds);
         cache.SetString(key, value, ttlMilliseconds);
     }
 
@@ -71,6 +71,18 @@ public class LoggingCache : ICache
     {
         this.logger.LogInformation("ContainsList: {Key}={Value}", key, value);
         return cache.ContainsList(key, value);
+    }
+
+    public void SetCounter(string key, long value)
+    {
+        this.logger.LogInformation("SetCounter: {Key}={Value}", key, value);
+        cache.SetCounter(key, value);
+    }
+
+    public long IncrementCounter(string key, long increment)
+    {
+        this.logger.LogInformation("IncrementCounter: {Key} + {Increment}", key, increment);
+        return cache.IncrementCounter(key, increment);
     }
 
     public bool Exists(string key)

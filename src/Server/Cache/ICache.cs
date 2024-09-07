@@ -22,6 +22,9 @@ public interface ICache
     void RemoveList(string key, string value);
     bool ContainsList(string key, string value);
 
+    void SetCounter(string key, long value);
+    long IncrementCounter(string key, long increment);
+
     bool Exists(string key);
 
     void Delete(string key);

@@ -5,6 +5,8 @@
 using Microsoft.Extensions.ObjectPool;
 
 using System.Buffers;
+using System.Buffers.Binary;
+
 #if DEBUG
 using System.Diagnostics;
 #endif
@@ -139,6 +141,14 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.buffer[this.writeIndex++] = (byte)value;
     }
 
+    public void WriteLong(long value)
+    {
+        this.EnsureBufferSize(8);
+
+        BinaryPrimitives.WriteInt64BigEndian(this.buffer.AsSpan(this.writeIndex), value);
+        this.writeIndex += 8;
+    }
+
     public void WriteULong(ulong value)
     {
         this.EnsureBufferSize(8);
@@ -237,6 +247,15 @@ public sealed class PooledByteBuffer : IByteBuffer
             value |= (uint)(currentByte & 0x7F) << shift;
             shift += 7;
         } while ((currentByte & 0x80) != 0);
+        return value;
+    }
+
+    public long ReadLong()
+    {
+        long value = BinaryPrimitives.ReadInt64BigEndian(this.buffer.AsSpan(this.readIndex));
+        
+        this.readIndex += 8;
+
         return value;
     }
 

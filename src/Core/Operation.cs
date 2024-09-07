@@ -61,5 +61,13 @@ public enum Operation : byte
     /// <summary>
     /// Sets a byte array for a key.
     /// </summary>
-    SetBytes = 13
+    SetBytes = 13,
+    /// <summary>
+    /// Sets a counter value for a key.
+    /// </summary>
+    SetCounter = 14,
+    /// <summary>
+    /// Increments a counter by a given value for a key.
+    /// </summary>
+    IncrementCounter = 15
 }

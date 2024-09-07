@@ -48,7 +48,7 @@ public sealed class MimoriaServer : IMimoriaServer
         
         this.mimoriaSocketServer.Start(this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port, this.monitor.CurrentValue.Backlog);
         this.startDateTime = DateTime.UtcNow;
-        this.logger.LogInformation("Mimoria server started on {ip}:{port}", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
+        this.logger.LogInformation("Mimoria server started on {Ip}:{Port}", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
     }
 
     public void Stop()
@@ -78,6 +78,8 @@ public sealed class MimoriaServer : IMimoriaServer
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetStats, this.OnGetStats);
         this.mimoriaSocketServer.SetOperationHandler(Operation.GetBytes, this.OnGetBytes);
         this.mimoriaSocketServer.SetOperationHandler(Operation.SetBytes, this.OnSetBytes);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.SetCounter, this.OnSetCounter);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.IncrementCounter, this.OnIncrementCounter);
 
         this.logger.LogTrace("Operation handlers registered");
     }
@@ -317,7 +319,7 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadString()!;
         uint valueLength = byteBuffer.ReadVarUInt();
-        
+
         if (valueLength > 0)
         {
             byte[] value = new byte[valueLength];
@@ -333,6 +335,33 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetBytes, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnSetCounter(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        long value = byteBuffer.ReadLong();
+
+        this.cache.SetCounter(key, value);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetCounter, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnIncrementCounter(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        long increment = byteBuffer.ReadLong();
+
+        long value = this.cache.IncrementCounter(key, increment);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.IncrementCounter, requestId, StatusCode.Ok);
+        responseBuffer.WriteLong(value);
         responseBuffer.EndPacket();
 
         return tcpConnection.SendAsync(responseBuffer);

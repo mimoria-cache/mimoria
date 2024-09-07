@@ -115,7 +115,7 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         return await mimoriaClient.GetObjectBinaryAsync<T>(key, cancellationToken);
     }
 
-    public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
+    public async ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetCacheClient(key);
         return await mimoriaClient.ExistsAsync(key, cancellationToken);
@@ -127,13 +127,13 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         await mimoriaClient.DeleteAsync(key, cancellationToken);
     }
 
-    public async Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default) where T : new()
+    public async Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetCacheClient(key);
         return await mimoriaClient.GetObjectJsonAsync<T>(key, jsonSerializerOptions, cancellationToken);
     }
 
-    public async Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default) where T : new()
+    public async Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetCacheClient(key);
         await mimoriaClient.SetObjectJsonAsync<T>(key, t, jsonSerializerOptions, ttl, cancellationToken);
@@ -168,6 +168,22 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
             : throw new ArgumentNullException(nameof(serverId));
     }
 
+    public Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetCacheClient(key);
+        return mimoriaClient.SetCounterAsync(key, value, cancellationToken);
+    }
+
+    public ValueTask<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetCacheClient(key);
+        return mimoriaClient.IncrementCounterAsync(key, increment, cancellationToken);
+    }
+
+    public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
+    {
+        return this.IncrementCounterAsync(key, -decrement, cancellationToken);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IMimoriaClient GetCacheClient(string key)

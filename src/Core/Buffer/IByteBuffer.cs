@@ -14,6 +14,7 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     void WriteByte(byte value);
     void WriteUInt(uint value);
     void WriteVarUInt(uint value);
+    void WriteLong(long value);
     void WriteULong(ulong value);
     unsafe void WriteFloat(float value);
     void WriteGuid(in Guid guid);
@@ -23,6 +24,7 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     byte ReadByte();
     uint ReadUInt();
     uint ReadVarUInt();
+    long ReadLong();
     ulong ReadULong();
     unsafe float ReadFloat();
     Guid ReadGuid();
