@@ -396,6 +396,78 @@ public sealed class MimoriaClient : IMimoriaClient
         };
     }
 
+    public IBulkOperation Bulk()
+        => new BulkOperation(this);
+
+    public async Task<List<object?>> ExecuteBulkAsync(BulkOperation bulkOperation, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Bulk, requestId);
+        byteBuffer.WriteVarUInt(bulkOperation.OperationCount);
+        byteBuffer.WriteBytes(bulkOperation.ByteBuffer.Bytes.AsSpan(0, bulkOperation.ByteBuffer.Size));
+        byteBuffer.EndPacket();
+
+        bulkOperation.Dispose();
+
+        IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+        uint operationCount = response.ReadVarUInt();
+
+        var list = new List<object?>((int)operationCount);
+
+        for (uint i = 0; i < operationCount; i++)
+        {
+            var operation = (Operation)response.ReadByte();
+            switch (operation)
+            {
+                case Operation.Login:
+                    break;
+                case Operation.GetString:
+                    {
+                        string? value = response.ReadString();
+                        list.Add(value);
+                        break;
+                    }
+                case Operation.SetString:
+                    // Nothing to do
+                    list.Add(true);
+                    break;
+                case Operation.SetObjectBinary:
+                    break;
+                case Operation.GetObjectBinary:
+                    break;
+                case Operation.GetList:
+                    break;
+                case Operation.AddList:
+                    break;
+                case Operation.RemoveList:
+                    break;
+                case Operation.ContainsList:
+                    break;
+                case Operation.Exists:
+                    break;
+                case Operation.Delete:
+                    break;
+                case Operation.GetStats:
+                    break;
+                case Operation.GetBytes:
+                    break;
+                case Operation.SetBytes:
+                    break;
+                case Operation.SetCounter:
+                    break;
+                case Operation.IncrementCounter:
+                    break;
+                case Operation.Bulk:
+                    break;
+                default:
+                    break;
+            }
+        }
+
+        return list;
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private uint GetNextRequestId()
         => Interlocked.Increment(ref this.requestIdCounter);

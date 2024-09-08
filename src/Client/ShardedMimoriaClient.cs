@@ -181,9 +181,27 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     }
 
     public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
+        => this.IncrementCounterAsync(key, -decrement, cancellationToken);
+
+    public IBulkOperation Bulk()
+        => new ShardedBulkOperation(this);
+
+    internal static async Task<List<object?>> ExecuteBulkAsync(ShardedBulkOperation shardedBulkOperation, CancellationToken cancellationToken = default)
     {
-        return this.IncrementCounterAsync(key, -decrement, cancellationToken);
+        var responses = new List<object?>();
+        foreach (var (_, bulkOperation) in shardedBulkOperation.BulkOperations)
+        {
+            var response = await bulkOperation.ExecuteAsync(cancellationToken);
+            responses.AddRange(response);
+        }
+        return responses;
     }
+
+    internal MimoriaClient GetMimoriaClient(Guid serverId)
+        => (MimoriaClient)this.idMimoriaClients[serverId];
+
+    internal Guid GetServerId(string key)
+        => this.consistentHashing.GetServerId(key);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IMimoriaClient GetCacheClient(string key)

@@ -69,5 +69,9 @@ public enum Operation : byte
     /// <summary>
     /// Increments a counter by a given value for a key.
     /// </summary>
-    IncrementCounter = 15
+    IncrementCounter = 15,
+    /// <summary>
+    /// Executes multiple operations in one request.
+    /// </summary>
+    Bulk = 16
 }

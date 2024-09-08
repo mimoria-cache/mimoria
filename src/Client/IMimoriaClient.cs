@@ -87,4 +87,6 @@ public interface IMimoriaClient
     Task DeleteAsync(string key, CancellationToken cancellationToken = default);
 
     Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default);
+
+    IBulkOperation Bulk();
 }

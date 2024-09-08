@@ -43,9 +43,9 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         this.serverId = this.serverIdProvider.GetServerId();
         this.monitor.OnChange(OnOptionsChanged);
-     
+
         this.RegisterOperationHandlers();
-        
+
         this.mimoriaSocketServer.Start(this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port, this.monitor.CurrentValue.Backlog);
         this.startDateTime = DateTime.UtcNow;
         this.logger.LogInformation("Mimoria server started on {Ip}:{Port}", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
@@ -80,6 +80,7 @@ public sealed class MimoriaServer : IMimoriaServer
         this.mimoriaSocketServer.SetOperationHandler(Operation.SetBytes, this.OnSetBytes);
         this.mimoriaSocketServer.SetOperationHandler(Operation.SetCounter, this.OnSetCounter);
         this.mimoriaSocketServer.SetOperationHandler(Operation.IncrementCounter, this.OnIncrementCounter);
+        this.mimoriaSocketServer.SetOperationHandler(Operation.Bulk, this.OnBulk);
 
         this.logger.LogTrace("Operation handlers registered");
     }
@@ -362,6 +363,78 @@ public sealed class MimoriaServer : IMimoriaServer
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.IncrementCounter, requestId, StatusCode.Ok);
         responseBuffer.WriteLong(value);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnBulk(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        uint operationCount = byteBuffer.ReadVarUInt();
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Bulk, requestId, StatusCode.Ok);
+        responseBuffer.WriteVarUInt(operationCount);
+
+        for (int i = 0; i < operationCount; i++)
+        {
+            var operation = (Operation)byteBuffer.ReadByte();
+            switch (operation)
+            {
+                case Operation.Login:
+                    break;
+                case Operation.GetString:
+                    {
+                        string key = byteBuffer.ReadString()!;
+                        string? value = this.cache.GetString(key);
+
+                        responseBuffer.WriteByte((byte)Operation.GetString);
+                        responseBuffer.WriteString(value);
+                        break;
+                    }
+                case Operation.SetString:
+                    {
+                        string key = byteBuffer.ReadString()!;
+                        string? value = byteBuffer.ReadString();
+                        uint ttl = byteBuffer.ReadUInt();
+
+                        this.cache.SetString(key, value, ttl);
+
+                        responseBuffer.WriteByte((byte)Operation.SetString);
+                    }
+                    break;
+                case Operation.SetObjectBinary:
+                    break;
+                case Operation.GetObjectBinary:
+                    break;
+                case Operation.GetList:
+                    break;
+                case Operation.AddList:
+                    break;
+                case Operation.RemoveList:
+                    break;
+                case Operation.ContainsList:
+                    break;
+                case Operation.Exists:
+                    break;
+                case Operation.Delete:
+                    break;
+                case Operation.GetStats:
+                    break;
+                case Operation.GetBytes:
+                    break;
+                case Operation.SetBytes:
+                    break;
+                case Operation.SetCounter:
+                    break;
+                case Operation.IncrementCounter:
+                    break;
+                case Operation.Bulk:
+                    break;
+                default:
+                    break;
+            }
+        }
+
         responseBuffer.EndPacket();
 
         return tcpConnection.SendAsync(responseBuffer);
