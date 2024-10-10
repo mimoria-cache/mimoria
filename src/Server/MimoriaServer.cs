@@ -102,7 +102,7 @@ public sealed class MimoriaServer : IMimoriaServer
         
         string password = byteBuffer.ReadString()!;
 
-        tcpConnection.Authenticated = this.monitor.CurrentValue.Password == password;
+        tcpConnection.Authenticated = this.monitor.CurrentValue.Password.Equals(password, StringComparison.Ordinal);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Login, requestId, StatusCode.Ok);
         responseBuffer.WriteByte(tcpConnection.Authenticated ? (byte)1 : (byte)0);
