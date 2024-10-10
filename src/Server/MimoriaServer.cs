@@ -16,6 +16,8 @@ namespace Varelen.Mimoria.Server;
 
 public sealed class MimoriaServer : IMimoriaServer
 {
+    private const uint ProtocolVersion = 1;
+
     private readonly ILogger<MimoriaServer> logger;
     private readonly IOptionsMonitor<ServerOptions> monitor;
     private readonly IServerIdProvider serverIdProvider;
@@ -87,6 +89,17 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private ValueTask OnLogin(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
+        uint clientProtocolVersion = byteBuffer.ReadVarUInt();
+        if (ProtocolVersion != clientProtocolVersion)
+        {
+            this.logger.LogInformation("Connection '{RemoteEndPoint}' has protocol version mismatch. Server protocol version is '{ServerProtocolVersion}' and client protocol version is '{ClientProtocolVersion}'", tcpConnection.Socket.RemoteEndPoint, ProtocolVersion, clientProtocolVersion);
+
+            IByteBuffer protocolVersionMismatchBuffer = PooledByteBuffer.FromPool(Operation.Login, requestId, StatusCode.Error);
+            protocolVersionMismatchBuffer.WriteString($"Protocol version mismatch. Server expected protocol version '{ProtocolVersion}' but got client protocol version '{clientProtocolVersion}'");
+            protocolVersionMismatchBuffer.EndPacket();
+            return tcpConnection.SendAsync(protocolVersionMismatchBuffer);
+        }
+        
         string password = byteBuffer.ReadString()!;
 
         tcpConnection.Authenticated = this.monitor.CurrentValue.Password == password;

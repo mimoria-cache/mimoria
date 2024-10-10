@@ -16,6 +16,7 @@ namespace Varelen.Mimoria.Client;
 
 public sealed class MimoriaClient : IMimoriaClient
 {
+    private const uint ProtocolVersion = 1;
     private const byte MaxPasswordLength = 24;
 
     private readonly IMimoriaSocketClient mimoriaSocketClient;
@@ -92,6 +93,7 @@ public sealed class MimoriaClient : IMimoriaClient
             uint requestId = this.GetNextRequestId();
 
             IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Login, requestId);
+            byteBuffer.WriteVarUInt(ProtocolVersion);
             byteBuffer.WriteString(password);
             byteBuffer.EndPacket();
 
