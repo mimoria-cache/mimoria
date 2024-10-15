@@ -6,7 +6,6 @@ using Microsoft.Extensions.ObjectPool;
 
 using System.Buffers;
 using System.Buffers.Binary;
-
 #if DEBUG
 using System.Diagnostics;
 #endif
@@ -56,14 +55,14 @@ public sealed class PooledByteBuffer : IByteBuffer
     public PooledByteBuffer(Operation operation)
         : this()
     {
-        this.WriteUInt(0);
+        this.WriteLengthPlaceholder();
         this.WriteByte((byte)operation);
     }
 
     public PooledByteBuffer(Operation operation, uint requestId)
         : this()
     {
-        this.WriteUInt(0);
+        this.WriteLengthPlaceholder();
         this.WriteByte((byte)operation);
         this.WriteUInt(requestId);
     }
@@ -71,7 +70,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     public PooledByteBuffer(Operation operation, uint requestId, StatusCode statusCode)
         : this()
     {
-        this.WriteUInt(0);
+        this.WriteLengthPlaceholder();
         this.WriteByte((byte)operation);
         this.WriteUInt(requestId);
         this.WriteByte((byte)statusCode);
@@ -86,6 +85,12 @@ public sealed class PooledByteBuffer : IByteBuffer
         }
     }
 #endif
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void WriteLengthPlaceholder()
+    {
+        this.WriteUInt(0);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureBufferSize(int sizeToAdd)
@@ -109,6 +114,13 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.buffer = bytes;
     }
 
+    public void WriteBool(bool value)
+    {
+        this.EnsureBufferSize(1);
+
+        this.buffer[this.writeIndex++] = (byte)(value ? 1 : 0);
+    }
+
     public void WriteByte(byte value)
     {
         this.EnsureBufferSize(1);
@@ -117,6 +129,16 @@ public sealed class PooledByteBuffer : IByteBuffer
     }
 
     public void WriteUInt(uint value)
+    {
+        this.EnsureBufferSize(4);
+
+        this.buffer[this.writeIndex++] = (byte)value;
+        this.buffer[this.writeIndex++] = (byte)(value >> 8);
+        this.buffer[this.writeIndex++] = (byte)(value >> 0x10);
+        this.buffer[this.writeIndex++] = (byte)(value >> 0x18);
+    }
+
+    public void WriteInt(int value)
     {
         this.EnsureBufferSize(4);
 
@@ -175,6 +197,14 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.buffer[this.writeIndex++] = (byte)(tmp >> 0x18);
     }
 
+    public void WriteDouble(double value)
+    {
+        this.EnsureBufferSize(4);
+
+        BinaryPrimitives.WriteDoubleBigEndian(this.buffer.AsSpan(this.writeIndex), value);
+        this.writeIndex += 8;
+    }
+
     public void WriteGuid(in Guid guid)
     {
         this.EnsureBufferSize(GuidByteSize);
@@ -222,12 +252,57 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += source.Length;
     }
 
+    public void WriteValue(MimoriaValue value)
+    {
+        this.WriteByte((byte)value.Type);
+        switch (value.Type)
+        {
+            case MimoriaValue.ValueType.Null:
+                this.WriteByte(0);
+                break;
+            case MimoriaValue.ValueType.Bytes:
+                this.WriteVarUInt((uint)((byte[])value.Value!).Length);
+                this.WriteBytes((byte[])value.Value!);
+                break;
+            case MimoriaValue.ValueType.String:
+                this.WriteString((string)value.Value!);
+                break;
+            case MimoriaValue.ValueType.Int:
+                this.WriteInt((int)value.Value!);
+                break;
+            case MimoriaValue.ValueType.Long:
+                this.WriteLong((long)value.Value!);
+                break;
+            case MimoriaValue.ValueType.Double:
+                this.WriteDouble((double)value.Value!);
+                break;
+            case MimoriaValue.ValueType.Bool:
+                this.WriteBool((bool)value.Value!);
+                break;
+            default:
+                break;
+        }
+    }
+
+    public bool ReadBool()
+        => this.buffer[this.readIndex++] == 1;
+
     public byte ReadByte()
         => this.buffer[this.readIndex++];
 
     public uint ReadUInt()
     {
         uint value = (uint)(this.buffer[this.readIndex++] |
+            (this.buffer[this.readIndex++] << 8) |
+            (this.buffer[this.readIndex++] << 0x10) |
+            (this.buffer[this.readIndex++] << 0x18));
+
+        return value;
+    }
+
+    public int ReadInt()
+    {
+        int value = (int)(this.buffer[this.readIndex++] |
             (this.buffer[this.readIndex++] << 8) |
             (this.buffer[this.readIndex++] << 0x10) |
             (this.buffer[this.readIndex++] << 0x18));
@@ -283,6 +358,13 @@ public sealed class PooledByteBuffer : IByteBuffer
         return *(float*)&value;
     }
 
+    public double ReadDouble()
+    {
+        double value = BinaryPrimitives.ReadDoubleBigEndian(this.buffer.AsSpan(this.readIndex));
+        this.readIndex += 8;
+        return value;
+    }
+
     public Guid ReadGuid()
     {
         var guid = new Guid(this.buffer.AsSpan(this.readIndex, GuidByteSize));
@@ -325,6 +407,35 @@ public sealed class PooledByteBuffer : IByteBuffer
         src.CopyTo(destination);
 
         this.readIndex += destination.Length;
+    }
+
+    public MimoriaValue ReadValue()
+    {
+        var type = (MimoriaValue.ValueType)this.ReadByte();
+        switch (type)
+        {
+            case MimoriaValue.ValueType.Null:
+                this.ReadByte();
+                return new MimoriaValue();
+            case MimoriaValue.ValueType.Bytes:
+                uint length = this.ReadVarUInt();
+                // TODO: Hm, pooling possible? Problem is it's returned to the user
+                byte[] bytes = new byte[length];
+                this.ReadBytes(bytes);
+                return bytes;
+            case MimoriaValue.ValueType.String:
+                return this.ReadString();
+            case MimoriaValue.ValueType.Int:
+                return this.ReadInt();
+            case MimoriaValue.ValueType.Long:
+                return this.ReadLong();
+            case MimoriaValue.ValueType.Double:
+                return this.ReadDouble();
+            case MimoriaValue.ValueType.Bool:
+                return this.ReadBool();
+            default:
+                return new MimoriaValue();
+        }
     }
 
     public void Retain()

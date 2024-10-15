@@ -11,25 +11,33 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
 
     int WriteIndex { get; set; }
 
+    void WriteBool(bool value);
     void WriteByte(byte value);
     void WriteUInt(uint value);
+    void WriteInt(int value);
     void WriteVarUInt(uint value);
     void WriteLong(long value);
     void WriteULong(ulong value);
     unsafe void WriteFloat(float value);
+    void WriteDouble(double value);
     void WriteGuid(in Guid guid);
     void WriteString(string? value);
     void WriteBytes(ReadOnlySpan<byte> source);
+    void WriteValue(MimoriaValue value);
 
+    bool ReadBool();
     byte ReadByte();
     uint ReadUInt();
+    int ReadInt();
     uint ReadVarUInt();
     long ReadLong();
     ulong ReadULong();
     unsafe float ReadFloat();
+    double ReadDouble();
     Guid ReadGuid();
     string? ReadString();
     void ReadBytes(Span<byte> destination);
+    MimoriaValue ReadValue();
 
     void Retain();
 
