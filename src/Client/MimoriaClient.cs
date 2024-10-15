@@ -520,8 +520,14 @@ public sealed class MimoriaClient : IMimoriaClient
                 case Operation.ContainsList:
                     break;
                 case Operation.Exists:
+                    {
+                        bool exists = response.ReadBool();
+                        list.Add(exists);
                     break;
+                    }
                 case Operation.Delete:
+                    // Nothing to do
+                    list.Add(true);
                     break;
                 case Operation.GetStats:
                     break;

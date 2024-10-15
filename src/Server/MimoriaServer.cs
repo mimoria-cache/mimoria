@@ -436,9 +436,24 @@ public sealed class MimoriaServer : IMimoriaServer
                 case Operation.ContainsList:
                     break;
                 case Operation.Exists:
-                    break;
+                    {
+                        string key = byteBuffer.ReadString()!;
+
+                        bool exists = this.cache.Exists(key);
+
+                        responseBuffer.WriteByte((byte)Operation.Exists);
+                        responseBuffer.WriteBool(exists);
+                        break;
+                    }
                 case Operation.Delete:
-                    break;
+                    {
+                        string key = byteBuffer.ReadString()!;
+
+                        this.cache.Delete(key);
+
+                        responseBuffer.WriteByte((byte)Operation.Delete);
+                        break;
+                    }
                 case Operation.GetStats:
                     break;
                 case Operation.GetBytes:
@@ -459,7 +474,7 @@ public sealed class MimoriaServer : IMimoriaServer
         responseBuffer.EndPacket();
 
         return tcpConnection.SendAsync(responseBuffer);
-        }
+    }
 
     private ValueTask OnGetMapValue(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {

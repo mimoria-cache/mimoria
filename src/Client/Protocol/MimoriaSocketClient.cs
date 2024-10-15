@@ -30,7 +30,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     }
 
     public MimoriaSocketClient(TimeSpan operationTimeout)
-        : this(operationTimeout, new ExponentialRetryPolicy(1000, 4, typeof(TimeoutException)))
+        : this(operationTimeout, new ExponentialRetryPolicy(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException)))
     {
 
     }

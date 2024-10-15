@@ -45,6 +45,20 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
         bulkOperation.SetString(key, value, ttl);
     }
 
+    public void Exists(string key)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+
+        bulkOperation.Exists(key);
+    }
+
+    public void Delete(string key)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+
+        bulkOperation.Delete(key);
+    }
+
     public Task<List<object?>> ExecuteAsync(CancellationToken cancellationToken = default)
         => ShardedMimoriaClient.ExecuteBulkAsync(this, cancellationToken);
 

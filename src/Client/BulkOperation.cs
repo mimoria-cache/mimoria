@@ -41,6 +41,22 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount++;
     }
 
+    public void Exists(string key)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.Exists);
+        this.byteBuffer.WriteString(key);
+
+        this.operationCount++;
+    }
+
+    public void Delete(string key)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.Delete);
+        this.byteBuffer.WriteString(key);
+
+        this.operationCount++;
+    }
+
     public Task<List<object?>> ExecuteAsync(CancellationToken cancellationToken = default)
         => this.mimoriaClient.ExecuteBulkAsync(this, cancellationToken);
 
