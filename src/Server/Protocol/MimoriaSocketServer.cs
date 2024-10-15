@@ -8,17 +8,18 @@ using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Server.Network;
 
+using System.Collections.Frozen;
+
 namespace Varelen.Mimoria.Server.Protocol;
 
 public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
 {
     private readonly ILogger<MimoriaSocketServer> logger;
-    private readonly Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers;
+    private FrozenDictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers = null!;
 
     public MimoriaSocketServer(ILogger<MimoriaSocketServer> logger)
     {
         this.logger = logger;
-        this.operationHandlers = new(Enum.GetNames(typeof(Operation)).Length);
     }
 
     protected override async ValueTask HandlePacketReceived(TcpConnection tcpConnection, IByteBuffer byteBuffer)
@@ -60,8 +61,8 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         }
     }
 
-    public void SetOperationHandler(Operation operation, Func<uint, TcpConnection, IByteBuffer, ValueTask> handler)
-        => this.operationHandlers[operation] = handler;
+    public void SetOperationHandlers(Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers)
+        => this.operationHandlers = operationHandlers.ToFrozenDictionary();
 
     private static ValueTask SendErrorResponseAsync(TcpConnection tcpConnection, Operation operation, uint requestId, string errorText)
     {

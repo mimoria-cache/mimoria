@@ -66,23 +66,32 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private void RegisterOperationHandlers()
     {
-        this.mimoriaSocketServer.SetOperationHandler(Operation.Login, this.OnLogin);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.GetString, this.OnGetString);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.SetString, this.OnSetString);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.GetList, this.OnGetList);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.AddList, this.OnAddList);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.RemoveList, this.OnRemoveList);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.ContainsList, this.OnContainsList);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.Exists, this.OnExists);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.Delete, this.OnDelete);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.GetObjectBinary, this.OnGetObjectBinary);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.SetObjectBinary, this.OnSetObjectBinary);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.GetStats, this.OnGetStats);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.GetBytes, this.OnGetBytes);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.SetBytes, this.OnSetBytes);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.SetCounter, this.OnSetCounter);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.IncrementCounter, this.OnIncrementCounter);
-        this.mimoriaSocketServer.SetOperationHandler(Operation.Bulk, this.OnBulk);
+        var operationHandlers = new Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>>
+        {
+            { Operation.Login, this.OnLogin },
+            { Operation.GetString, this.OnGetString },
+            { Operation.SetString, this.OnSetString },
+            { Operation.GetList, this.OnGetList },
+            { Operation.AddList, this.OnAddList },
+            { Operation.RemoveList, this.OnRemoveList },
+            { Operation.ContainsList, this.OnContainsList },
+            { Operation.Exists, this.OnExists },
+            { Operation.Delete, this.OnDelete },
+            { Operation.GetObjectBinary, this.OnGetObjectBinary },
+            { Operation.SetObjectBinary, this.OnSetObjectBinary },
+            { Operation.GetStats, this.OnGetStats },
+            { Operation.GetBytes, this.OnGetBytes },
+            { Operation.SetBytes, this.OnSetBytes },
+            { Operation.SetCounter, this.OnSetCounter },
+            { Operation.IncrementCounter, this.OnIncrementCounter },
+            { Operation.Bulk, this.OnBulk },
+            { Operation.GetMapValue, this.OnGetMapValue },
+            { Operation.SetMapValue, this.OnSetMapValue },
+            { Operation.GetMap, this.OnGetMap },
+            { Operation.SetMap, this.OnSetMap }
+        };
+
+        this.mimoriaSocketServer.SetOperationHandlers(operationHandlers);
 
         this.logger.LogTrace("Operation handlers registered");
     }
@@ -92,7 +101,7 @@ public sealed class MimoriaServer : IMimoriaServer
         uint clientProtocolVersion = byteBuffer.ReadVarUInt();
         if (ProtocolVersion != clientProtocolVersion)
         {
-            this.logger.LogInformation("Connection '{RemoteEndPoint}' has protocol version mismatch. Server protocol version is '{ServerProtocolVersion}' and client protocol version is '{ClientProtocolVersion}'", tcpConnection.Socket.RemoteEndPoint, ProtocolVersion, clientProtocolVersion);
+            this.logger.LogWarning("Connection '{RemoteEndPoint}' has protocol version mismatch. Server protocol version is '{ServerProtocolVersion}' and client protocol version is '{ClientProtocolVersion}'", tcpConnection.Socket.RemoteEndPoint, ProtocolVersion, clientProtocolVersion);
 
             IByteBuffer protocolVersionMismatchBuffer = PooledByteBuffer.FromPool(Operation.Login, requestId, StatusCode.Error);
             protocolVersionMismatchBuffer.WriteString($"Protocol version mismatch. Server expected protocol version '{ProtocolVersion}' but got client protocol version '{clientProtocolVersion}'");

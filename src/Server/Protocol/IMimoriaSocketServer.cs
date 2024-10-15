@@ -10,5 +10,5 @@ namespace Varelen.Mimoria.Server.Protocol;
 
 public interface IMimoriaSocketServer : ISocketServer
 {
-    void SetOperationHandler(Operation operation, Func<uint, TcpConnection, IByteBuffer, ValueTask> handler);
+    void SetOperationHandlers(Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers);
 }
