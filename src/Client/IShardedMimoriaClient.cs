@@ -6,7 +6,7 @@ namespace Varelen.Mimoria.Client;
 
 public interface IShardedMimoriaClient : IMimoriaClient
 {
-    public IReadOnlyList<IMimoriaClient> CacheClients { get; }
+    public IReadOnlyList<IMimoriaClient> MimoriaClients { get; }
 
     Task<Stats> GetStatsAsync(int index, CancellationToken cancellationToken = default);
 

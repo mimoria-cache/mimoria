@@ -105,7 +105,7 @@ public sealed class MimoriaServer : IMimoriaServer
         tcpConnection.Authenticated = this.monitor.CurrentValue.Password.Equals(password, StringComparison.Ordinal);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Login, requestId, StatusCode.Ok);
-        responseBuffer.WriteByte(tcpConnection.Authenticated ? (byte)1 : (byte)0);
+        responseBuffer.WriteBool(tcpConnection.Authenticated);
         if (tcpConnection.Authenticated)
         {
             responseBuffer.WriteGuid(this.serverId);
@@ -185,15 +185,14 @@ public sealed class MimoriaServer : IMimoriaServer
         string? value = byteBuffer.ReadString();
         uint ttlMilliseconds = byteBuffer.ReadUInt();
 
-        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId, StatusCode.Ok);
-        responseBuffer.EndPacket();
-
         // TODO: Should null values not be allowed in lists?
         if (value is null)
         {
-            responseBuffer.Dispose();
             throw new ArgumentException($"Cannot remove null value from list under key '{key}'");
         }
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
 
         this.cache.AddList(key, value, ttlMilliseconds);
 
@@ -448,6 +447,77 @@ public sealed class MimoriaServer : IMimoriaServer
             }
         }
 
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+        }
+
+    private ValueTask OnGetMapValue(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        string subKey = byteBuffer.ReadString()!;
+
+        MimoriaValue value = this.cache.GetMapValue(key, subKey);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetMapValue, requestId, StatusCode.Ok);
+        responseBuffer.WriteValue(value);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnSetMapValue(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        string subKey = byteBuffer.ReadString()!;
+        MimoriaValue value = byteBuffer.ReadValue();
+        uint ttlMilliseconds = byteBuffer.ReadUInt();
+
+        this.cache.SetMapValue(key, subKey, value, ttlMilliseconds);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetMapValue, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnGetMap(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+
+        Dictionary<string, MimoriaValue> map = this.cache.GetMap(key);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetMap, requestId, StatusCode.Ok);
+        responseBuffer.WriteVarUInt((uint)map.Count);
+        foreach (var (subKey, subValue) in map)
+        {
+            responseBuffer.WriteString(subKey);
+            responseBuffer.WriteValue(subValue);
+        }
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnSetMap(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string key = byteBuffer.ReadString()!;
+        uint count = byteBuffer.ReadVarUInt();
+
+        var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
+        for (int i = 0; i < count; i++)
+        {
+            string subKey = byteBuffer.ReadString()!;
+            MimoriaValue subValue = byteBuffer.ReadValue();
+
+            map[subKey] = subValue;
+        }
+
+        uint ttlMilliseconds = byteBuffer.ReadUInt();
+
+        this.cache.SetMap(key, map, ttlMilliseconds);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetMap, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
         return tcpConnection.SendAsync(responseBuffer);

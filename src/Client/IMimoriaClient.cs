@@ -4,6 +4,8 @@
 
 using System.Text.Json;
 
+using Varelen.Mimoria.Core;
+
 namespace Varelen.Mimoria.Client;
 
 public interface IMimoriaClient
@@ -81,6 +83,14 @@ public interface IMimoriaClient
     /// <param name="cancellationToken"></param>
     /// <returns>The new value.</returns>
     ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default);
+
+    Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default);
+
+    Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+
+    Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default);
+
+    Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
     ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 

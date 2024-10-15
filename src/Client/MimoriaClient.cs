@@ -175,7 +175,7 @@ public sealed class MimoriaClient : IMimoriaClient
             return [];
         }
 
-        var list = new List<string>((int)count);
+        var list = new List<string>(capacity: (int)count);
         for (uint i = 0; i < count; i++)
         {
             list.Add(response.ReadString()!);
@@ -396,6 +396,79 @@ public sealed class MimoriaClient : IMimoriaClient
             CacheMisses = response.ReadULong(),
             CacheHitRatio = response.ReadFloat()
         };
+    }
+
+    public async Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.GetMapValue, requestId);
+        byteBuffer.WriteString(key);
+        byteBuffer.WriteString(subKey);
+        byteBuffer.EndPacket();
+
+        IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+
+        return response.ReadValue();
+    }
+
+    public async Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.SetMapValue, requestId);
+        byteBuffer.WriteString(key);
+        byteBuffer.WriteString(subKey);
+        byteBuffer.WriteValue(subValue);
+        byteBuffer.WriteUInt((uint)ttl.TotalMilliseconds);
+
+        byteBuffer.EndPacket();
+
+        await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+    }
+
+    public async Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.GetMap, requestId);
+        byteBuffer.WriteString(key);
+
+        byteBuffer.EndPacket();
+
+        IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+
+        uint count = response.ReadVarUInt();
+        
+        var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
+        for (int i = 0; i < count; i++)
+        {
+            string subKey = response.ReadString()!;
+            MimoriaValue subValue = response.ReadValue();
+
+            map[subKey] = subValue;
+        }
+
+        return map;
+    }
+
+    public async Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.SetMap, requestId);
+        byteBuffer.WriteString(key);
+        byteBuffer.WriteVarUInt((uint)map.Count);
+        foreach (var (subKey, subValue) in map)
+        {
+        byteBuffer.WriteString(subKey);
+        byteBuffer.WriteValue(subValue);
+        }
+        byteBuffer.WriteUInt((uint)ttl.TotalMilliseconds);
+
+        byteBuffer.EndPacket();
+
+        await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
     public IBulkOperation Bulk()

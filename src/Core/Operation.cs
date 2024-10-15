@@ -73,5 +73,21 @@ public enum Operation : byte
     /// <summary>
     /// Executes multiple operations in one request.
     /// </summary>
-    Bulk = 16
+    Bulk = 16,
+    /// <summary>
+    /// Gets a map value of a map under the given key.
+    /// </summary>
+    GetMapValue = 17,
+    /// <summary>
+    /// Sets a map value of a map under the given key.
+    /// </summary>
+    SetMapValue = 18,
+    /// <summary>
+    /// Gets the entire map under the given key.
+    /// </summary>
+    GetMap = 19,
+    /// <summary>
+    /// Sets the entire map under the given key.
+    /// </summary>
+    SetMap = 20
 }
