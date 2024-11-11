@@ -132,20 +132,16 @@ public sealed class PooledByteBuffer : IByteBuffer
     {
         this.EnsureBufferSize(4);
 
-        this.buffer[this.writeIndex++] = (byte)value;
-        this.buffer[this.writeIndex++] = (byte)(value >> 8);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x10);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x18);
+        BinaryPrimitives.WriteUInt32BigEndian(this.buffer.AsSpan(this.writeIndex), value);
+        this.writeIndex += 4;
     }
 
     public void WriteInt(int value)
     {
         this.EnsureBufferSize(4);
 
-        this.buffer[this.writeIndex++] = (byte)value;
-        this.buffer[this.writeIndex++] = (byte)(value >> 8);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x10);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x18);
+        BinaryPrimitives.WriteInt32BigEndian(this.buffer.AsSpan(this.writeIndex), value);
+        this.writeIndex += 4;
     }
 
     // Based on the source code of the BinaryWriter.Write7BitEncodedInt() method from the .NET Foundation.
@@ -175,14 +171,8 @@ public sealed class PooledByteBuffer : IByteBuffer
     {
         this.EnsureBufferSize(8);
 
-        this.buffer[this.writeIndex++] = (byte)value;
-        this.buffer[this.writeIndex++] = (byte)(value >> 8);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x10);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x18);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x20);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x28);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x30);
-        this.buffer[this.writeIndex++] = (byte)(value >> 0x38);
+        BinaryPrimitives.WriteUInt64BigEndian(this.buffer.AsSpan(this.writeIndex), value);
+        this.writeIndex += 8;
     }
 
     public unsafe void WriteFloat(float value)
@@ -191,10 +181,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
         uint tmp = *(uint*)&value;
 
-        this.buffer[this.writeIndex++] = (byte)tmp;
-        this.buffer[this.writeIndex++] = (byte)(tmp >> 8);
-        this.buffer[this.writeIndex++] = (byte)(tmp >> 0x10);
-        this.buffer[this.writeIndex++] = (byte)(tmp >> 0x18);
+        BinaryPrimitives.WriteSingleBigEndian(this.buffer.AsSpan(this.writeIndex), value);
+        this.writeIndex += 4;
     }
 
     public void WriteDouble(double value)
@@ -292,21 +280,15 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public uint ReadUInt()
     {
-        uint value = (uint)(this.buffer[this.readIndex++] |
-            (this.buffer[this.readIndex++] << 8) |
-            (this.buffer[this.readIndex++] << 0x10) |
-            (this.buffer[this.readIndex++] << 0x18));
-
+        uint value = BinaryPrimitives.ReadUInt32BigEndian(this.buffer.AsSpan(this.readIndex));
+        this.readIndex += 4;
         return value;
     }
 
     public int ReadInt()
     {
-        int value = (int)(this.buffer[this.readIndex++] |
-            (this.buffer[this.readIndex++] << 8) |
-            (this.buffer[this.readIndex++] << 0x10) |
-            (this.buffer[this.readIndex++] << 0x18));
-
+        int value = BinaryPrimitives.ReadInt32BigEndian(this.buffer.AsSpan(this.readIndex));
+        this.readIndex += 4;
         return value;
     }
 
@@ -328,34 +310,22 @@ public sealed class PooledByteBuffer : IByteBuffer
     public long ReadLong()
     {
         long value = BinaryPrimitives.ReadInt64BigEndian(this.buffer.AsSpan(this.readIndex));
-        
         this.readIndex += 8;
-
         return value;
     }
 
     public ulong ReadULong()
     {
-        ulong value = (ulong)(this.buffer[this.readIndex++] |
-            (this.buffer[this.readIndex++] << 8) |
-            (this.buffer[this.readIndex++] << 0x10) |
-            (this.buffer[this.readIndex++] << 0x18) |
-            (this.buffer[this.readIndex++] << 0x20) |
-            (this.buffer[this.readIndex++] << 0x28) |
-            (this.buffer[this.readIndex++] << 0x30) |
-            (this.buffer[this.readIndex++] << 0x38));
-
+        ulong value = BinaryPrimitives.ReadUInt64BigEndian(this.buffer.AsSpan(this.readIndex));
+        this.readIndex += 8;
         return value;
     }
 
     public unsafe float ReadFloat()
     {
-        uint value = (uint)(this.buffer[this.readIndex++] |
-            (this.buffer[this.readIndex++] << 8) |
-            (this.buffer[this.readIndex++] << 0x10) |
-            (this.buffer[this.readIndex++] << 0x18));
-
-        return *(float*)&value;
+        float value = BinaryPrimitives.ReadSingleBigEndian(this.buffer.AsSpan(this.readIndex));
+        this.readIndex += 4;
+        return value;
     }
 
     public double ReadDouble()
