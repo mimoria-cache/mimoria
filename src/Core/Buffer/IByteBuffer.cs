@@ -21,6 +21,9 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     unsafe void WriteFloat(float value);
     void WriteDouble(double value);
     void WriteGuid(in Guid guid);
+    void WriteDateTimeUtc(in DateTime dateTime);
+    void WriteDateOnly(in DateOnly dateOnly);
+    void WriteTimeOnly(in TimeOnly timeOnly);
     void WriteString(string? value);
     void WriteBytes(ReadOnlySpan<byte> source);
     void WriteValue(MimoriaValue value);
@@ -35,6 +38,9 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     unsafe float ReadFloat();
     double ReadDouble();
     Guid ReadGuid();
+    DateTime ReadDateTimeUtc();
+    DateOnly ReadDateOnly();
+    TimeOnly ReadTimeOnly();
     string? ReadString();
     void ReadBytes(Span<byte> destination);
     MimoriaValue ReadValue();

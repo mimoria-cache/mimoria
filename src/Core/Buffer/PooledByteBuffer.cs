@@ -202,6 +202,21 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += GuidByteSize;
     }
 
+    public void WriteDateTimeUtc(in DateTime dateTime)
+    {
+        this.WriteLong(dateTime.ToUniversalTime().Ticks);
+    }
+
+    public void WriteDateOnly(in DateOnly dateOnly)
+    {
+        this.WriteInt(dateOnly.DayNumber);
+    }
+
+    public void WriteTimeOnly(in TimeOnly timeOnly)
+    {
+        this.WriteLong(timeOnly.Ticks);
+    }
+
     public void WriteString(string? value)
     {
         if (value is null)
@@ -340,6 +355,24 @@ public sealed class PooledByteBuffer : IByteBuffer
         var guid = new Guid(this.buffer.AsSpan(this.readIndex, GuidByteSize));
         this.readIndex += GuidByteSize;
         return guid;
+    }
+
+    public DateTime ReadDateTimeUtc()
+    {
+        long ticks = this.ReadLong();
+        return new DateTime(ticks, DateTimeKind.Utc);
+    }
+
+    public DateOnly ReadDateOnly()
+    {
+        int dayNumber = this.ReadInt();
+        return DateOnly.FromDayNumber(dayNumber);
+    }
+
+    public TimeOnly ReadTimeOnly()
+    {
+        long ticks = this.ReadLong();
+        return new TimeOnly(ticks);
     }
 
     public string? ReadString()
