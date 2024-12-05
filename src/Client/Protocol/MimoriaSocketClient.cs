@@ -19,6 +19,8 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     private readonly TimeSpan operationTimeout;
     private readonly IRetryPolicy operationRetryPolicy;
     private readonly ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer>> taskCompletionSources;
+    private readonly ConcurrentDictionary<string, List<Subscription>> subscriptions;
+    private readonly ReaderWriterLockSlim subscriptionsReadWriteLock;
 
     /// <summary>
     /// Create a new Mimoria socket client with the default timeout of 250 milliseconds.
@@ -40,11 +42,40 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         this.operationTimeout = operationTimeout;
         this.operationRetryPolicy = operationRetryPolicy;
         this.taskCompletionSources = new ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer>>();
+        this.subscriptions = new ConcurrentDictionary<string, List<Subscription>>();
+        this.subscriptionsReadWriteLock = new ReaderWriterLockSlim();
     }
 
     protected override void OnPacketReceived(IByteBuffer byteBuffer)
     {
-        _ = (Operation)byteBuffer.ReadByte();
+        var operation = (Operation)byteBuffer.ReadByte();
+        if (operation == Operation.Publish)
+        {
+            string channel = byteBuffer.ReadString()!;
+
+            this.subscriptionsReadWriteLock.EnterReadLock();
+
+            try
+            {
+                if (!this.subscriptions.TryGetValue(channel, out List<Subscription>? foundSubscriptions))
+                {
+                    return;
+                }
+
+                MimoriaValue payload = byteBuffer.ReadValue();
+
+                foreach (Subscription subscription in foundSubscriptions)
+                {
+                    subscription.OnPayload(payload);
+                }
+            }
+            finally
+            {
+                this.subscriptionsReadWriteLock.ExitReadLock();
+            }
+
+            return;
+        }
 
         uint requestId = byteBuffer.ReadUInt();
         var statusCode = (StatusCode)byteBuffer.ReadByte();
@@ -79,6 +110,48 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         finally
         {
             byteBuffer.Dispose();
+        }
+    }
+
+    public ValueTask SendAndForgetAsync(IByteBuffer byteBuffer, CancellationToken cancellationToken = default)
+    {
+        return this.SendAsync(byteBuffer, cancellationToken);
+    }
+
+    public (Subscription, bool alreadySubscribed) Subscribe(string channel)
+    {
+        this.subscriptionsReadWriteLock.EnterWriteLock();
+
+        try
+        {
+            if (this.subscriptions.TryGetValue(channel, out List<Subscription>? foundSubscriptions))
+            {
+                var subscription = new Subscription();
+                foundSubscriptions.Add(subscription);
+                return (subscription, alreadySubscribed: true);
+            }
+
+            var newSubscription = new Subscription();
+            this.subscriptions.TryAdd(channel, [newSubscription]);
+            return (newSubscription, alreadySubscribed: false);
+        }
+        finally
+        {
+            this.subscriptionsReadWriteLock.ExitWriteLock();
+        }
+    }
+
+    public bool Unsubscribe(string channel)
+    {
+        this.subscriptionsReadWriteLock.EnterWriteLock();
+
+        try
+        {
+            return this.subscriptions.TryRemove(channel, out _);
+        }
+        finally
+        {
+            this.subscriptionsReadWriteLock.ExitWriteLock();
         }
     }
 

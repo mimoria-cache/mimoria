@@ -17,6 +17,8 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
     private readonly ILogger<MimoriaSocketServer> logger;
     private FrozenDictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers = null!;
 
+    public event IMimoriaSocketServer.TcpConnectionEvent? Disconnected;
+
     public MimoriaSocketServer(ILogger<MimoriaSocketServer> logger)
     {
         this.logger = logger;
@@ -82,6 +84,8 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
 
     protected override void HandleCloseConnection(TcpConnection tcpConnection)
     {
+        this.Disconnected?.Invoke(tcpConnection);
+
         this.logger.LogInformation("Closed connection '{RemoteEndPoint}'", tcpConnection.RemoteEndPoint);
     }
 }

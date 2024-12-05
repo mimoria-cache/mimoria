@@ -213,6 +213,24 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         return mimoriaClient.SetMapAsync(key, map, ttl, cancellationToken);
     }
 
+    public Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetMimoriaClient(channel);
+        return mimoriaClient.SubscribeAsync(channel, cancellationToken);
+    }
+
+    public Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetMimoriaClient(channel);
+        return mimoriaClient.UnsubscribeAsync(channel, cancellationToken);
+    }
+
+    public Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetMimoriaClient(channel);
+        return mimoriaClient.PublishAsync(channel, payload, cancellationToken);
+    }
+
     public IBulkOperation Bulk()
         => new ShardedBulkOperation(this);
 

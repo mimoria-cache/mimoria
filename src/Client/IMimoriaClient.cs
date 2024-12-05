@@ -98,5 +98,11 @@ public interface IMimoriaClient
 
     Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default);
 
+    Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default);
+
+    Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default);
+
+    Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default);
+
     IBulkOperation Bulk();
 }

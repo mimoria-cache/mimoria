@@ -10,5 +10,9 @@ namespace Varelen.Mimoria.Server.Protocol;
 
 public interface IMimoriaSocketServer : ISocketServer
 {
+    public delegate void TcpConnectionEvent(TcpConnection tcpConnection);
+
+    public event TcpConnectionEvent? Disconnected;
+
     void SetOperationHandlers(Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers);
 }

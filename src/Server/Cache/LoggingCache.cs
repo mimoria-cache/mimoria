@@ -109,7 +109,7 @@ public class LoggingCache : ICache
 
     public void SetMap(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds)
     {
-        this.logger.LogInformation("SetMap: '{Key}' = {Count}", key, map.Count);
+        this.logger.LogInformation("SetMap: '{Key}' = {Count} (tt='{Ttl}')", key, map.Count, ttlMilliseconds);
         this.cache.SetMap(key, map, ttlMilliseconds);
     }
 

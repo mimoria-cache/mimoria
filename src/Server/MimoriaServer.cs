@@ -11,6 +11,7 @@ using Varelen.Mimoria.Server.Cache;
 using Varelen.Mimoria.Server.Network;
 using Varelen.Mimoria.Server.Options;
 using Varelen.Mimoria.Server.Protocol;
+using Varelen.Mimoria.Server.PubSub;
 
 namespace Varelen.Mimoria.Server;
 
@@ -20,6 +21,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private readonly ILogger<MimoriaServer> logger;
     private readonly IOptionsMonitor<ServerOptions> monitor;
+    private readonly IPubSubService pubSubService;
     private readonly IServerIdProvider serverIdProvider;
     private readonly IMimoriaSocketServer mimoriaSocketServer;
     private readonly ICache cache;
@@ -30,12 +32,14 @@ public sealed class MimoriaServer : IMimoriaServer
     public MimoriaServer(
         ILogger<MimoriaServer> logger,
         IOptionsMonitor<ServerOptions> monitor,
+        IPubSubService pubSubService,
         IServerIdProvider serverIdProvider,
         IMimoriaSocketServer mimoriaSocketServer,
         ICache cache)
     {
         this.logger = logger;
         this.monitor = monitor;
+        this.pubSubService = pubSubService;
         this.serverIdProvider = serverIdProvider;
         this.mimoriaSocketServer = mimoriaSocketServer;
         this.cache = cache;
@@ -48,9 +52,15 @@ public sealed class MimoriaServer : IMimoriaServer
 
         this.RegisterOperationHandlers();
 
+        this.mimoriaSocketServer.Disconnected += HandleTcpConnectionDisconnected;
         this.mimoriaSocketServer.Start(this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port, this.monitor.CurrentValue.Backlog);
         this.startDateTime = DateTime.UtcNow;
         this.logger.LogInformation("Mimoria server started on {Ip}:{Port}", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
+    }
+
+    private void HandleTcpConnectionDisconnected(TcpConnection tcpConnection)
+    {
+        this.pubSubService.Unsubscribe(tcpConnection);
     }
 
     public void Stop()
@@ -88,7 +98,10 @@ public sealed class MimoriaServer : IMimoriaServer
             { Operation.GetMapValue, this.OnGetMapValue },
             { Operation.SetMapValue, this.OnSetMapValue },
             { Operation.GetMap, this.OnGetMap },
-            { Operation.SetMap, this.OnSetMap }
+            { Operation.SetMap, this.OnSetMap },
+            { Operation.Subscribe, this.OnSubscribe },
+            { Operation.Unsubscribe, this.OnUnsubscribe },
+            { Operation.Publish, this.OnPublish }
         };
 
         this.mimoriaSocketServer.SetOperationHandlers(operationHandlers);
@@ -545,5 +558,37 @@ public sealed class MimoriaServer : IMimoriaServer
         responseBuffer.EndPacket();
 
         return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnSubscribe(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string channel = byteBuffer.ReadString()!;
+
+        this.pubSubService.Subscribe(channel, tcpConnection);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Subscribe, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnUnsubscribe(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string channel = byteBuffer.ReadString()!;
+
+        this.pubSubService.Unsubscribe(channel, tcpConnection);
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Unsubscribe, requestId, StatusCode.Ok);
+        responseBuffer.EndPacket();
+
+        return tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private ValueTask OnPublish(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    {
+        string channel = byteBuffer.ReadString()!;
+        MimoriaValue payload = byteBuffer.ReadValue();
+
+        return this.pubSubService.PublishAsync(channel, payload);
     }
 }

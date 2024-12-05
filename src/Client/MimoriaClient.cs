@@ -66,7 +66,7 @@ public sealed class MimoriaClient : IMimoriaClient
             return;
         }
 
-        Task.Run(() => this.ConnectAsync());
+        _ = Task.Run(async () => await this.ConnectAsync());
     }
 
     /// <inheritdoc />
@@ -439,7 +439,7 @@ public sealed class MimoriaClient : IMimoriaClient
         IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
 
         uint count = response.ReadVarUInt();
-        
+
         var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
         for (int i = 0; i < count; i++)
         {
@@ -461,8 +461,8 @@ public sealed class MimoriaClient : IMimoriaClient
         byteBuffer.WriteVarUInt((uint)map.Count);
         foreach (var (subKey, subValue) in map)
         {
-        byteBuffer.WriteString(subKey);
-        byteBuffer.WriteValue(subValue);
+            byteBuffer.WriteString(subKey);
+            byteBuffer.WriteValue(subValue);
         }
         byteBuffer.WriteUInt((uint)ttl.TotalMilliseconds);
 
@@ -523,7 +523,7 @@ public sealed class MimoriaClient : IMimoriaClient
                     {
                         bool exists = response.ReadBool();
                         list.Add(exists);
-                    break;
+                        break;
                     }
                 case Operation.Delete:
                     // Nothing to do
@@ -547,6 +547,53 @@ public sealed class MimoriaClient : IMimoriaClient
         }
 
         return list;
+    }
+
+    public async Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        (Subscription subscription, bool alreadySubscribed) = this.mimoriaSocketClient.Subscribe(channel);
+
+        if (!alreadySubscribed)
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Subscribe, requestId);
+            byteBuffer.WriteString(channel);
+            byteBuffer.EndPacket();
+
+            await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+        }
+
+        return subscription;
+    }
+
+    public async Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)
+    {
+        if (!this.mimoriaSocketClient.Unsubscribe(channel))
+        {
+            // We have no subscription, so do nothing
+            return;
+        }
+
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Unsubscribe, requestId);
+        byteBuffer.WriteString(channel);
+        byteBuffer.EndPacket();
+
+        await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+    }
+
+    public async Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Publish, requestId);
+        byteBuffer.WriteString(channel);
+        byteBuffer.WriteValue(payload);
+        byteBuffer.EndPacket();
+
+        await this.mimoriaSocketClient.SendAndForgetAsync(byteBuffer, cancellationToken);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

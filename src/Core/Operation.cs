@@ -89,5 +89,17 @@ public enum Operation : byte
     /// <summary>
     /// Sets the entire map under the given key.
     /// </summary>
-    SetMap = 20
+    SetMap = 20,
+    /// <summary>
+    /// Subscribes to a channel.
+    /// </summary>
+    Subscribe = 21,
+    /// <summary>
+    /// Unsubscribes from a channel.
+    /// </summary>
+    Unsubscribe = 22,
+    /// <summary>
+    /// Published a payload to a channel.
+    /// </summary>
+    Publish = 23
 }
