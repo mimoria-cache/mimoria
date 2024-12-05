@@ -86,7 +86,8 @@ public abstract class AsyncTcpSocketClient : ISocketClient
                     return;
                 }
 
-                this.expectedPacketLength = BinaryPrimitives.ReadInt32LittleEndian(receiveBuffer);
+
+                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(receiveBuffer);
                 this.receivedBytes = received - 4;
                 this.buffer.WriteBytes(this.receiveBuffer.AsSpan(4, received - 4));
 
