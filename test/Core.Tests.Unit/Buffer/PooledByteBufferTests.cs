@@ -19,7 +19,7 @@ public sealed class PooledByteBufferTests : IDisposable
     public void NewInstance_When_DisposingUsedInstance_And_InstantiatingNewInstance_Then_ByteBufferComesFromPool()
     {
         // Arrange
-        byte[] expectedBytes = { 1, 2, 3, 4 };
+        byte[] expectedBytes = [1, 2, 3, 4];
         this.sut.WriteBytes(expectedBytes);
         this.sut.Dispose();
 
@@ -34,7 +34,7 @@ public sealed class PooledByteBufferTests : IDisposable
     public void Dispose_When_ReferenceCountIsZero_Then_ByteBufferIsReturnedToPool()
     {
         // Arrange
-        byte[] expectedBytes = { 1, 2, 3, 4 };
+        byte[] expectedBytes = [1, 2, 3, 4];
         this.sut.WriteBytes(expectedBytes);
 
         // Act 1
@@ -188,7 +188,7 @@ public sealed class PooledByteBufferTests : IDisposable
     public void ReadBytes_When_WritingBytes_And_ReadingBytes_Then_CorrectWrittenBytesIsReturnedAndSizeIsCorrect()
     {
         // Arrange
-        byte[] fibonacci = { 0, 1, 1, 2, 3, 5, 8, 13 };
+        byte[] fibonacci = [0, 1, 1, 2, 3, 5, 8, 13];
         byte[] readFibonacci = new byte[fibonacci.Length];
 
         // Act
