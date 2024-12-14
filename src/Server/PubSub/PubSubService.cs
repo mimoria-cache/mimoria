@@ -130,4 +130,11 @@ public sealed class PubSubService : IPubSubService
             this.subscriptionsReadWriteLock.ExitReadLock();
         }
     }
+
+    public void Dispose()
+    {
+        this.subscriptions.Clear();
+        this.subscriptionsReadWriteLock.Dispose();
+        GC.SuppressFinalize(this);
+    }
 }

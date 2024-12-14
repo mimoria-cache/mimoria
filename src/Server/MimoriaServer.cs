@@ -66,6 +66,7 @@ public sealed class MimoriaServer : IMimoriaServer
     public void Stop()
     {
         this.mimoriaSocketServer.Stop();
+        this.pubSubService.Dispose();
         this.logger.LogInformation("Mimoria server stopped");
     }
 

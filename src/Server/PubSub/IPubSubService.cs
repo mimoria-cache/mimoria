@@ -7,7 +7,7 @@ using Varelen.Mimoria.Server.Network;
 
 namespace Varelen.Mimoria.Server.PubSub;
 
-public interface IPubSubService
+public interface IPubSubService : IDisposable
 {
     void Subscribe(string channel, TcpConnection tcpConnection);
     void Unsubscribe(string channel, TcpConnection tcpConnection);
