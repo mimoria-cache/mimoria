@@ -66,7 +66,7 @@ namespace Varelen.Mimoria.Server.Network
                         return;
                     }
 
-                    tcpConnection.ExpectedPacketLength = BinaryPrimitives.ReadInt32LittleEndian(tcpConnection.ReceiveBuffer);
+                    tcpConnection.ExpectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(tcpConnection.ReceiveBuffer);
                     tcpConnection.ReceivedBytes = received - 4;
                     tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(4, received - 4));
 
