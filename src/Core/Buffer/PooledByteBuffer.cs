@@ -6,9 +6,7 @@ using Microsoft.Extensions.ObjectPool;
 
 using System.Buffers;
 using System.Buffers.Binary;
-#if DEBUG
 using System.Diagnostics;
-#endif
 using System.Runtime.CompilerServices;
 using System.Text;
 
