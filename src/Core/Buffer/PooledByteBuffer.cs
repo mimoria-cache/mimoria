@@ -30,8 +30,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     private uint referenceCount;
 
-    public int Size => writeIndex;
-    public byte[] Bytes => buffer;
+    public int Size => this.writeIndex;
+    public byte[] Bytes => this.buffer;
     public int WriteIndex
     {
         get => this.writeIndex;
@@ -45,6 +45,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public PooledByteBuffer()
     {
+        this.readIndex = 0;
+        this.writeIndex = 0;
         this.referenceCount = 1;
         this.buffer = new byte[DefaultBufferSize];
 #if DEBUG
@@ -483,12 +485,19 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IByteBuffer FromPool()
-        => Pool.Get();
+    {
+        IByteBuffer byteBuffer = Pool.Get();
+        Debug.Assert(byteBuffer.Size == 0, "PooledByteBuffer.FromPool buffer is not zero size");
+        return byteBuffer;
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IByteBuffer FromPool(Operation operation)
     {
         PooledByteBuffer pooledByteBuffer = Pool.Get();
+
+        Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation) buffer is not zero size");
+
         pooledByteBuffer.WriteUInt(0);
         pooledByteBuffer.WriteByte((byte)operation);
         return pooledByteBuffer;
@@ -498,6 +507,9 @@ public sealed class PooledByteBuffer : IByteBuffer
     public static IByteBuffer FromPool(Operation operation, uint requestId)
     {
         PooledByteBuffer pooledByteBuffer = Pool.Get();
+
+        Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation, requestId) buffer is not zero size");
+
         pooledByteBuffer.WriteUInt(0);
         pooledByteBuffer.WriteByte((byte)operation);
         pooledByteBuffer.WriteUInt(requestId);
@@ -508,6 +520,9 @@ public sealed class PooledByteBuffer : IByteBuffer
     public static IByteBuffer FromPool(Operation operation, uint requestId, StatusCode statusCode)
     {
         PooledByteBuffer pooledByteBuffer = Pool.Get();
+
+        Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation, requestId, statusCode) buffer is not zero size");
+
         pooledByteBuffer.WriteUInt(0);
         pooledByteBuffer.WriteByte((byte)operation);
         pooledByteBuffer.WriteUInt(requestId);
