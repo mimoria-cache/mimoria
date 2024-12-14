@@ -13,7 +13,7 @@ namespace Varelen.Mimoria.Client;
 
 public sealed class ShardedMimoriaClient : IShardedMimoriaClient
 {
-    private readonly Dictionary<Guid, IMimoriaClient> idMimoriaClients = [];
+    private readonly Dictionary<Guid, IMimoriaClient> idMimoriaClients;
     private readonly IReadOnlyList<IMimoriaClient> mimoriaClients;
     private readonly IConsistentHashing consistentHashing;
 
@@ -34,6 +34,7 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
             throw new ArgumentException("At least two endpoints required", nameof(ipEndPoints));
         }
 
+        this.idMimoriaClients = new Dictionary<Guid, IMimoriaClient>();
         this.consistentHashing = consistentHashing;
         this.mimoriaClients = ipEndPoints
             .Select(ipEndPoint => new MimoriaClient(ipEndPoint.Address.ToString(), (ushort)ipEndPoint.Port, password))

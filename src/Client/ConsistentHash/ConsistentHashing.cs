@@ -13,11 +13,11 @@ public sealed class ConsistentHashing : IConsistentHashing
 {
     private readonly ReaderWriterLockSlim readerWriterLockSlim = new();
     private readonly IHasher hasher;
-    private readonly Dictionary<uint, Guid> hashServerIds = [];
-    private readonly SortedSet<uint> hashRange = [];
+    private readonly Dictionary<uint, Guid> hashServerIds;
+    private readonly SortedSet<uint> hashRange;
 
     public ConsistentHashing(IHasher hasher)
-        : this(hasher, [])
+        : this(hasher, Enumerable.Empty<Guid>())
     {
 
     }
@@ -25,6 +25,9 @@ public sealed class ConsistentHashing : IConsistentHashing
     public ConsistentHashing(IHasher hasher, IEnumerable<Guid> serverIds)
     {
         this.hasher = hasher;
+        this.hashServerIds = new Dictionary<uint, Guid>();
+        this.hashRange = new SortedSet<uint>();
+        
         foreach (Guid serverId in serverIds)
         {
             this.AddServerId(serverId);

@@ -132,7 +132,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
             }
 
             var newSubscription = new Subscription();
-            this.subscriptions.TryAdd(channel, [newSubscription]);
+            this.subscriptions.TryAdd(channel, new List<Subscription> { newSubscription });
             return (newSubscription, alreadySubscribed: false);
         }
         finally

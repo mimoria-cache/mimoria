@@ -172,7 +172,7 @@ public sealed class MimoriaClient : IMimoriaClient
         uint count = response.ReadUInt();
         if (count == 0)
         {
-            return [];
+            return new List<string>();
         }
 
         var list = new List<string>(capacity: (int)count);
