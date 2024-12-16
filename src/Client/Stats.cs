@@ -4,7 +4,7 @@
 
 namespace Varelen.Mimoria.Client;
 
-public sealed class Stats
+public readonly struct Stats
 {
     /// <summary>
     /// The server uptime in seconds.
