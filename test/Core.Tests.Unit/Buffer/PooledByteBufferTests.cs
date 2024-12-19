@@ -184,6 +184,20 @@ public sealed class PooledByteBufferTests : IDisposable
         read.Should().Be(value);
     }
 
+
+    [Fact]
+    public void ReadString_When_ReadingStringLargerThanMaxStringSize_Then_ArgumentExceptionIsThrown()
+    {
+        // Arrange
+        this.sut.WriteVarUInt(PooledByteBuffer.MaxStringSizeBytes + 1);
+
+        // Act & Assert
+        this.sut.Invoking(x => x.ReadString())
+            .Should()
+            .Throw<ArgumentException>()
+            .WithMessage($"Read string value length {PooledByteBuffer.MaxStringSizeBytes + 1} exceeded max allowed length {PooledByteBuffer.MaxStringSizeBytes}");
+    }
+
     [Fact]
     public void ReadBytes_When_WritingBytes_And_ReadingBytes_Then_CorrectWrittenBytesIsReturnedAndSizeIsCorrect()
     {
@@ -230,6 +244,19 @@ public sealed class PooledByteBufferTests : IDisposable
 
         // Assert
         this.sut.Equals(otherPooledByteBuffer).Should().BeFalse();
+    }
+
+    [Fact]
+    public void WriteString_When_WritingStringLargerThanMaxStringSize_Then_ArgumentExceptionIsThrown()
+    {
+        // Arrange
+        var value = new string('t', (int)PooledByteBuffer.MaxStringSizeBytes + 1);
+
+        // Act & Assert
+        this.sut.Invoking(x => x.WriteString(value))
+        .Should()
+        .Throw<ArgumentException>()
+            .WithMessage($"Written string value length {value.Length} exceeded max allowed length {PooledByteBuffer.MaxStringSizeBytes}");
     }
 
     public void Dispose()
