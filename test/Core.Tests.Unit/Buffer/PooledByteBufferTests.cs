@@ -56,6 +56,16 @@ public sealed class PooledByteBufferTests : IDisposable
     }
 
     [Fact]
+    public void Retain_When_Retaining_Then_ReferenceCountIsIncreased()
+    {
+        // Act
+        this.sut.Retain();
+
+        // Assert
+        this.sut.ReferenceCount.Should().Be(2);
+    }
+
+    [Fact]
     public void ReadByte_When_WritingByte_And_ReadingByte_Then_CorrectWrittenByteIsReturnedAndSizeIsCorrect()
     {
         // Act
