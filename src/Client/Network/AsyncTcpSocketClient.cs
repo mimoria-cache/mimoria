@@ -12,6 +12,11 @@ namespace Varelen.Mimoria.Client.Network;
 
 public abstract class AsyncTcpSocketClient : ISocketClient
 {
+    // TODO: Review
+    private const int DefaultTcpKeepAliveTime = 60;
+    private const int DefaultTcpKeepAliveInterval = 30;
+    private const int DefaultTcpKeepAliveRetryCount = 3;
+
     public event ISocketClient.SocketHandler? Disconnected;
     public event ISocketClient.SocketHandler? Connected;
 
@@ -28,11 +33,14 @@ public abstract class AsyncTcpSocketClient : ISocketClient
 
     protected AsyncTcpSocketClient()
     {
-        // TODO: Configure tcp keep alive
         this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
         {
             NoDelay = true
         };
+        this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+        this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, DefaultTcpKeepAliveTime);
+        this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, DefaultTcpKeepAliveInterval);
+        this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, DefaultTcpKeepAliveRetryCount);
         // TODO: Dual mode
     }
 
