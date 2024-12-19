@@ -56,13 +56,16 @@ public sealed class PooledByteBufferTests : IDisposable
     }
 
     [Fact]
-    public void Retain_When_Retaining_Then_ReferenceCountIsIncreased()
+    public void Retain_When_RetainingAndDisposingOnce_Then_ReferenceCountIsIncreasedAndDecreased()
     {
-        // Act
+        // Act & Assert
         this.sut.Retain();
 
-        // Assert
         this.sut.ReferenceCount.Should().Be(2);
+
+        this.sut.Dispose();
+
+        this.sut.ReferenceCount.Should().Be(1);
     }
 
     [Fact]
