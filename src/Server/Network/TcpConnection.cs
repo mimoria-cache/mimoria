@@ -12,7 +12,8 @@ namespace Varelen.Mimoria.Server.Network;
 public sealed class TcpConnection
 {
     private const int DefaultBufferSize = 65527;
- 
+
+    public ulong Id { get; private set; }
     public Socket Socket { get; set; }
     // TODO: Configurable?
     public byte[] ReceiveBuffer { get; } = GC.AllocateArray<byte>(length: DefaultBufferSize, pinned: true);
@@ -27,8 +28,8 @@ public sealed class TcpConnection
 
     private volatile bool connected = true;
 
-    public TcpConnection(AsyncTcpSocketServer asyncTcpSocketServer, Socket socket, EndPoint remoteEndPoint)
-        => (this.tcpSocketServer, this.Socket, this.RemoteEndPoint) = (asyncTcpSocketServer, socket, remoteEndPoint);
+    public TcpConnection(ulong id, AsyncTcpSocketServer asyncTcpSocketServer, Socket socket, EndPoint remoteEndPoint)
+        => (this.Id, this.tcpSocketServer, this.Socket, this.RemoteEndPoint) = (id, asyncTcpSocketServer, socket, remoteEndPoint);
 
     public async ValueTask SendAsync(IByteBuffer byteBuffer)
     {
@@ -71,4 +72,11 @@ public sealed class TcpConnection
             this.tcpSocketServer.DecrementConnections(this);
         }
     }
+
+    public override bool Equals(object? obj)
+        => obj is TcpConnection connection
+            && this.Id == connection.Id;
+
+    public override int GetHashCode()
+        => HashCode.Combine(this.Id);
 }

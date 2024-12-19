@@ -14,6 +14,7 @@ namespace Varelen.Mimoria.Server.Network
     {
         private readonly Socket socket;
         private ulong connections;
+        private ulong connectionIdCounter;
 
         public ulong Connections => Interlocked.Read(ref this.connections);
 
@@ -45,7 +46,8 @@ namespace Varelen.Mimoria.Server.Network
 
                 Interlocked.Increment(ref this.connections);
 
-                var tcpConnection = new TcpConnection(this, clientSocket, clientSocket.RemoteEndPoint!);
+                ulong connectionId = Interlocked.Increment(ref this.connectionIdCounter);
+                var tcpConnection = new TcpConnection(connectionId, this, clientSocket, clientSocket.RemoteEndPoint!);
 
                 this.HandleOpenConnection(tcpConnection);
 
