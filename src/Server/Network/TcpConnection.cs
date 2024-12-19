@@ -22,11 +22,11 @@ public sealed class TcpConnection
     public int ReceivedBytes { get; set; }
     public bool Authenticated { get; set; }
     public EndPoint RemoteEndPoint { get; private set; }
-    public bool Connected => this.connected;
+    public bool Connected => Volatile.Read(ref this.connected);
 
     private readonly AsyncTcpSocketServer tcpSocketServer;
 
-    private volatile bool connected = true;
+    private bool connected = true;
 
     public TcpConnection(ulong id, AsyncTcpSocketServer asyncTcpSocketServer, Socket socket, EndPoint remoteEndPoint)
         => (this.Id, this.tcpSocketServer, this.Socket, this.RemoteEndPoint) = (id, asyncTcpSocketServer, socket, remoteEndPoint);
@@ -49,12 +49,10 @@ public sealed class TcpConnection
 
     public void Disconnect()
     {
-        if (!this.connected)
+        if (!Interlocked.Exchange(ref this.connected, false))
         {
             return;
         }
-
-        this.connected = false;
 
         try
         {
