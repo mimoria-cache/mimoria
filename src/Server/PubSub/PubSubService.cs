@@ -107,22 +107,15 @@ public sealed class PubSubService : IPubSubService
                 return;
             }
 
-            IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Publish);
+            using IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Publish);
             byteBuffer.WriteString(channel);
             byteBuffer.WriteValue(payload);
             byteBuffer.EndPacket();
 
-            try
+            foreach (TcpConnection tcpConnection in tcpConnections)
             {
-                foreach (TcpConnection tcpConnection in tcpConnections)
-                {
-                    byteBuffer.Retain();
-                    await tcpConnection.SendAsync(byteBuffer);
-                }
-            }
-            finally
-            {
-                byteBuffer.Dispose();
+                byteBuffer.Retain();
+                await tcpConnection.SendAsync(byteBuffer);
             }
         }
         finally
