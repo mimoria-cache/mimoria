@@ -13,7 +13,7 @@ public sealed class PooledByteBufferPooledObjectPolicy : IPooledObjectPolicy<Poo
 
     public bool Return(PooledByteBuffer pooledByteBuffer)
     {
-        pooledByteBuffer.Clear();
+        pooledByteBuffer.Reset();
         return true;
     }
 }

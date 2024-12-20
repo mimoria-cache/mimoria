@@ -459,6 +459,12 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public void Clear()
     {
+        this.writeIndex = 0;
+        this.readIndex = 0;
+    }
+
+    public void Reset()
+    {
         this.referenceCount = 1;
         this.writeIndex = 0;
         this.readIndex = 0;
@@ -484,7 +490,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static IByteBuffer FromPool()
     {
-        IByteBuffer byteBuffer = Pool.Get();
+        PooledByteBuffer byteBuffer = Pool.Get();
         Debug.Assert(byteBuffer.Size == 0, "PooledByteBuffer.FromPool buffer is not zero size");
         return byteBuffer;
     }
@@ -493,7 +499,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     public static IByteBuffer FromPool(Operation operation)
     {
         PooledByteBuffer pooledByteBuffer = Pool.Get();
-
+       
         Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation) buffer is not zero size");
 
         pooledByteBuffer.WriteUInt(0);
@@ -505,7 +511,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     public static IByteBuffer FromPool(Operation operation, uint requestId)
     {
         PooledByteBuffer pooledByteBuffer = Pool.Get();
-
+        
         Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation, requestId) buffer is not zero size");
 
         pooledByteBuffer.WriteUInt(0);
