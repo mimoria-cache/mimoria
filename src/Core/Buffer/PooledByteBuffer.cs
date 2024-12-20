@@ -441,6 +441,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Retain()
         => Interlocked.Increment(ref this.referenceCount);
 
@@ -457,12 +458,14 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex = originalWriteIndex;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Clear()
     {
         this.writeIndex = 0;
         this.readIndex = 0;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Reset()
     {
         this.referenceCount = 1;
