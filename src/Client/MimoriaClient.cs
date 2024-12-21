@@ -77,15 +77,15 @@ public sealed class MimoriaClient : IMimoriaClient
             return;
         }
 
-        this.connecting = true;
-
-        await this.connectRetryPolicy.ExecuteAsync(async () =>
-        {
             if (password.Length > MaxPasswordLength)
             {
                 throw new ArgumentException($"Password can only be {MaxPasswordLength} characters long");
             }
 
+        this.connecting = true;
+
+        await this.connectRetryPolicy.ExecuteAsync(async () =>
+        {
             await this.mimoriaSocketClient.ConnectAsync(ip, port, cancellationToken);
 
             this.connecting = false;
