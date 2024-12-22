@@ -39,19 +39,26 @@ namespace Varelen.Mimoria.Server.Network
 
         private async Task AcceptAsync()
         {
-            while (this.socket.IsBound)
+            try
             {
-                Socket clientSocket = await this.socket.AcceptAsync();
-                clientSocket.NoDelay = true;
+                while (this.socket.IsBound)
+                {
+                    Socket clientSocket = await this.socket.AcceptAsync();
+                    clientSocket.NoDelay = true;
 
-                Interlocked.Increment(ref this.connections);
+                    Interlocked.Increment(ref this.connections);
 
-                ulong connectionId = Interlocked.Increment(ref this.connectionIdCounter);
-                var tcpConnection = new TcpConnection(connectionId, this, clientSocket, clientSocket.RemoteEndPoint!);
+                    ulong connectionId = Interlocked.Increment(ref this.connectionIdCounter);
+                    var tcpConnection = new TcpConnection(connectionId, this, clientSocket, clientSocket.RemoteEndPoint!);
 
-                this.HandleOpenConnection(tcpConnection);
+                    this.HandleOpenConnection(tcpConnection);
 
-                _ = this.ReceiveAsync(tcpConnection);
+                    _ = this.ReceiveAsync(tcpConnection);
+                }
+            }
+            catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
+            {
+                // Ignore
             }
         }
 

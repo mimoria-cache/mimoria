@@ -11,7 +11,7 @@ namespace Varelen.Mimoria.Server.Network;
 
 public sealed class TcpConnection
 {
-    private const int DefaultBufferSize = 65527;
+    private const int DefaultBufferSize = 65535;
 
     public ulong Id { get; private set; }
     public Socket Socket { get; set; }
