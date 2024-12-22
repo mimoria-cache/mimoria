@@ -108,6 +108,8 @@ namespace Varelen.Mimoria.Server.Network
             }
             catch (Exception)
             {
+                tcpConnection.Disconnect();
+
                 // TODO: What to do? If we ignore other exceptions then they are silently dropped
                 // because we are not awaiting this method
             }
