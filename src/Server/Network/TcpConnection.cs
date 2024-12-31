@@ -21,7 +21,7 @@ public sealed class TcpConnection
     public int ExpectedPacketLength { get; set; }
     public int ReceivedBytes { get; set; }
     public bool Authenticated { get; set; }
-    public EndPoint RemoteEndPoint { get; private set; }
+    public EndPoint RemoteEndPoint { get; }
     public bool Connected => Volatile.Read(ref this.connected);
 
     private readonly AsyncTcpSocketServer tcpSocketServer;

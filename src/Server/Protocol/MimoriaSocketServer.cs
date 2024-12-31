@@ -32,7 +32,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         if (!this.operationHandlers.TryGetValue(operation, out Func<uint, TcpConnection, IByteBuffer, ValueTask>? operationHandler))
         {
             byteBuffer.Dispose();
-            this.logger.LogWarning("Client '{EndPoint}' sent an unsupported operation '{Operation}'", tcpConnection.Socket.RemoteEndPoint, operation);
+            this.logger.LogWarning("Client '{EndPoint}' sent an unsupported operation '{Operation}'", tcpConnection.RemoteEndPoint, operation);
             await SendErrorResponseAsync(tcpConnection, operation, requestId, $"Operation '{operation}' is unsupported");
             tcpConnection.Disconnect();
             return;
