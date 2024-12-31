@@ -5,13 +5,18 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
-using Varelen.Mimoria.Core.Buffer;
+using System.Net;
+
 using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Server.Bully;
 using Varelen.Mimoria.Server.Cache;
+using Varelen.Mimoria.Server.Cluster;
 using Varelen.Mimoria.Server.Network;
 using Varelen.Mimoria.Server.Options;
 using Varelen.Mimoria.Server.Protocol;
 using Varelen.Mimoria.Server.PubSub;
+using Varelen.Mimoria.Server.Replication;
 
 namespace Varelen.Mimoria.Server;
 
@@ -20,42 +25,115 @@ public sealed class MimoriaServer : IMimoriaServer
     private const uint ProtocolVersion = 1;
 
     private readonly ILogger<MimoriaServer> logger;
+    private readonly ILoggerFactory loggerFactory;
     private readonly IOptionsMonitor<ServerOptions> monitor;
     private readonly IPubSubService pubSubService;
-    private readonly IServerIdProvider serverIdProvider;
     private readonly IMimoriaSocketServer mimoriaSocketServer;
     private readonly ICache cache;
+    private readonly IReplicator? replicator;
 
-    private Guid serverId;
+    private readonly ClusterServer? clusterServer;
+    private readonly Dictionary<int, ClusterClient> clusterClients;
+
     private DateTime startDateTime;
+
+    private readonly BullyAlgorithm? bullyAlgorithm;
+    private readonly TaskCompletionSource nodeReadyTaskCompletionSource;
+    private readonly TaskCompletionSource clusterReadyTaskCompletionSource;
+
+    public IBullyAlgorithm? BullyAlgorithm => this.bullyAlgorithm;
 
     public MimoriaServer(
         ILogger<MimoriaServer> logger,
+        ILoggerFactory loggerFactory,
         IOptionsMonitor<ServerOptions> monitor,
         IPubSubService pubSubService,
-        IServerIdProvider serverIdProvider,
         IMimoriaSocketServer mimoriaSocketServer,
         ICache cache)
     {
         this.logger = logger;
+        this.loggerFactory = loggerFactory;
         this.monitor = monitor;
         this.pubSubService = pubSubService;
-        this.serverIdProvider = serverIdProvider;
         this.mimoriaSocketServer = mimoriaSocketServer;
         this.cache = cache;
+        this.clusterClients = [];
+        this.nodeReadyTaskCompletionSource = new TaskCompletionSource();
+        this.clusterReadyTaskCompletionSource = new TaskCompletionSource();
+
+        if (this.monitor.CurrentValue.Cluster is not null)
+        {
+            this.clusterServer = new ClusterServer(this.loggerFactory.CreateLogger<ClusterServer>(), this.monitor.CurrentValue.Cluster?.Port ?? 0, this.monitor.CurrentValue.Cluster?.Nodes?.Length ?? 0);
+            this.clusterServer.AllClientsConnected += HandleAllClientsConnected;
+            this.clusterServer.AliveReceived += HandleAliveReceived;
+            this.clusterServer.Start();
+
+            this.bullyAlgorithm = new BullyAlgorithm(this.loggerFactory.CreateLogger<BullyAlgorithm>(), this.monitor.CurrentValue.Cluster!.Id, this.monitor.CurrentValue.Cluster!.Nodes.Select(n => n.Id).ToArray(), this.clusterServer);
+            this.bullyAlgorithm.LeaderElected += HandleLeaderElected;
+
+            this.logger.LogInformation("In cluster mode, using nodes: '{}'", string.Join(',', this.monitor.CurrentValue.Cluster!.Nodes.Select(n => $"{n.Host}:{n.Port}")));
+
+            this.logger.LogInformation("Using '{Replicator}' replicator", this.monitor.CurrentValue.Cluster.Replication.Type);
+        }
     }
 
-    public void Start()
+    private void HandleAllClientsConnected()
     {
-        this.serverId = this.serverIdProvider.GetServerId();
+        if (!this.nodeReadyTaskCompletionSource.Task.IsCompleted)
+        {
+            this.nodeReadyTaskCompletionSource.SetResult();
+        }
+    }
+
+    private void HandleAliveReceived(int leader)
+    {
+        this.bullyAlgorithm?.HandleAlive(leader);
+    }
+
+    public async Task StartAsync()
+    {
         this.monitor.OnChange(OnOptionsChanged);
 
         this.RegisterOperationHandlers();
 
+        this.startDateTime = DateTime.UtcNow;
+
+        if (this.monitor.CurrentValue.Cluster is not null)
+        {
+            foreach (ServerOptions.Node node in this.monitor.CurrentValue.Cluster.Nodes)
+            {
+                // TODO: Handle DNS error?
+                var addresses = await Dns.GetHostAddressesAsync(node.Host);
+
+                var clusterClient = new ClusterClient(this.loggerFactory.CreateLogger<ClusterClient>(), this.monitor.CurrentValue.Cluster.Id, addresses[0].ToString(), node.Port, this.bullyAlgorithm!, this.cache);
+                await clusterClient.ConnectAsync();
+                
+                this.clusterClients.Add(node.Id, clusterClient);
+            }
+
+            this.logger.LogInformation("Waiting for node to be ready");
+            await this.nodeReadyTaskCompletionSource.Task;
+            this.logger.LogInformation("Node ready");
+
+            _ = this.bullyAlgorithm!.StartAsync();
+
+            this.logger.LogInformation("Waiting for cluster to be ready");
+            await this.clusterReadyTaskCompletionSource.Task;
+            this.logger.LogInformation("Cluster ready");
+        }
+
         this.mimoriaSocketServer.Disconnected += HandleTcpConnectionDisconnected;
         this.mimoriaSocketServer.Start(this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port, this.monitor.CurrentValue.Backlog);
-        this.startDateTime = DateTime.UtcNow;
+
         this.logger.LogInformation("Mimoria server started on {Ip}:{Port}", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
+    }
+
+    private void HandleLeaderElected()
+    {
+        if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
+        {
+            this.clusterReadyTaskCompletionSource.SetResult();
+        }
     }
 
     private void HandleTcpConnectionDisconnected(TcpConnection tcpConnection)
@@ -65,8 +143,27 @@ public sealed class MimoriaServer : IMimoriaServer
 
     public void Stop()
     {
+        if (this.clusterServer is not null)
+        {
+            this.clusterServer.AllClientsConnected -= HandleAllClientsConnected;
+            this.clusterServer.AliveReceived -= HandleAliveReceived;
+            this.clusterServer.Stop();
+        }
+        if (this.bullyAlgorithm is not null)
+        {
+            this.bullyAlgorithm.LeaderElected -= HandleLeaderElected;
+            this.bullyAlgorithm.Stop();
+        }
+        this.mimoriaSocketServer.Disconnected -= HandleTcpConnectionDisconnected;
         this.mimoriaSocketServer.Stop();
         this.pubSubService.Dispose();
+        this.replicator?.Dispose();
+
+        foreach (var (_, clusterClient) in this.clusterClients)
+        {
+            clusterClient.Close();
+        }
+
         this.logger.LogInformation("Mimoria server stopped");
     }
 
@@ -131,7 +228,8 @@ public sealed class MimoriaServer : IMimoriaServer
         responseBuffer.WriteBool(tcpConnection.Authenticated);
         if (tcpConnection.Authenticated)
         {
-            responseBuffer.WriteGuid(this.serverId);
+            responseBuffer.WriteInt(this.monitor.CurrentValue.Cluster?.Id ?? 0);
+            responseBuffer.WriteBool(this.bullyAlgorithm?.IsLeader ?? false);
         }
         responseBuffer.EndPacket();
 
@@ -159,7 +257,7 @@ public sealed class MimoriaServer : IMimoriaServer
         return tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask OnSetString(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask OnSetString(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string? value = byteBuffer.ReadString();
@@ -167,10 +265,15 @@ public sealed class MimoriaServer : IMimoriaServer
 
         this.cache.SetString(key, value, ttlMilliseconds);
 
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateSetStringAsync(key, value, ttlMilliseconds);
+        }
+
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetString, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
-        return tcpConnection.SendAsync(responseBuffer);
+        await tcpConnection.SendAsync(responseBuffer);
     }
 
     private ValueTask OnGetList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)

@@ -101,5 +101,13 @@ public enum Operation : byte
     /// <summary>
     /// Published a payload to a channel.
     /// </summary>
-    Publish = 23
+    Publish = 23,
+
+    // Cluster
+    ClusterLogin = 250,
+    ElectionMessage = 251,
+    AliveMessage = 252,
+    VictoryMessage = 253,
+    HeartbeatMessage = 254,
+    Batch = 255
 }

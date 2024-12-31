@@ -6,6 +6,6 @@ namespace Varelen.Mimoria.Server;
 
 public interface IMimoriaServer
 {
-    void Start();
+    Task StartAsync();
     void Stop();
 }
