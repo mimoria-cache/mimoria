@@ -14,15 +14,15 @@ namespace Varelen.Mimoria.Server.Replication;
 public sealed class AsyncReplicator : IReplicator
 {
     private readonly ClusterServer clusterServer;
-    private readonly ConcurrentQueue<IByteBuffer> buffers;
-    private readonly SemaphoreSlim buffersSemaphore;
+    private readonly ConcurrentQueue<IByteBuffer> operationsBuffers;
+    private readonly SemaphoreSlim operationsBuffersSemaphore;
     private readonly PeriodicTimer flushTimer;
 
     public AsyncReplicator(ClusterServer clusterServer, TimeSpan flushInterval)
     {
         this.clusterServer = clusterServer;
-        this.buffers = new ConcurrentQueue<IByteBuffer>();
-        this.buffersSemaphore = new SemaphoreSlim(initialCount: 1);
+        this.operationsBuffers = new ConcurrentQueue<IByteBuffer>();
+        this.operationsBuffersSemaphore = new SemaphoreSlim(initialCount: 1);
         this.flushTimer = new PeriodicTimer(flushInterval);
 
         _ = this.StartFlushingAsync();
@@ -32,13 +32,19 @@ public sealed class AsyncReplicator : IReplicator
     {
         while (await this.flushTimer.WaitForNextTickAsync())
         {
-            await this.buffersSemaphore.WaitAsync();
+            await this.operationsBuffersSemaphore.WaitAsync();
 
             try
             {
-                if (this.buffers.IsEmpty)
+                if (this.operationsBuffers.IsEmpty)
                 {
                     continue;
+                }
+
+                using IByteBuffer operationsBuffer = PooledByteBuffer.FromPool();
+                foreach (IByteBuffer buffer in this.operationsBuffers)
+                {
+                    operationsBuffer.WriteBytes(buffer.Bytes.AsSpan(0, buffer.Size));
                 }
 
                 // TODO: Is 'Task.WhenAll' still okay if you have many secondary nodes?
@@ -48,14 +54,8 @@ public sealed class AsyncReplicator : IReplicator
 
                     IByteBuffer batch = PooledByteBuffer.FromPool(Operation.Batch, requestId);
 
-                    batch.WriteVarUInt((uint)this.buffers.Count);
-
-                    // TODO: Write buffers only once and reuse it?
-                    foreach (IByteBuffer buffer in this.buffers)
-                    {
-                        batch.WriteBytes(buffer.Bytes.AsSpan(0, buffer.Size));
-                    }
-
+                    batch.WriteVarUInt((uint)this.operationsBuffers.Count);
+                    batch.WriteBytes(operationsBuffer.Bytes.AsSpan(0, operationsBuffer.Size));
                     batch.EndPacket();
 
                     return clusterConnection.Value.SendAndWaitForResponseAsync(requestId, batch).AsTask();
@@ -65,7 +65,7 @@ public sealed class AsyncReplicator : IReplicator
             }
             finally
             {
-                this.buffersSemaphore.Release();
+                this.operationsBuffersSemaphore.Release();
             }
         }
     }
@@ -73,7 +73,7 @@ public sealed class AsyncReplicator : IReplicator
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void ClearBuffers()
     {
-        while (this.buffers.TryDequeue(out IByteBuffer? buffer))
+        while (this.operationsBuffers.TryDequeue(out IByteBuffer? buffer))
         {
             buffer.Dispose();
         }
@@ -81,7 +81,7 @@ public sealed class AsyncReplicator : IReplicator
 
     public async ValueTask ReplicateSetStringAsync(string key, string? value, uint ttlMilliseconds)
     {
-        await this.buffersSemaphore.WaitAsync();
+        await this.operationsBuffersSemaphore.WaitAsync();
 
         try
         {
@@ -91,18 +91,18 @@ public sealed class AsyncReplicator : IReplicator
             byteBuffer.WriteString(value);
             byteBuffer.WriteUInt(ttlMilliseconds);
 
-            this.buffers.Enqueue(byteBuffer);
+            this.operationsBuffers.Enqueue(byteBuffer);
         }
         finally
         {
-            this.buffersSemaphore.Release();
+            this.operationsBuffersSemaphore.Release();
         }
     }
 
     public void Dispose()
     {
         this.flushTimer.Dispose();
-        this.buffersSemaphore.Dispose();
+        this.operationsBuffersSemaphore.Dispose();
 
         // TODO: How to make sure remaining buffers are replicated, or ignore it?
         this.ClearBuffers();
