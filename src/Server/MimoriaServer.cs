@@ -68,7 +68,13 @@ public sealed class MimoriaServer : IMimoriaServer
             this.clusterServer.AliveReceived += HandleAliveReceived;
             this.clusterServer.Start();
 
-            this.bullyAlgorithm = new BullyAlgorithm(this.loggerFactory.CreateLogger<BullyAlgorithm>(), this.monitor.CurrentValue.Cluster!.Id, this.monitor.CurrentValue.Cluster!.Nodes.Select(n => n.Id).ToArray(), this.clusterServer);
+            this.bullyAlgorithm = new BullyAlgorithm(
+                this.loggerFactory.CreateLogger<BullyAlgorithm>(),
+                this.monitor.CurrentValue.Cluster!.Id,
+                this.monitor.CurrentValue.Cluster!.Nodes.Select(n => n.Id).ToArray(),
+                this.clusterServer,
+                TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderHeartbeatIntervalMs),
+                TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderMissingTimeoutMs));
             this.bullyAlgorithm.LeaderElected += HandleLeaderElected;
 
             this.logger.LogInformation("In cluster mode, using nodes: '{}'", string.Join(',', this.monitor.CurrentValue.Cluster!.Nodes.Select(n => $"{n.Host}:{n.Port}")));

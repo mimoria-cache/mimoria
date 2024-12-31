@@ -15,10 +15,14 @@ namespace Varelen.Mimoria.Server.Bully;
 /// </summary>
 public sealed class BullyAlgorithm : IBullyAlgorithm
 {
+    private const int MissingLeaderCheckIntervalMs = 500;
+
     private readonly ILogger<BullyAlgorithm> logger;
     private readonly int id;
     private readonly int[] nodeIds;
     private readonly ClusterServer clusterServer;
+    private readonly TimeSpan leaderHeartbeatInterval;
+    private readonly TimeSpan leaderMissingTimeout;
     private readonly PeriodicTimer periodicTimer;
 
     private DateTime lastReceivedHeartbeat;
@@ -31,7 +35,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
     public bool IsLeader { get; private set; }
 
-    private bool IsLeaderMissing => DateTime.Now - this.lastReceivedHeartbeat >= TimeSpan.FromSeconds(2);
+    private bool IsLeaderMissing => DateTime.Now - this.lastReceivedHeartbeat >= this.leaderMissingTimeout;
 
     public int Leader {  get; private set; }
 
@@ -39,13 +43,17 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         ILogger<BullyAlgorithm> logger,
         int id,
         int[] nodeIds,
-        ClusterServer clusterServer)
+        ClusterServer clusterServer,
+        TimeSpan leaderHeartbeatInterval,
+        TimeSpan leaderMissingTimeout)
     {
         this.logger = logger;
         this.id = id;
         this.nodeIds = nodeIds;
         this.clusterServer = clusterServer;
-        this.periodicTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(500));
+        this.leaderHeartbeatInterval = leaderHeartbeatInterval;
+        this.leaderMissingTimeout = leaderMissingTimeout;
+        this.periodicTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(MissingLeaderCheckIntervalMs));
         this.IsLeader = false;
         this.lastReceivedHeartbeat = DateTime.Now;
         this.receivedAlives = 0;
@@ -167,7 +175,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
                 await clusterConnection.SendAsync(heartbeatMessageBuffer);
             }
 
-            await Task.Delay(1000);
+            await Task.Delay(this.leaderHeartbeatInterval);
         }
     }
 

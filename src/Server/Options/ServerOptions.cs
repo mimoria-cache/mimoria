@@ -19,6 +19,7 @@ public class ServerOptions
         public int Port { get; set; } = 6566;
         public Node[] Nodes { get; set; } = [];
         public Replication Replication { get; set; } = new Replication();
+        public ElectionOptions Election { get; set; } = new ElectionOptions();
     }
 
     public class Node
@@ -32,6 +33,12 @@ public class ServerOptions
     {
         public ReplicationType Type { get; set; } = ReplicationType.Sync;
         public int? IntervalMilliseconds { get; set; } = null;
+    }
+
+    public class ElectionOptions
+    {
+        public int LeaderHeartbeatIntervalMs { get; set; } = 1000;
+        public int LeaderMissingTimeoutMs { get; set; } = 3000;
     }
 
     public enum ReplicationType
