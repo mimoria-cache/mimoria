@@ -5,6 +5,7 @@
 using System.Net;
 using System.Net.Sockets;
 
+using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Server.Network;
@@ -35,7 +36,7 @@ public sealed class TcpConnection
     {
         try
         {
-            _ = await this.Socket.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size), SocketFlags.None);
+            await this.Socket.SendAllAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {

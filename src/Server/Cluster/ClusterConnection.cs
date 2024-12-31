@@ -129,8 +129,7 @@ public sealed class ClusterConnection
     {
         try
         {
-            // TODO: Handle if sent is less than
-            _ = await this.socket.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
+            await this.socket.SendAllAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
@@ -150,8 +149,7 @@ public sealed class ClusterConnection
             bool added = this.waitingResponses.TryAdd(requestId, taskCompletionSource);
             Debug.Assert(added, "Task completion was not added to dictionary");
 
-            // TODO: Handle if sent is less than
-            _ = await this.socket.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
+            await this.socket.SendAllAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
 
             await taskCompletionSource.Task;
         }

@@ -60,7 +60,7 @@ public sealed class ClusterClient
                 byteBuffer.WriteInt(this.id);
                 byteBuffer.EndPacket();
 
-                await this.socket.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
+                await this.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
 
                 _ = ReceiveAsync();
             }
@@ -123,7 +123,7 @@ public sealed class ClusterClient
                             aliveBuffer.WriteInt(this.bullyAlgorithm.Leader);
                             aliveBuffer.EndPacket();
 
-                            await this.socket.SendAsync(aliveBuffer.Bytes.AsMemory(0, aliveBuffer.Size));
+                            await this.SendAsync(aliveBuffer.Bytes.AsMemory(0, aliveBuffer.Size));
                             break;
                         }
                     case Operation.VictoryMessage:
@@ -183,7 +183,7 @@ public sealed class ClusterClient
                             using var batchBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
                             batchBuffer.EndPacket();
 
-                            await this.socket.SendAsync(batchBuffer.Bytes.AsMemory(0, batchBuffer.Size));
+                            await this.SendAsync(batchBuffer.Bytes.AsMemory(0, batchBuffer.Size));
                             break;
                         }
                 }
@@ -202,6 +202,9 @@ public sealed class ClusterClient
             this.logger.LogError(exception, "Unexpected error while receiving");
         }
     }
+
+    private ValueTask SendAsync(Memory<byte> buffer)
+        => this.socket!.SendAllAsync(buffer);
 
     public void Disconnect(bool reconnect = true)
     {

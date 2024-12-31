@@ -3,9 +3,10 @@
 // SPDX-License-Identifier: MIT
 
 using System.Buffers.Binary;
-using System.Net.Sockets;
 using System.Net;
+using System.Net.Sockets;
 
+using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Client.Network;
@@ -67,7 +68,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
     {
         try
         {
-            _ = await this.socket.SendAsync(new ReadOnlyMemory<byte>(byteBuffer.Bytes, 0, byteBuffer.Size), SocketFlags.None, cancellationToken);
+            await this.socket.SendAllAsync(new ReadOnlyMemory<byte>(byteBuffer.Bytes, 0, byteBuffer.Size), cancellationToken);
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
