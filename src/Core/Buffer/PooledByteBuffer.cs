@@ -41,12 +41,12 @@ public sealed class PooledByteBuffer : IByteBuffer
     private readonly string allocatedStackTrace;
 #endif
 
-    public PooledByteBuffer()
+    public PooledByteBuffer(int bufferSize = DefaultBufferSize)
     {
         this.readIndex = 0;
         this.writeIndex = 0;
         this.referenceCount = 1;
-        this.buffer = new byte[DefaultBufferSize];
+        this.buffer = new byte[bufferSize];
 #if DEBUG
         this.allocatedStackTrace = new StackTrace().ToString();
 #endif
