@@ -73,6 +73,10 @@ public sealed class MimoriaServer : IMimoriaServer
 
             this.logger.LogInformation("In cluster mode, using nodes: '{}'", string.Join(',', this.monitor.CurrentValue.Cluster!.Nodes.Select(n => $"{n.Host}:{n.Port}")));
 
+            this.replicator = this.monitor.CurrentValue.Cluster.Replication.Type == ServerOptions.ReplicationType.Sync
+                ? new SyncReplicator(this.clusterServer, this.bullyAlgorithm)
+                : new AsyncReplicator(clusterServer, TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Replication.IntervalMilliseconds!.Value));
+
             this.logger.LogInformation("Using '{Replicator}' replicator", this.monitor.CurrentValue.Cluster.Replication.Type);
         }
     }
