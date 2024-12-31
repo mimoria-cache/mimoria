@@ -28,9 +28,15 @@ public sealed class MimoriaClient : IMimoriaClient
     private readonly ushort port;
     private readonly string password;
 
+    private bool isPrimary;
+
     private volatile bool connecting;
 
-    public Guid? ServerId { get; private set; }
+    public int? ServerId { get; private set; }
+
+    public bool IsConnected => this.mimoriaSocketClient.IsConnected;
+
+    public bool IsPrimary => this.isPrimary;
 
     public MimoriaClient(string ip, ushort port, string password = "")
         : this(ip, port, password, new MimoriaSocketClient())
@@ -57,6 +63,7 @@ public sealed class MimoriaClient : IMimoriaClient
         this.mimoriaSocketClient = mimoriaSocketClient;
         this.mimoriaSocketClient.Disconnected += HandleDisconnected;
         this.connectRetryPolicy = connectRetryPolicy;
+        this.isPrimary = false;
     }
 
     private void HandleDisconnected()
@@ -72,21 +79,21 @@ public sealed class MimoriaClient : IMimoriaClient
     /// <inheritdoc />
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        if (this.mimoriaSocketClient.IsConnected || connecting)
+        if (this.mimoriaSocketClient.IsConnected || this.connecting)
         {
             return;
         }
 
-            if (password.Length > MaxPasswordLength)
-            {
-                throw new ArgumentException($"Password can only be {MaxPasswordLength} characters long");
-            }
+        if (this.password.Length > MaxPasswordLength)
+        {
+            throw new ArgumentException($"Password can only be {MaxPasswordLength} characters long");
+        }
 
         this.connecting = true;
 
         await this.connectRetryPolicy.ExecuteAsync(async () =>
         {
-            await this.mimoriaSocketClient.ConnectAsync(ip, port, cancellationToken);
+            await this.mimoriaSocketClient.ConnectAsync(this.ip, this.port, cancellationToken);
 
             this.connecting = false;
 
@@ -94,7 +101,7 @@ public sealed class MimoriaClient : IMimoriaClient
 
             IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Login, requestId);
             byteBuffer.WriteVarUInt(ProtocolVersion);
-            byteBuffer.WriteString(password);
+            byteBuffer.WriteString(this.password);
             byteBuffer.EndPacket();
 
             using IByteBuffer response =
@@ -103,7 +110,8 @@ public sealed class MimoriaClient : IMimoriaClient
             {
                 throw new MimoriaConnectionException($"Login to Mimoria instance at {ip}:{port} failed. Given password did not match configured password");
             }
-            this.ServerId = response.ReadGuid();
+            this.ServerId = response.ReadInt();
+            this.isPrimary = response.ReadBool();
             return true;
         }, cancellationToken);
     }

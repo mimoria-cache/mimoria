@@ -15,7 +15,11 @@ public interface IMimoriaClient
     /// 
     /// This is only set after the client successfully connected and authenticated.
     /// </summary>
-    Guid? ServerId { get; }
+    int? ServerId { get; }
+
+    bool IsConnected { get; }
+
+    bool IsPrimary { get; }
 
     /// <summary>
     /// Connects to the remote Mimoria instance.

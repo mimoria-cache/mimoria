@@ -6,7 +6,7 @@ namespace Varelen.Mimoria.Client.ConsistentHash;
 
 public interface IConsistentHashing
 {
-    void AddServerId(Guid serverId);
-    void RemoveServerId(Guid serverId);
-    Guid GetServerId(string key);
+    void AddServerId(int serverId);
+    void RemoveServerId(int serverId);
+    int GetServerId(string key);
 }

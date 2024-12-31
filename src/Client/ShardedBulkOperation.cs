@@ -9,20 +9,20 @@ namespace Varelen.Mimoria.Client;
 public class ShardedBulkOperation : IBulkOperation, IDisposable
 {
     private readonly ShardedMimoriaClient shardedMimoriaClient;
-    private readonly Dictionary<Guid, BulkOperation> bulkOperations;
+    private readonly Dictionary<int, BulkOperation> bulkOperations;
 
-    internal Dictionary<Guid, BulkOperation> BulkOperations => this.bulkOperations;
+    internal Dictionary<int, BulkOperation> BulkOperations => this.bulkOperations;
 
     internal ShardedBulkOperation(ShardedMimoriaClient shardedMimoriaClient)
     {
         this.shardedMimoriaClient = shardedMimoriaClient;
-        this.bulkOperations = new Dictionary<Guid, BulkOperation>();
+        this.bulkOperations = new Dictionary<int, BulkOperation>();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private BulkOperation GetOrAddBulkOperation(string key)
     {
-        Guid serverId = this.shardedMimoriaClient.GetServerId(key);
+        int serverId = this.shardedMimoriaClient.GetServerId(key);
 
         if (this.bulkOperations.TryGetValue(serverId, out BulkOperation? byteBuffer))
         {

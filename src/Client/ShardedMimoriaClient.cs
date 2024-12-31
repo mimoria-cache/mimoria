@@ -13,13 +13,17 @@ namespace Varelen.Mimoria.Client;
 
 public sealed class ShardedMimoriaClient : IShardedMimoriaClient
 {
-    private readonly Dictionary<Guid, IMimoriaClient> idMimoriaClients;
+    private readonly Dictionary<int, IMimoriaClient> idMimoriaClients;
     private readonly IReadOnlyList<IMimoriaClient> mimoriaClients;
     private readonly IConsistentHashing consistentHashing;
 
-    public Guid? ServerId => null;
+    public int? ServerId => null;
 
     public IReadOnlyList<IMimoriaClient> MimoriaClients => mimoriaClients;
+
+    public bool IsConnected => false;
+
+    public bool IsPrimary => true;
 
     public ShardedMimoriaClient(string password, params IPEndPoint[] ipEndPoints)
         : this(new ConsistentHashing(new Murmur3Hasher()), password, ipEndPoints)
@@ -34,7 +38,7 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
             throw new ArgumentException("At least two endpoints required", nameof(ipEndPoints));
         }
 
-        this.idMimoriaClients = new Dictionary<Guid, IMimoriaClient>();
+        this.idMimoriaClients = new Dictionary<int, IMimoriaClient>();
         this.consistentHashing = consistentHashing;
         this.mimoriaClients = ipEndPoints
             .Select(ipEndPoint => new MimoriaClient(ipEndPoint.Address.ToString(), (ushort)ipEndPoint.Port, password))
@@ -156,23 +160,14 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     public async Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default)
         => await this.GetStatsAsync(0, cancellationToken);
 
-    public async Task<Stats> GetStatsAsync(int index, CancellationToken cancellationToken = default)
+    public async Task<Stats> GetStatsAsync(int serverId, CancellationToken cancellationToken = default)
     {
-        if (index < 0 || index > this.mimoriaClients.Count - 1)
+        if (!this.idMimoriaClients.TryGetValue(serverId, out IMimoriaClient? mimoriaClient))
         {
-            throw new ArgumentOutOfRangeException(nameof(index));
+            throw new ArgumentOutOfRangeException(nameof(serverId));
         }
 
-        IMimoriaClient mimoriaClient = this.mimoriaClients[index];
         return await mimoriaClient.GetStatsAsync(cancellationToken);
-    }
-
-    public async Task<Stats> GetStatsAsync(Guid serverId, CancellationToken cancellationToken = default)
-    {
-        IMimoriaClient? mimoriaClient = this.mimoriaClients.FirstOrDefault(mc => mc.ServerId == serverId);
-        return mimoriaClient is not null
-            ? await mimoriaClient.GetStatsAsync(cancellationToken)
-            : throw new ArgumentNullException(nameof(serverId));
     }
 
     public Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default)
@@ -246,16 +241,16 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         return responses;
     }
 
-    internal MimoriaClient GetMimoriaClient(Guid serverId)
+    internal MimoriaClient GetMimoriaClient(int serverId)
         => (MimoriaClient)this.idMimoriaClients[serverId];
 
-    internal Guid GetServerId(string key)
+    internal int GetServerId(string key)
         => this.consistentHashing.GetServerId(key);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IMimoriaClient GetMimoriaClient(string key)
     {
-        Guid serverId = this.consistentHashing.GetServerId(key);
+        int serverId = this.consistentHashing.GetServerId(key);
         return this.idMimoriaClients[serverId];
     }
 }

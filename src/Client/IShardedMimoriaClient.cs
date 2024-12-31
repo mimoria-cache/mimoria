@@ -8,7 +8,5 @@ public interface IShardedMimoriaClient : IMimoriaClient
 {
     public IReadOnlyList<IMimoriaClient> MimoriaClients { get; }
 
-    Task<Stats> GetStatsAsync(int index, CancellationToken cancellationToken = default);
-
-    Task<Stats> GetStatsAsync(Guid serverId, CancellationToken cancellationToken = default);
+    Task<Stats> GetStatsAsync(int serverId, CancellationToken cancellationToken = default);
 }

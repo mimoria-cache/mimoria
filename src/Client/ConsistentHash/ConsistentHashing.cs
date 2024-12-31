@@ -13,28 +13,28 @@ public sealed class ConsistentHashing : IConsistentHashing
 {
     private readonly ReaderWriterLockSlim readerWriterLockSlim = new();
     private readonly IHasher hasher;
-    private readonly Dictionary<uint, Guid> hashServerIds;
+    private readonly Dictionary<uint, int> hashServerIds;
     private readonly SortedSet<uint> hashRange;
 
     public ConsistentHashing(IHasher hasher)
-        : this(hasher, Enumerable.Empty<Guid>())
+        : this(hasher, Enumerable.Empty<int>())
     {
 
     }
 
-    public ConsistentHashing(IHasher hasher, IEnumerable<Guid> serverIds)
+    public ConsistentHashing(IHasher hasher, IEnumerable<int> serverIds)
     {
         this.hasher = hasher;
-        this.hashServerIds = new Dictionary<uint, Guid>();
+        this.hashServerIds = new Dictionary<uint, int>();
         this.hashRange = new SortedSet<uint>();
         
-        foreach (Guid serverId in serverIds)
+        foreach (int serverId in serverIds)
         {
             this.AddServerId(serverId);
         }
     }
 
-    public void AddServerId(Guid serverId)
+    public void AddServerId(int serverId)
     {
         this.readerWriterLockSlim.EnterWriteLock();
 
@@ -51,7 +51,7 @@ public sealed class ConsistentHashing : IConsistentHashing
         }
     }
 
-    public void RemoveServerId(Guid serverId)
+    public void RemoveServerId(int serverId)
     {
         this.readerWriterLockSlim.EnterWriteLock();
 
@@ -68,7 +68,7 @@ public sealed class ConsistentHashing : IConsistentHashing
         }
     }
 
-    public Guid GetServerId(string key)
+    public int GetServerId(string key)
     {
         this.readerWriterLockSlim.EnterReadLock();
 
