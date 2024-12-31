@@ -24,7 +24,7 @@ public sealed class ClusterConnection
     private readonly ClusterServer clusterServer;
     private readonly Socket socket;
     private readonly ConcurrentDictionary<uint, TaskCompletionSource> waitingResponses;
-    private readonly IByteBuffer buffer;
+    private readonly PooledByteBuffer buffer;
     private bool connected;
     private uint requestIdCounter;
     private int expectedPacketLength;
@@ -47,8 +47,7 @@ public sealed class ClusterConnection
         this.connected = true;
         this.waitingResponses = [];
         this.requestIdCounter = 0;
-        // TODO: Larger byte buffer so it does not need to resize
-        this.buffer = PooledByteBuffer.FromPool();
+        this.buffer = new PooledByteBuffer(DefaultBufferSize);
     }
 
     public async Task ReceiveAsync()

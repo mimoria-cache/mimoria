@@ -26,8 +26,7 @@ public sealed class ClusterClient
     private readonly ICache cache;
     private readonly IPEndPoint remoteEndPoint;
 
-    // TODO: Larger byte buffer so it does not need to resize
-    private readonly IByteBuffer buffer = PooledByteBuffer.FromPool();
+    private readonly PooledByteBuffer buffer = new(DefaultBufferSize);
 
     private int expectedPacketLength;
     private int receivedBytes;
