@@ -7,9 +7,9 @@ namespace Varelen.Mimoria.Server.Options;
 public class MimoriaOptions
 {
     public string Ip { get; set; } = "127.0.0.1";
-    public ushort Port { get; set; } = 6565;
+    public int Port { get; set; } = 6565;
     public ushort Backlog { get; set; } = 50;
-    public string Password { get; set; } = "";
+    public string? Password { get; set; }
 
     public ClusterOptions? Cluster { get; set; }
 
@@ -18,19 +18,19 @@ public class MimoriaOptions
         public int Id { get; set; }
         public int Port { get; set; } = 6566;
         public string? Password { get; set; }
-        public Node[] Nodes { get; set; } = [];
-        public Replication Replication { get; set; } = new Replication();
+        public NodeOptions[] Nodes { get; set; } = [];
+        public ReplicationOptions Replication { get; set; } = new ReplicationOptions();
         public ElectionOptions Election { get; set; } = new ElectionOptions();
     }
 
-    public class Node
+    public class NodeOptions
     {
         public int Id { get; set; }
         public string Host { get; set; } = "127.0.0.1";
         public int Port { get; set; }
     }
 
-    public class Replication
+    public class ReplicationOptions
     {
         public ReplicationType Type { get; set; } = ReplicationType.Sync;
         public int? IntervalMilliseconds { get; set; } = null;
