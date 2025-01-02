@@ -27,11 +27,11 @@ public sealed class ClusterServer
     public event MessageEvent? AliveReceived;
     public event ClusterEvent? AllClientsConnected;
 
-    public ClusterServer(ILogger<ClusterServer> logger, int port, int expectedClients, string password)
+    public ClusterServer(ILogger<ClusterServer> logger, string ip, int port, int expectedClients, string password)
     {
         this.logger = logger;
         this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        this.socket.Bind(new IPEndPoint(IPAddress.Any, port));
+        this.socket.Bind(new IPEndPoint(IPAddress.Parse(ip), port));
         this.socket.Listen(10);
         this.clients = [];
         this.expectedClients = expectedClients;

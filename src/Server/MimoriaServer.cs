@@ -63,7 +63,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
         if (this.monitor.CurrentValue.Cluster is not null)
         {
-            this.clusterServer = new ClusterServer(this.loggerFactory.CreateLogger<ClusterServer>(), this.monitor.CurrentValue.Cluster?.Port ?? 0, this.monitor.CurrentValue.Cluster?.Nodes?.Length ?? 0, this.monitor.CurrentValue.Cluster?.Password!);
+            this.clusterServer = new ClusterServer(this.loggerFactory.CreateLogger<ClusterServer>(), this.monitor.CurrentValue.Cluster.Ip, this.monitor.CurrentValue.Cluster?.Port ?? 0, this.monitor.CurrentValue.Cluster?.Nodes?.Length ?? 0, this.monitor.CurrentValue.Cluster?.Password!);
             this.clusterServer.AllClientsConnected += HandleAllClientsConnected;
             this.clusterServer.AliveReceived += HandleAliveReceived;
             this.clusterServer.Start();
@@ -110,7 +110,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
         if (this.monitor.CurrentValue.Cluster is not null)
         {
-            foreach (MimoriaOptions.Node node in this.monitor.CurrentValue.Cluster.Nodes)
+            foreach (MimoriaOptions.NodeOptions node in this.monitor.CurrentValue.Cluster.Nodes)
             {
                 // TODO: Handle DNS error?
                 var addresses = await Dns.GetHostAddressesAsync(node.Host);
@@ -133,7 +133,7 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         this.mimoriaSocketServer.Disconnected += HandleTcpConnectionDisconnected;
-        this.mimoriaSocketServer.Start(this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port, this.monitor.CurrentValue.Backlog);
+        this.mimoriaSocketServer.Start(this.monitor.CurrentValue.Ip, (ushort)this.monitor.CurrentValue.Port, this.monitor.CurrentValue.Backlog);
 
         this.logger.LogInformation("Mimoria server started on {Ip}:{Port}", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
     }
