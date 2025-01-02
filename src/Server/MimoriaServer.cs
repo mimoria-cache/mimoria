@@ -63,7 +63,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
         if (this.monitor.CurrentValue.Cluster is not null)
         {
-            this.clusterServer = new ClusterServer(this.loggerFactory.CreateLogger<ClusterServer>(), this.monitor.CurrentValue.Cluster?.Port ?? 0, this.monitor.CurrentValue.Cluster?.Nodes?.Length ?? 0);
+            this.clusterServer = new ClusterServer(this.loggerFactory.CreateLogger<ClusterServer>(), this.monitor.CurrentValue.Cluster?.Port ?? 0, this.monitor.CurrentValue.Cluster?.Nodes?.Length ?? 0, this.monitor.CurrentValue.Cluster?.Password!);
             this.clusterServer.AllClientsConnected += HandleAllClientsConnected;
             this.clusterServer.AliveReceived += HandleAliveReceived;
             this.clusterServer.Start();
@@ -115,7 +115,7 @@ public sealed class MimoriaServer : IMimoriaServer
                 // TODO: Handle DNS error?
                 var addresses = await Dns.GetHostAddressesAsync(node.Host);
 
-                var clusterClient = new ClusterClient(this.loggerFactory.CreateLogger<ClusterClient>(), this.monitor.CurrentValue.Cluster.Id, addresses[0].ToString(), node.Port, this.bullyAlgorithm!, this.cache);
+                var clusterClient = new ClusterClient(this.loggerFactory.CreateLogger<ClusterClient>(), this.monitor.CurrentValue.Cluster.Id, addresses[0].ToString(), node.Port, this.bullyAlgorithm!, this.cache, this.monitor.CurrentValue.Cluster.Password!);
                 await clusterClient.ConnectAsync();
                 
                 this.clusterClients.Add(node.Id, clusterClient);

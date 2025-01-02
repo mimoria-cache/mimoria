@@ -17,6 +17,7 @@ public class MimoriaOptions
     {
         public int Id { get; set; }
         public int Port { get; set; } = 6566;
+        public string? Password { get; set; }
         public Node[] Nodes { get; set; } = [];
         public Replication Replication { get; set; } = new Replication();
         public ElectionOptions Election { get; set; } = new ElectionOptions();

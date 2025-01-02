@@ -24,6 +24,7 @@ public sealed class ClusterClient
     private Socket? socket;
     private readonly BullyAlgorithm bullyAlgorithm;
     private readonly ICache cache;
+    private readonly string password;
     private readonly IPEndPoint remoteEndPoint;
 
     private readonly PooledByteBuffer buffer = new(DefaultBufferSize);
@@ -34,12 +35,13 @@ public sealed class ClusterClient
 
     public bool Connected => Volatile.Read(ref this.connected);
 
-    public ClusterClient(ILogger<ClusterClient> logger, int id, string ip, int port, BullyAlgorithm bullyAlgorithm, ICache cache)
+    public ClusterClient(ILogger<ClusterClient> logger, int id, string ip, int port, BullyAlgorithm bullyAlgorithm, ICache cache, string password)
     {
         this.logger = logger;
         this.id = id;
         this.bullyAlgorithm = bullyAlgorithm;
         this.cache = cache;
+        this.password = password;
         this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
     }
 
@@ -56,6 +58,7 @@ public sealed class ClusterClient
                 this.connected = true;
 
                 using IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.ClusterLogin, requestId: 0);
+                byteBuffer.WriteString(this.password);
                 byteBuffer.WriteInt(this.id);
                 byteBuffer.EndPacket();
 

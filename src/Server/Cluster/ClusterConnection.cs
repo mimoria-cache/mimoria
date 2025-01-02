@@ -91,6 +91,13 @@ public sealed class ClusterConnection
                 switch (operation)
                 {
                     case Operation.ClusterLogin:
+                        string receivedPassword = byteBuffer.ReadString()!;
+                        if (!receivedPassword.Equals(this.clusterServer.password, StringComparison.Ordinal))
+                        {
+                            this.Disconnect();
+                            return;
+                        }
+
                         this.Id = byteBuffer.ReadInt();
 
                         this.Authenticated?.Invoke(this);

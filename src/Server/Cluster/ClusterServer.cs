@@ -20,13 +20,14 @@ public sealed class ClusterServer
     private readonly Socket socket;
     private readonly ConcurrentDictionary<int, ClusterConnection> clients;
     private readonly int expectedClients;
+    internal readonly string password;
 
     public ConcurrentDictionary<int, ClusterConnection> Clients => clients;
 
     public event MessageEvent? AliveReceived;
     public event ClusterEvent? AllClientsConnected;
 
-    public ClusterServer(ILogger<ClusterServer> logger, int port, int expectedClients)
+    public ClusterServer(ILogger<ClusterServer> logger, int port, int expectedClients, string password)
     {
         this.logger = logger;
         this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -34,6 +35,7 @@ public sealed class ClusterServer
         this.socket.Listen(10);
         this.clients = [];
         this.expectedClients = expectedClients;
+        this.password = password;
     }
 
     public void Start()
