@@ -4,7 +4,7 @@
 
 namespace Varelen.Mimoria.Server.Options;
 
-public class ServerOptions
+public class MimoriaOptions
 {
     public string Ip { get; set; } = "127.0.0.1";
     public ushort Port { get; set; } = 6565;

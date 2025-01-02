@@ -26,7 +26,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private readonly ILogger<MimoriaServer> logger;
     private readonly ILoggerFactory loggerFactory;
-    private readonly IOptionsMonitor<ServerOptions> monitor;
+    private readonly IOptionsMonitor<MimoriaOptions> monitor;
     private readonly IPubSubService pubSubService;
     private readonly IMimoriaSocketServer mimoriaSocketServer;
     private readonly ICache cache;
@@ -46,7 +46,7 @@ public sealed class MimoriaServer : IMimoriaServer
     public MimoriaServer(
         ILogger<MimoriaServer> logger,
         ILoggerFactory loggerFactory,
-        IOptionsMonitor<ServerOptions> monitor,
+        IOptionsMonitor<MimoriaOptions> monitor,
         IPubSubService pubSubService,
         IMimoriaSocketServer mimoriaSocketServer,
         ICache cache)
@@ -79,7 +79,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
             this.logger.LogInformation("In cluster mode, using nodes: '{}'", string.Join(',', this.monitor.CurrentValue.Cluster!.Nodes.Select(n => $"{n.Host}:{n.Port}")));
 
-            this.replicator = this.monitor.CurrentValue.Cluster.Replication.Type == ServerOptions.ReplicationType.Sync
+            this.replicator = this.monitor.CurrentValue.Cluster.Replication.Type == MimoriaOptions.ReplicationType.Sync
                 ? new SyncReplicator(this.clusterServer, this.bullyAlgorithm)
                 : new AsyncReplicator(clusterServer, TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Replication.IntervalMilliseconds!.Value));
 
@@ -110,7 +110,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
         if (this.monitor.CurrentValue.Cluster is not null)
         {
-            foreach (ServerOptions.Node node in this.monitor.CurrentValue.Cluster.Nodes)
+            foreach (MimoriaOptions.Node node in this.monitor.CurrentValue.Cluster.Nodes)
             {
                 // TODO: Handle DNS error?
                 var addresses = await Dns.GetHostAddressesAsync(node.Host);
@@ -177,7 +177,7 @@ public sealed class MimoriaServer : IMimoriaServer
         this.logger.LogInformation("Mimoria server stopped");
     }
 
-    private void OnOptionsChanged(ServerOptions cacheServerOptions)
+    private void OnOptionsChanged(MimoriaOptions cacheServerOptions)
     {
         this.logger.LogInformation("ServerOptions were reloaded");
     }
