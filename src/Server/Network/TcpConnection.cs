@@ -68,7 +68,7 @@ public sealed class TcpConnection
             this.Socket.Close();
             this.ByteBuffer.Dispose();
 
-            this.tcpSocketServer.DecrementConnections(this);
+            this.tcpSocketServer.HandleCloseConnectionInternal(this);
         }
     }
 

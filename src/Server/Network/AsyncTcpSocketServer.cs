@@ -3,143 +3,153 @@
 // SPDX-License-Identifier: MIT
 
 using System.Buffers.Binary;
-using System.Net.Sockets;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
+using System.Net.Sockets;
 
 using Varelen.Mimoria.Core.Buffer;
 
-namespace Varelen.Mimoria.Server.Network
+namespace Varelen.Mimoria.Server.Network;
+
+public abstract class AsyncTcpSocketServer : ISocketServer
 {
-    public abstract class AsyncTcpSocketServer : ISocketServer
+    private readonly Socket socket;
+    private readonly ConcurrentDictionary<ulong, TcpConnection> connections;
+    private ulong connectionIdCounter;
+
+    public ulong Connections => (ulong)this.connections.Count;
+
+    protected AsyncTcpSocketServer()
     {
-        private readonly Socket socket;
-        private ulong connections;
-        private ulong connectionIdCounter;
-
-        public ulong Connections => Interlocked.Read(ref this.connections);
-
-        protected AsyncTcpSocketServer()
+        // TODO: Keep alive
+        this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
         {
-            // TODO: Keep alive
-            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            NoDelay = true
+        };
+        this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        this.connections = [];
+        // TODO: Dual mode
+    }
+
+    public void Start(string ip, ushort port, ushort backlog = 50)
+    {
+        this.socket.Bind(new IPEndPoint(IPAddress.Parse(ip), port));
+        this.socket.Listen(backlog);
+
+        _ = this.AcceptAsync();
+    }
+
+    private async Task AcceptAsync()
+    {
+        try
+        {
+            while (this.socket.IsBound)
             {
-                NoDelay = true
-            };
-            this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-            // TODO: Dual mode
+                Socket clientSocket = await this.socket.AcceptAsync();
+                clientSocket.NoDelay = true;
+
+                ulong connectionId = Interlocked.Increment(ref this.connectionIdCounter);
+                var tcpConnection = new TcpConnection(connectionId, this, clientSocket, clientSocket.RemoteEndPoint!);
+
+                bool added = this.connections.TryAdd(connectionId, tcpConnection);
+                Debug.Assert(added, $"Unable to add new connection with id '{connectionId}'");
+
+                this.HandleOpenConnection(tcpConnection);
+
+                _ = this.ReceiveAsync(tcpConnection);
+            }
         }
-
-        public void Start(string ip, ushort port, ushort backlog = 50)
+        catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
-            this.socket.Bind(new IPEndPoint(IPAddress.Parse(ip), port));
-            this.socket.Listen(backlog);
-
-            _ = this.AcceptAsync();
+            // Ignore
         }
+    }
 
-        private async Task AcceptAsync()
+    private async Task ReceiveAsync(TcpConnection tcpConnection)
+    {
+        try
         {
-            try
+            while (tcpConnection.Connected)
             {
-                while (this.socket.IsBound)
+                int received = await tcpConnection.Socket.ReceiveAsync(tcpConnection.ReceiveBuffer.AsMemory(), SocketFlags.None);
+                if (received == 0)
                 {
-                    Socket clientSocket = await this.socket.AcceptAsync();
-                    clientSocket.NoDelay = true;
-
-                    Interlocked.Increment(ref this.connections);
-
-                    ulong connectionId = Interlocked.Increment(ref this.connectionIdCounter);
-                    var tcpConnection = new TcpConnection(connectionId, this, clientSocket, clientSocket.RemoteEndPoint!);
-
-                    this.HandleOpenConnection(tcpConnection);
-
-                    _ = this.ReceiveAsync(tcpConnection);
+                    tcpConnection.Disconnect();
+                    return;
                 }
-            }
-            catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
-            {
-                // Ignore
-            }
-        }
 
-        private async Task ReceiveAsync(TcpConnection tcpConnection)
-        {
-            try
-            {
-                while (tcpConnection.Connected)
+                tcpConnection.ExpectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(tcpConnection.ReceiveBuffer);
+                tcpConnection.ReceivedBytes = received - 4;
+                tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(4, received - 4));
+
+                while (tcpConnection.ReceivedBytes < tcpConnection.ExpectedPacketLength)
                 {
-                    int received = await tcpConnection.Socket.ReceiveAsync(tcpConnection.ReceiveBuffer.AsMemory(), SocketFlags.None);
+                    int bytesToReceive = Math.Min(tcpConnection.ExpectedPacketLength - tcpConnection.ReceivedBytes, tcpConnection.ReceiveBuffer.Length);
+                    
+                    received = await tcpConnection.Socket.ReceiveAsync(tcpConnection.ReceiveBuffer.AsMemory(0, bytesToReceive), SocketFlags.None);
                     if (received == 0)
                     {
                         tcpConnection.Disconnect();
                         return;
                     }
 
-                    tcpConnection.ExpectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(tcpConnection.ReceiveBuffer);
-                    tcpConnection.ReceivedBytes = received - 4;
-                    tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(4, received - 4));
-
-                    while (tcpConnection.ReceivedBytes < tcpConnection.ExpectedPacketLength)
-                    {
-                        int bytesToReceive = Math.Min(tcpConnection.ExpectedPacketLength - tcpConnection.ReceivedBytes, tcpConnection.ReceiveBuffer.Length);
-                        
-                        received = await tcpConnection.Socket.ReceiveAsync(tcpConnection.ReceiveBuffer.AsMemory(0, bytesToReceive), SocketFlags.None);
-                        if (received == 0)
-                        {
-                            tcpConnection.Disconnect();
-                            return;
-                        }
-
-                        tcpConnection.ReceivedBytes += received;
-                        tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(0, received));
-                    }
-
-                    IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
-                    byteBuffer.WriteBytes(tcpConnection.ByteBuffer.Bytes.AsSpan(0, tcpConnection.ExpectedPacketLength));
-
-                    await this.HandlePacketReceived(tcpConnection, byteBuffer);
-
-                    tcpConnection.ByteBuffer.Clear();
+                    tcpConnection.ReceivedBytes += received;
+                    tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(0, received));
                 }
-            }
-            catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
-            {
-                tcpConnection.Disconnect();
-            }
-            catch (Exception)
-            {
-                tcpConnection.Disconnect();
 
-                // TODO: What to do? If we ignore other exceptions then they are silently dropped
-                // because we are not awaiting this method
+                IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+                byteBuffer.WriteBytes(tcpConnection.ByteBuffer.Bytes.AsSpan(0, tcpConnection.ExpectedPacketLength));
+
+                await this.HandlePacketReceived(tcpConnection, byteBuffer);
+
+                tcpConnection.ByteBuffer.Clear();
             }
         }
-
-        protected abstract ValueTask HandlePacketReceived(TcpConnection tcpConnection, IByteBuffer byteBuffer);
-
-        protected abstract void HandleOpenConnection(TcpConnection tcpConnection);
-        protected abstract void HandleCloseConnection(TcpConnection tcpConnection);
-
-        internal void DecrementConnections(TcpConnection tcpConnection)
+        catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
-            Interlocked.Decrement(ref this.connections);
-            this.HandleCloseConnection(tcpConnection);
+            tcpConnection.Disconnect();
+        }
+        catch (Exception)
+        {
+            tcpConnection.Disconnect();
+
+            // TODO: What to do? If we ignore other exceptions then they are silently dropped
+            // because we are not awaiting this method
+        }
+    }
+
+    protected abstract ValueTask HandlePacketReceived(TcpConnection tcpConnection, IByteBuffer byteBuffer);
+
+    protected abstract void HandleOpenConnection(TcpConnection tcpConnection);
+    protected abstract void HandleCloseConnection(TcpConnection tcpConnection);
+
+    internal void HandleCloseConnectionInternal(TcpConnection tcpConnection)
+    {
+        bool removed = this.connections.TryRemove(tcpConnection.Id, out _);
+        Debug.Assert(removed, $"Unable to remove connection with id '{tcpConnection.Id}'");
+        
+        this.HandleCloseConnection(tcpConnection);
+    }
+
+    public void Stop()
+    {
+        try
+        {
+            this.socket.Shutdown(SocketShutdown.Both);
+        }
+        catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
+        {
+            // Ignored
+        }
+        finally
+        {
+            this.socket.Close();
         }
 
-        public void Stop()
+        foreach (var (_, tcpConnection) in this.connections)
         {
-            try
-            {
-                this.socket.Shutdown(SocketShutdown.Both);
-            }
-            catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
-            {
-                // Ignored
-            }
-            finally
-            {
-                this.socket.Close();
-            }
+            tcpConnection.Disconnect();
         }
     }
 }
