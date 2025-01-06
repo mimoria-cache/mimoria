@@ -20,6 +20,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
     public event IMimoriaSocketServer.TcpConnectionEvent? Disconnected;
 
     public MimoriaSocketServer(ILogger<MimoriaSocketServer> logger)
+        : base(logger)
     {
         this.logger = logger;
     }

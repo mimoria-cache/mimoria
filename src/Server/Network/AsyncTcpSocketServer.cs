@@ -2,26 +2,31 @@
 //
 // SPDX-License-Identifier: MIT
 
+using Microsoft.Extensions.Logging;
+
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
+using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Server.Network;
 
 public abstract class AsyncTcpSocketServer : ISocketServer
 {
+    private readonly ILogger<AsyncTcpSocketServer> logger;
     private readonly Socket socket;
     private readonly ConcurrentDictionary<ulong, TcpConnection> connections;
     private ulong connectionIdCounter;
 
     public ulong Connections => (ulong)this.connections.Count;
 
-    protected AsyncTcpSocketServer()
+    protected AsyncTcpSocketServer(ILogger<AsyncTcpSocketServer> logger)
     {
+        this.logger = logger;
         // TODO: Keep alive
         this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
         {
@@ -76,6 +81,13 @@ public abstract class AsyncTcpSocketServer : ISocketServer
                 if (received == 0)
                 {
                     tcpConnection.Disconnect();
+                    return;
+                }
+
+                if (received < ProtocolDefaults.MinPacketLength)
+                {
+                    tcpConnection.Disconnect();
+                    this.logger.LogWarning("Received smaller packet length '{PacketLength}' than allowed min packet length '{MinPacketLength}' from '{RemoteAddress}'", received, ProtocolDefaults.MinPacketLength, tcpConnection.RemoteEndPoint);
                     return;
                 }
 
