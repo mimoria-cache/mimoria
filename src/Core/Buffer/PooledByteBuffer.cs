@@ -505,7 +505,7 @@ public sealed class PooledByteBuffer : IByteBuffer
        
         Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation) buffer is not zero size");
 
-        pooledByteBuffer.WriteUInt(0);
+        pooledByteBuffer.WriteLengthPlaceholder();
         pooledByteBuffer.WriteByte((byte)operation);
         return pooledByteBuffer;
     }
@@ -517,7 +517,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         
         Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation, requestId) buffer is not zero size");
 
-        pooledByteBuffer.WriteUInt(0);
+        pooledByteBuffer.WriteLengthPlaceholder();
         pooledByteBuffer.WriteByte((byte)operation);
         pooledByteBuffer.WriteUInt(requestId);
         return pooledByteBuffer;
@@ -530,7 +530,7 @@ public sealed class PooledByteBuffer : IByteBuffer
 
         Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation, requestId, statusCode) buffer is not zero size");
 
-        pooledByteBuffer.WriteUInt(0);
+        pooledByteBuffer.WriteLengthPlaceholder();
         pooledByteBuffer.WriteByte((byte)operation);
         pooledByteBuffer.WriteUInt(requestId);
         pooledByteBuffer.WriteByte((byte)statusCode);
