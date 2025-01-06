@@ -72,6 +72,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
             finally
             {
                 this.subscriptionsReadWriteLock.ExitReadLock();
+                byteBuffer.Dispose();
             }
 
             return;
@@ -82,6 +83,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
 
         if (!this.taskCompletionSources.TryRemove(requestId, out TaskCompletionSource<IByteBuffer>? taskCompletionSource))
         {
+            byteBuffer.Dispose();
             return;
         }
 
@@ -89,6 +91,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         {
             string errorText = byteBuffer.ReadString()!;
             taskCompletionSource.SetException(new MimoriaErrorStatusCodeException(errorText));
+            byteBuffer.Dispose();
             return;
         }
 
@@ -114,9 +117,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     }
 
     public ValueTask SendAndForgetAsync(IByteBuffer byteBuffer, CancellationToken cancellationToken = default)
-    {
-        return this.SendAsync(byteBuffer, cancellationToken);
-    }
+        => this.SendAsync(byteBuffer, cancellationToken);
 
     public (Subscription, bool alreadySubscribed) Subscribe(string channel)
     {
