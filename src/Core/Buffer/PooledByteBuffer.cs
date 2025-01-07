@@ -114,6 +114,15 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.buffer = bytes;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void ThrowIfOutOfRange(uint size)
+    {
+        if (this.readIndex + size > this.Size)
+        {
+            throw new ArgumentException($"Tried to read at '{this.readIndex + size}' but size is only '{this.Size}'");
+        }
+    }
+
     public void WriteBool(bool value)
     {
         this.EnsureBufferSize(1);
@@ -232,7 +241,7 @@ public sealed class PooledByteBuffer : IByteBuffer
             int written = Encoding.UTF8.GetBytes(value, data);
             if (written > MaxStringSizeBytes)
             {
-                throw new ArgumentException($"Written string value length {written} exceeded max allowed length {MaxStringSizeBytes}");
+                throw new ArgumentException($"Written string value length '{written}' exceeded max allowed length '{MaxStringSizeBytes}'");
             }
 
             this.WriteVarUInt((uint)written);
@@ -288,13 +297,21 @@ public sealed class PooledByteBuffer : IByteBuffer
     }
 
     public bool ReadBool()
-        => this.buffer[this.readIndex++] == 1;
+    {
+        this.ThrowIfOutOfRange(1);
+        return this.buffer[this.readIndex++] == 1;
+    }
 
     public byte ReadByte()
-        => this.buffer[this.readIndex++];
+    {
+        this.ThrowIfOutOfRange(1);
+        return this.buffer[this.readIndex++];
+    }
 
     public uint ReadUInt()
     {
+        this.ThrowIfOutOfRange(4);
+
         uint value = BinaryPrimitives.ReadUInt32BigEndian(this.buffer.AsSpan(this.readIndex));
         this.readIndex += 4;
         return value;
@@ -302,6 +319,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public int ReadInt()
     {
+        this.ThrowIfOutOfRange(4);
+
         int value = BinaryPrimitives.ReadInt32BigEndian(this.buffer.AsSpan(this.readIndex));
         this.readIndex += 4;
         return value;
@@ -315,7 +334,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         byte currentByte;
         do
         {
-            currentByte = this.buffer[this.readIndex++];
+            currentByte = this.ReadByte();
             value |= (uint)(currentByte & 0x7F) << shift;
             shift += 7;
         } while ((currentByte & 0x80) != 0);
@@ -324,6 +343,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public long ReadLong()
     {
+        this.ThrowIfOutOfRange(8);
+     
         long value = BinaryPrimitives.ReadInt64BigEndian(this.buffer.AsSpan(this.readIndex));
         this.readIndex += 8;
         return value;
@@ -331,6 +352,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public ulong ReadULong()
     {
+        this.ThrowIfOutOfRange(8);
+
         ulong value = BinaryPrimitives.ReadUInt64BigEndian(this.buffer.AsSpan(this.readIndex));
         this.readIndex += 8;
         return value;
@@ -338,6 +361,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public unsafe float ReadFloat()
     {
+        this.ThrowIfOutOfRange(4);
+
         float value = BinaryPrimitives.ReadSingleBigEndian(this.buffer.AsSpan(this.readIndex));
         this.readIndex += 4;
         return value;
@@ -345,6 +370,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public double ReadDouble()
     {
+        this.ThrowIfOutOfRange(8);
+
         double value = BinaryPrimitives.ReadDoubleBigEndian(this.buffer.AsSpan(this.readIndex));
         this.readIndex += 8;
         return value;
@@ -352,6 +379,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public Guid ReadGuid()
     {
+        this.ThrowIfOutOfRange(GuidByteSize);
+
         var guid = new Guid(this.buffer.AsSpan(this.readIndex, GuidByteSize));
         this.readIndex += GuidByteSize;
         return guid;
@@ -383,9 +412,11 @@ public sealed class PooledByteBuffer : IByteBuffer
             return null;
         }
 
+        this.ThrowIfOutOfRange(length);
+
         if (length > MaxStringSizeBytes)
         {
-            throw new ArgumentException($"Read string value length {length} exceeded max allowed length {MaxStringSizeBytes}");
+            throw new ArgumentException($"Read string value length '{length}' exceeded max allowed length '{MaxStringSizeBytes}'");
         }
 
         byte[] bytes = ArrayPool<byte>.Shared.Rent((int)length);
@@ -405,6 +436,8 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     public void ReadBytes(Span<byte> destination)
     {
+        this.ThrowIfOutOfRange((uint)destination.Length);
+
         // TODO: Limit bytes size to something reasonable (for example 256MB or similar)
         Span<byte> src = this.buffer.AsSpan(this.readIndex, destination.Length);
         src.CopyTo(destination);
