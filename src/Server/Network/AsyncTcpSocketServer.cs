@@ -69,6 +69,10 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         {
             // Ignore
         }
+        catch (Exception exception)
+        {
+            this.logger.LogError(exception, "Unexpected error while accepting connections");
+        }
     }
 
     private async Task ReceiveAsync(TcpConnection tcpConnection)
@@ -122,12 +126,11 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         {
             tcpConnection.Disconnect();
         }
-        catch (Exception)
+        catch (Exception exception)
         {
             tcpConnection.Disconnect();
 
-            // TODO: What to do? If we ignore other exceptions then they are silently dropped
-            // because we are not awaiting this method
+            this.logger.LogError(exception, "Unexpected error while receiving from connection '{ConnectionId}' ('{ConnectionEndPoint}')", tcpConnection.Id, tcpConnection.RemoteEndPoint);
         }
     }
 
