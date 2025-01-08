@@ -13,6 +13,8 @@ namespace Varelen.Mimoria.Server.Replication;
 
 public sealed class SyncReplicator : IReplicator
 {
+    private const int BatchCount = 1;
+    
     private readonly ClusterServer clusterServer;
     private readonly IBullyAlgorithm bullyAlgorithm;
 
@@ -39,7 +41,7 @@ public sealed class SyncReplicator : IReplicator
             uint requestId = clusterConnection.Value.IncrementRequestId();
 
             IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
-            byteBuffer.WriteVarUInt(1);
+            byteBuffer.WriteVarUInt(BatchCount);
             byteBuffer.WriteByte((byte)Operation.SetString);
             byteBuffer.WriteString(key);
             byteBuffer.WriteString(value);
