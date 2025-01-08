@@ -17,7 +17,6 @@ namespace Varelen.Mimoria.Client;
 public sealed class MimoriaClient : IMimoriaClient
 {
     private const uint ProtocolVersion = 1;
-    private const byte MaxPasswordLength = 24;
 
     private readonly IMimoriaSocketClient mimoriaSocketClient;
     private readonly IRetryPolicy connectRetryPolicy;
@@ -84,9 +83,9 @@ public sealed class MimoriaClient : IMimoriaClient
             return;
         }
 
-        if (this.password.Length > MaxPasswordLength)
+        if (this.password.Length > ProtocolDefaults.MaxPasswordLength)
         {
-            throw new ArgumentException($"Password can only be {MaxPasswordLength} characters long");
+            throw new ArgumentException($"Password can only be '{ProtocolDefaults.MaxPasswordLength}' characters long but was '{this.password.Length}'");
         }
 
         this.connecting = true;

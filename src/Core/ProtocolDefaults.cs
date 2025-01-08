@@ -7,4 +7,5 @@ namespace Varelen.Mimoria.Core;
 public static class ProtocolDefaults
 {
     public const int MinPacketLength = 4;
+    public const int MaxPasswordLength = 4096;
 }
