@@ -92,6 +92,18 @@ public sealed class PooledByteBufferTests : IDisposable
         read.Should().Be(500);
     }
 
+    [Fact]
+    public void ReadUInt_When_BufferTooSmall_Then_ExceptionIsThrown()
+    {
+        // Arrange
+        this.sut.WriteByte(1);
+        this.sut.WriteByte(1);
+        this.sut.WriteByte(1);
+
+        // Act & Assert
+        this.sut.Invoking(b => b.ReadUInt()).Should().Throw<ArgumentException>();
+    }
+
     [Theory]
     [InlineData(0, 1)]
     [InlineData(127, 1)]
@@ -179,6 +191,16 @@ public sealed class PooledByteBufferTests : IDisposable
         // Assert
         this.sut.Size.Should().Be(1);
         read.Should().BeNull();
+    }
+
+    [Fact]
+    public void ReadString_When_ReadingLargeStringWithTooSmallBuffer_Then_ExceptionIsThrown()
+    {
+        // Arrange
+        this.sut.WriteVarUInt(100);
+
+        // Act & Assert
+        this.sut.Invoking(b => b.ReadString()).Should().Throw<ArgumentException>();
     }
 
     [Fact]
