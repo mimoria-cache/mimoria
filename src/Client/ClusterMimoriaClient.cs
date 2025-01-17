@@ -118,9 +118,13 @@ public sealed class ClusterMimoriaClient : IMimoriaClient
         return new BulkOperation((MimoriaClient)mimoriaClient);
     }
 
-    public Task<bool> ContainsList(string key, string value, CancellationToken cancellationToken = default)
+    public Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default)
+        => this.ContainsListAsync(key, value, preferSecondary: false, cancellationToken);
+
+    public Task<bool> ContainsListAsync(string key, string value, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.ContainsListAsync(key, value, cancellationToken);
     }
 
     public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)

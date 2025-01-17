@@ -215,7 +215,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
-    public async Task<bool> ContainsList(string key, string value, CancellationToken cancellationToken = default)
+    public async Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
