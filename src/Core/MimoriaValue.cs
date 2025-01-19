@@ -8,6 +8,8 @@ namespace Varelen.Mimoria.Core;
 
 public readonly struct MimoriaValue
 {
+    public static readonly MimoriaValue Null = new();
+
     internal enum ValueType : byte
     {
         Null = 0,

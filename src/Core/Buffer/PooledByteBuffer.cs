@@ -452,7 +452,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         {
             case MimoriaValue.ValueType.Null:
                 this.ReadByte();
-                return new MimoriaValue();
+                return MimoriaValue.Null;
             case MimoriaValue.ValueType.Bytes:
                 uint length = this.ReadVarUInt();
                 // TODO: Hm, pooling possible? Problem is it's returned to the user
@@ -470,7 +470,7 @@ public sealed class PooledByteBuffer : IByteBuffer
             case MimoriaValue.ValueType.Bool:
                 return this.ReadBool();
             default:
-                return new MimoriaValue();
+                return MimoriaValue.Null;
         }
     }
 
