@@ -23,6 +23,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
     private readonly ClusterServer clusterServer;
     private readonly TimeSpan leaderHeartbeatInterval;
     private readonly TimeSpan leaderMissingTimeout;
+    private readonly TimeSpan electionTimeout;
     private readonly PeriodicTimer periodicTimer;
 
     private DateTime lastReceivedHeartbeat;
@@ -45,7 +46,8 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         int[] nodeIds,
         ClusterServer clusterServer,
         TimeSpan leaderHeartbeatInterval,
-        TimeSpan leaderMissingTimeout)
+        TimeSpan leaderMissingTimeout,
+        TimeSpan electionTimeout)
     {
         this.logger = logger;
         this.id = id;
@@ -53,6 +55,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         this.clusterServer = clusterServer;
         this.leaderHeartbeatInterval = leaderHeartbeatInterval;
         this.leaderMissingTimeout = leaderMissingTimeout;
+        this.electionTimeout = electionTimeout;
         this.periodicTimer = new PeriodicTimer(TimeSpan.FromMilliseconds(MissingLeaderCheckIntervalMs));
         this.IsLeader = false;
         this.lastReceivedHeartbeat = DateTime.Now;
@@ -98,7 +101,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
             await SendElectionMessageAsync();
 
-            await Task.Delay(1000);
+            await Task.Delay(this.electionTimeout);
 
             if (this.receivedAlives == 0)
             {

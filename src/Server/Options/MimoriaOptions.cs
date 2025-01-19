@@ -41,6 +41,7 @@ public class MimoriaOptions
     {
         public int LeaderHeartbeatIntervalMs { get; set; } = 1000;
         public int LeaderMissingTimeoutMs { get; set; } = 3000;
+        public int ElectionTimeoutMs { get; set; } = 1000;
     }
 
     public enum ReplicationType
