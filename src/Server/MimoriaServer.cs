@@ -169,6 +169,7 @@ public sealed class MimoriaServer : IMimoriaServer
         this.mimoriaSocketServer.Stop();
         this.pubSubService.Dispose();
         this.replicator?.Dispose();
+        this.cache.Dispose();
 
         foreach (var (_, clusterClient) in this.clusterClients)
         {
