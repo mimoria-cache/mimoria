@@ -93,13 +93,13 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
             this.LeaderElected?.Invoke();
 
-            _ = this.StartLeaderHeartbeat();
+            _ = this.StartLeaderHeartbeatAsync();
         }
         else
         {
             this.logger.LogDebug("Sending election messages to higher ids");
 
-            await SendElectionMessageAsync();
+            await this.SendElectionMessageAsync();
 
             await Task.Delay(this.electionTimeout);
 
@@ -115,7 +115,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
                 this.LeaderElected?.Invoke();
 
-                _ = this.StartLeaderHeartbeat();
+                _ = this.StartLeaderHeartbeatAsync();
             }
             else
             {
@@ -163,7 +163,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         }
     }
 
-    private async Task StartLeaderHeartbeat()
+    private async Task StartLeaderHeartbeatAsync()
     {
         while (this.IsLeader)
         {
