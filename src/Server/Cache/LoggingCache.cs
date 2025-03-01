@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -25,104 +25,104 @@ public class LoggingCache : ICache
 
     public LoggingCache(ILogger<LoggingCache> logger, ICache cache)
     {
-        this.cache = cache;
         this.logger = logger;
+        this.cache = cache;
     }
 
-    public string? GetString(string key)
+    public Task<string?> GetStringAsync(string key)
     {
         this.logger.LogInformation("GetString: '{Key}'", key);
-        return this.cache.GetString(key);
+        return this.cache.GetStringAsync(key);
     }
 
-    public void SetString(string key, string? value, uint ttlMilliseconds)
+    public async Task SetStringAsync(string key, string? value, uint ttlMilliseconds)
     {
         this.logger.LogInformation("SetString: '{Key}'='{Value}' (ttl='{Ttl}')", key, value ?? "null", ttlMilliseconds);
-        this.cache.SetString(key, value, ttlMilliseconds);
+        await this.cache.SetStringAsync(key, value, ttlMilliseconds);
     }
 
-    public void SetBytes(string key, byte[]? bytes, uint ttlMilliseconds)
+    public async Task SetBytesAsync(string key, byte[]? bytes, uint ttlMilliseconds)
     {
         this.logger.LogInformation("SetBytes: '{Key}'='{Value}' (ttl='{Ttl}')", key, Convert.ToHexString(bytes ?? []), ttlMilliseconds);
-        this.cache.SetBytes(key, bytes, ttlMilliseconds);
+        await this.cache.SetBytesAsync(key, bytes, ttlMilliseconds);
     }
 
-    public byte[]? GetBytes(string key)
+    public Task<byte[]?> GetBytesAsync(string key)
     {
         this.logger.LogInformation("GetBytes: '{Key}'", key);
-        return this.cache.GetBytes(key);
+        return this.cache.GetBytesAsync(key);
     }
 
-    public IEnumerable<string> GetList(string key)
+    public IAsyncEnumerable<string> GetListAsync(string key)
     {
         this.logger.LogInformation("GetList: '{Key}'", key);
-        return this.cache.GetList(key);
+        return this.cache.GetListAsync(key);
     }
 
-    public void AddList(string key, string value, uint ttlMilliseconds)
+    public async Task AddListAsync(string key, string value, uint ttlMilliseconds)
     {
         this.logger.LogInformation("AddList: '{Key}'='{Value}' (ttl='{Ttl}')", key, value, ttlMilliseconds);
-        this.cache.AddList(key, value, ttlMilliseconds);
+        await this.cache.AddListAsync(key, value, ttlMilliseconds);
     }
 
-    public void RemoveList(string key, string value)
+    public async Task RemoveListAsync(string key, string value)
     {
         this.logger.LogInformation("RemoveList: '{Key}'='{Value}'", key, value);
-        this.cache.RemoveList(key, value);
+        await this.cache.RemoveListAsync(key, value);
     }
 
-    public bool ContainsList(string key, string value)
+    public Task<bool> ContainsListAsync(string key, string value)
     {
         this.logger.LogInformation("ContainsList: '{Key}'='{Value}'", key, value);
-        return this.cache.ContainsList(key, value);
+        return this.cache.ContainsListAsync(key, value);
     }
 
-    public void SetCounter(string key, long value)
+    public async Task SetCounterAsync(string key, long value)
     {
         this.logger.LogInformation("SetCounter: '{Key}'='{Value}'", key, value);
-        this.cache.SetCounter(key, value);
+        await this.cache.SetCounterAsync(key, value);
     }
 
-    public long IncrementCounter(string key, long increment)
+    public Task<long> IncrementCounterAsync(string key, long increment)
     {
         this.logger.LogInformation("IncrementCounter: '{Key}' + '{Increment}'", key, increment);
-        return this.cache.IncrementCounter(key, increment);
+        return this.cache.IncrementCounterAsync(key, increment);
     }
 
-    public MimoriaValue GetMapValue(string key, string subKey)
+    public Task<MimoriaValue> GetMapValueAsync(string key, string subKey)
     {
         this.logger.LogInformation("GetMapValue: '{Key}' -> '{SubKey}'", key, subKey);
-        return this.cache.GetMapValue(key, subKey);
+        return this.cache.GetMapValueAsync(key, subKey);
     }
 
-    public void SetMapValue(string key, string subKey, MimoriaValue value, uint ttlMilliseconds)
+    public async Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds)
     {
         this.logger.LogInformation("SetMapValue: '{Key}' -> '{SubKey}'='{Value}' (ttl='{Ttl}')", key, subKey, value, ttlMilliseconds);
-        this.cache.SetMapValue(key, subKey, value, ttlMilliseconds);
+        await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds);
     }
 
-    public Dictionary<string, MimoriaValue> GetMap(string key)
+    public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key)
     {
         this.logger.LogInformation("GetMap: '{Key}'", key);
-        return this.cache.GetMap(key);
+        return this.cache.GetMapAsync(key);
     }
 
-    public void SetMap(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds)
+    public async Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds)
     {
         this.logger.LogInformation("SetMap: '{Key}' = {Count} (tt='{Ttl}')", key, map.Count, ttlMilliseconds);
-        this.cache.SetMap(key, map, ttlMilliseconds);
+        await this.cache.SetMapAsync(key, map, ttlMilliseconds);
     }
 
-    public bool Exists(string key)
+    public Task<bool> ExistsAsync(string key)
     {
         this.logger.LogInformation("Exists: '{Key}'", key);
-        return this.cache.Exists(key);
+        return this.cache.ExistsAsync(key);
     }
 
-    public void Delete(string key)
+    public async Task DeleteAsync(string key)
     {
         this.logger.LogInformation("Delete: '{Key}'", key);
-        this.cache.Delete(key);
+        await this.cache.DeleteAsync(key);
     }
 
     public void Dispose()

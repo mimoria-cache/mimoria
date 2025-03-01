@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -14,27 +14,27 @@ public interface ICache : IDisposable
     public float HitRatio { get; }
     public ulong ExpiredKeys { get; }
 
-    string? GetString(string key);
-    void SetString(string key, string? value, uint ttlMilliseconds);
+    Task<string?> GetStringAsync(string key);
+    Task SetStringAsync(string key, string? value, uint ttlMilliseconds);
 
-    void SetBytes(string key, byte[]? bytes, uint ttlMilliseconds);
-    byte[]? GetBytes(string key);
+    Task SetBytesAsync(string key, byte[]? bytes, uint ttlMilliseconds);
+    Task<byte[]?> GetBytesAsync(string key);
 
-    IEnumerable<string> GetList(string key);
-    void AddList(string key, string value, uint ttlMilliseconds);
-    void RemoveList(string key, string value);
-    bool ContainsList(string key, string value);
+    IAsyncEnumerable<string> GetListAsync(string key);
+    Task AddListAsync(string key, string value, uint ttlMilliseconds);
+    Task RemoveListAsync(string key, string value);
+    Task<bool> ContainsListAsync(string key, string value);
 
-    void SetCounter(string key, long value);
-    long IncrementCounter(string key, long increment);
+    Task SetCounterAsync(string key, long value);
+    Task<long> IncrementCounterAsync(string key, long increment);
 
-    MimoriaValue GetMapValue(string key, string subKey);
-    void SetMapValue(string key, string subKey, MimoriaValue value, uint ttlMilliseconds);
+    Task<MimoriaValue> GetMapValueAsync(string key, string subKey);
+    Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds);
 
-    Dictionary<string, MimoriaValue> GetMap(string key);
-    void SetMap(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds);
+    Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key);
+    Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds);
 
-    bool Exists(string key);
+    Task<bool> ExistsAsync(string key);
 
-    void Delete(string key);
+    Task DeleteAsync(string key);
 }
