@@ -107,11 +107,10 @@ public sealed class PooledByteBuffer : IByteBuffer
             newRealSize *= BufferGrowFactor;
         }
 
-        byte[] bytes = ArrayPool<byte>.Shared.Rent(newRealSize);
-        this.buffer.AsSpan(0, this.writeIndex).CopyTo(bytes);
-        ArrayPool<byte>.Shared.Return(this.buffer);
+        var newBuffer = new byte[newRealSize];
+        this.buffer.AsSpan(0, this.writeIndex).CopyTo(newBuffer.AsSpan());
 
-        this.buffer = bytes;
+        this.buffer = newBuffer;
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
