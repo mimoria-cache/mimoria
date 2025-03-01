@@ -207,7 +207,7 @@ public sealed class PooledByteBufferTests : IDisposable
     public void ReadString_When_WritingStringLongerThanBuffer_And_ReadingString_Then_CorrectWrittenStringIsReturnedAndSizeIsCorrect()
     {
         // Arrange
-        var value = new string('t', 600);
+        var value = new string('t', PooledByteBuffer.DefaultBufferSize + 1);
 
         // Act
         int bufferSizeBefore = this.sut.Bytes.Length;
@@ -218,7 +218,6 @@ public sealed class PooledByteBufferTests : IDisposable
         this.sut.Bytes.Length.Should().Be(bufferSizeBefore * PooledByteBuffer.BufferGrowFactor);
         read.Should().Be(value);
     }
-
 
     [Fact]
     public void ReadString_When_ReadingStringLargerThanMaxStringSize_Then_ArgumentExceptionIsThrown()
