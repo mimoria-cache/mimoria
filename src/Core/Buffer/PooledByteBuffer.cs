@@ -14,7 +14,7 @@ namespace Varelen.Mimoria.Core.Buffer;
 
 public sealed class PooledByteBuffer : IByteBuffer
 {
-    public const int DefaultBufferSize = 512;
+    public const int DefaultBufferSize = 65_536;
     public const byte BufferGrowFactor = 2;
     public const uint MaxStringSizeBytes = 128_000_000;
     public const uint MaxByteArraySizeBytes = 128_000_000;
