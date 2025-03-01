@@ -10,12 +10,12 @@ namespace Varelen.Mimoria.Core;
 public static class SocketExtensions
 {
     /// <summary>
-    /// Keeps sending data until all data from the buffer was sent.
+    /// Keeps sending data until all data from the buffer is sent.
     /// </summary>
     /// <param name="socket">The socket instance.</param>
     /// <param name="buffer">The buffer to send.</param>
     /// <param name="cancellationToken">The optional cancellation token.</param>
-    /// <returns></returns>
+    /// <returns>An asynchronous task that completes when all data has been sent.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static async ValueTask SendAllAsync(this Socket socket, ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
     {
