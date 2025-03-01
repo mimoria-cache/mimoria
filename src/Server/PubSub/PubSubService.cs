@@ -58,16 +58,16 @@ public sealed class PubSubService : IPubSubService
         try
         {
             // Just try to remove the connection from all channels
-            int unsubscripedChannels = 0;
+            int unsubscribedChannels = 0;
             foreach (var (_, tcpConnections) in this.subscriptions)
             {
                 if (tcpConnections.Remove(tcpConnection))
                 {
-                    unsubscripedChannels++;
+                    unsubscribedChannels++;
                 }
             }
 
-            this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from '{ChannelCount}' channels", tcpConnection.RemoteEndPoint, unsubscripedChannels);
+            this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from '{ChannelCount}' channels", tcpConnection.RemoteEndPoint, unsubscribedChannels);
         }
         finally
         {
