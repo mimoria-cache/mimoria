@@ -188,30 +188,30 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         var operationHandlers = new Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>>
         {
-            { Operation.Login, this.OnLogin },
-            { Operation.GetString, this.OnGetString },
-            { Operation.SetString, this.OnSetString },
-            { Operation.GetList, this.OnGetList },
-            { Operation.AddList, this.OnAddList },
-            { Operation.RemoveList, this.OnRemoveList },
-            { Operation.ContainsList, this.OnContainsList },
-            { Operation.Exists, this.OnExists },
-            { Operation.Delete, this.OnDelete },
-            { Operation.GetObjectBinary, this.OnGetObjectBinary },
-            { Operation.SetObjectBinary, this.OnSetObjectBinary },
-            { Operation.GetStats, this.OnGetStats },
-            { Operation.GetBytes, this.OnGetBytes },
-            { Operation.SetBytes, this.OnSetBytes },
-            { Operation.SetCounter, this.OnSetCounter },
-            { Operation.IncrementCounter, this.OnIncrementCounter },
-            { Operation.Bulk, this.OnBulk },
-            { Operation.GetMapValue, this.OnGetMapValue },
-            { Operation.SetMapValue, this.OnSetMapValue },
-            { Operation.GetMap, this.OnGetMap },
-            { Operation.SetMap, this.OnSetMap },
-            { Operation.Subscribe, this.OnSubscribe },
-            { Operation.Unsubscribe, this.OnUnsubscribe },
-            { Operation.Publish, this.OnPublish }
+            { Operation.Login, this.HandleLoginAsync },
+            { Operation.GetString, this.HandleGetStringAsync },
+            { Operation.SetString, this.HandleSetStringAsync },
+            { Operation.GetList, this.HandleGetListAsync },
+            { Operation.AddList, this.HandleAddListAsync },
+            { Operation.RemoveList, this.HandleRemoveListAsync },
+            { Operation.ContainsList, this.HandleContainsListAsync },
+            { Operation.Exists, this.HandleExistsAsync },
+            { Operation.Delete, this.HandleDeleteAsync },
+            { Operation.GetObjectBinary, this.HandleGetObjectBinaryAsync },
+            { Operation.SetObjectBinary, this.HandleSetObjectBinaryAsync },
+            { Operation.GetStats, this.HandleGetStatsAsync },
+            { Operation.GetBytes, this.HandleGetBytesAsync },
+            { Operation.SetBytes, this.HandleSetBytesAsync },
+            { Operation.SetCounter, this.HandleSetCounterAsync },
+            { Operation.IncrementCounter, this.HandleIncrementCounterAsync },
+            { Operation.Bulk, this.HandleBulkAsync },
+            { Operation.GetMapValue, this.HandleGetMapValueAsync },
+            { Operation.SetMapValue, this.HandleSetMapValueAsync },
+            { Operation.GetMap, this.HandleGetMapAsync },
+            { Operation.SetMap, this.HandleSetMapAsync },
+            { Operation.Subscribe, this.HandleSubscribeAsync },
+            { Operation.Unsubscribe, this.HandleUnsubscribeAsync },
+            { Operation.Publish, this.HandlePublishAsync }
         };
 
         this.mimoriaSocketServer.SetOperationHandlers(operationHandlers);
@@ -219,7 +219,7 @@ public sealed class MimoriaServer : IMimoriaServer
         this.logger.LogTrace("Operation handlers registered");
     }
 
-    private ValueTask OnLogin(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private ValueTask HandleLoginAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         uint clientProtocolVersion = byteBuffer.ReadVarUInt();
         if (ProtocolVersion != clientProtocolVersion)
@@ -257,7 +257,7 @@ public sealed class MimoriaServer : IMimoriaServer
         return tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnGetString(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleGetStringAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string? value = await this.cache.GetStringAsync(key);
@@ -269,7 +269,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnSetString(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleSetStringAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string? value = byteBuffer.ReadString();
@@ -288,7 +288,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnGetList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleGetListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
 
@@ -316,7 +316,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnAddList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleAddListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string? value = byteBuffer.ReadString();
@@ -336,7 +336,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnRemoveList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleRemoveListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string? value = byteBuffer.ReadString();
@@ -355,7 +355,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnContainsList(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleContainsListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string? value = byteBuffer.ReadString();
@@ -375,7 +375,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnExists(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleExistsAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
 
@@ -386,7 +386,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnDelete(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleDeleteAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
 
@@ -398,7 +398,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnGetObjectBinary(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleGetObjectBinaryAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         byte[]? value = await this.cache.GetBytesAsync(key);
@@ -414,7 +414,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnSetObjectBinary(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleSetObjectBinaryAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         uint objectLength = byteBuffer.ReadUInt();
@@ -434,7 +434,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask OnGetStats(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private ValueTask HandleGetStatsAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetStats, requestId, StatusCode.Ok);
         responseBuffer.WriteVarUInt((uint)(DateTime.UtcNow - startDateTime).TotalSeconds);
@@ -448,7 +448,7 @@ public sealed class MimoriaServer : IMimoriaServer
         return tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnGetBytes(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleGetBytesAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         byte[]? value = await this.cache.GetBytesAsync(key);
@@ -465,7 +465,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnSetBytes(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleSetBytesAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         uint valueLength = byteBuffer.ReadVarUInt();
@@ -490,7 +490,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnSetCounter(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleSetCounterAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         long value = byteBuffer.ReadLong();
@@ -503,7 +503,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnIncrementCounter(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleIncrementCounterAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         long increment = byteBuffer.ReadLong();
@@ -517,7 +517,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnBulk(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleBulkAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         uint operationCount = byteBuffer.ReadVarUInt();
 
@@ -604,7 +604,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnGetMapValue(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleGetMapValueAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string subKey = byteBuffer.ReadString()!;
@@ -618,7 +618,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnSetMapValue(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleSetMapValueAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         string subKey = byteBuffer.ReadString()!;
@@ -633,7 +633,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnGetMap(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleGetMapAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
 
@@ -651,7 +651,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private async ValueTask OnSetMap(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleSetMapAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
         uint count = byteBuffer.ReadVarUInt();
@@ -675,7 +675,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask OnSubscribe(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private ValueTask HandleSubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string channel = byteBuffer.ReadString()!;
 
@@ -687,7 +687,7 @@ public sealed class MimoriaServer : IMimoriaServer
         return tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask OnUnsubscribe(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private ValueTask HandleUnsubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string channel = byteBuffer.ReadString()!;
 
@@ -699,7 +699,7 @@ public sealed class MimoriaServer : IMimoriaServer
         return tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask OnPublish(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private ValueTask HandlePublishAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string channel = byteBuffer.ReadString()!;
         MimoriaValue payload = byteBuffer.ReadValue();
