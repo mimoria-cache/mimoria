@@ -86,6 +86,19 @@ public sealed class AutoRemovingAsyncKeyedLocking : IDisposable
         return releaser;
     }
 
+    /// <summary>
+    /// Used to assert if the key has an active releaser with lock.
+    /// 
+    /// It would be better to also check if it's the same thread, but it's better than nothing.
+    /// </summary>
+    /// <param name="key">The key to check for.</param>
+    [Conditional("DEBUG")]
+    public void DebugAssertKeyHasReleaserLock(string key)
+    {
+        Debug.Assert(this.releasersByKey.ContainsKey(key), $"Key '{key}' has no active releaser");
+        Debug.Assert(this.releasersByKey[key].Semaphore.CurrentCount == 0, $"Semaphore current count is not zero for releaser with key '{key}'");
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Release(ReferenceCountedReleaser releaser)
     {

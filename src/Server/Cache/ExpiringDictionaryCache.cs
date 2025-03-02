@@ -74,6 +74,8 @@ public sealed class ExpiringDictionaryCache : ICache
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async ValueTask<(bool Expired, Entry<object?>? Entry)> TryGetAndHandleExpireAsync(string key)
     {
+        this.autoRemovingAsyncKeyedLocking.DebugAssertKeyHasReleaserLock(key);
+
         if (!this.cache.TryGetValue(key, out Entry<object?>? foundEntry))
         {
             this.IncrementMisses();
