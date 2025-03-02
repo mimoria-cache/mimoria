@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Server.Cache.Locking;
 
 namespace Varelen.Mimoria.Server.Cache;
 
@@ -13,28 +14,29 @@ public interface ICache : IDisposable
     public ulong Misses { get; }
     public float HitRatio { get; }
     public ulong ExpiredKeys { get; }
+    public AutoRemovingAsyncKeyedLocking AutoRemovingAsyncKeyedLocking { get; }
 
-    Task<string?> GetStringAsync(string key);
-    Task SetStringAsync(string key, string? value, uint ttlMilliseconds);
+    Task<string?> GetStringAsync(string key, bool takeLock = true);
+    Task SetStringAsync(string key, string? value, uint ttlMilliseconds, bool takeLock = true);
 
-    Task SetBytesAsync(string key, byte[]? bytes, uint ttlMilliseconds);
-    Task<byte[]?> GetBytesAsync(string key);
+    Task SetBytesAsync(string key, byte[]? bytes, uint ttlMilliseconds, bool takeLock = true);
+    Task<byte[]?> GetBytesAsync(string key, bool takeLock = true);
 
-    IAsyncEnumerable<string> GetListAsync(string key);
-    Task AddListAsync(string key, string value, uint ttlMilliseconds);
-    Task RemoveListAsync(string key, string value);
-    Task<bool> ContainsListAsync(string key, string value);
+    IAsyncEnumerable<string> GetListAsync(string key, bool takeLock = true);
+    Task AddListAsync(string key, string value, uint ttlMilliseconds, bool takeLock = true);
+    Task RemoveListAsync(string key, string value, bool takeLock = true);
+    Task<bool> ContainsListAsync(string key, string value, bool takeLock = true);
 
-    Task SetCounterAsync(string key, long value);
-    Task<long> IncrementCounterAsync(string key, long increment);
+    Task SetCounterAsync(string key, long value, bool takeLock = true);
+    Task<long> IncrementCounterAsync(string key, long increment, bool takeLock = true);
 
-    Task<MimoriaValue> GetMapValueAsync(string key, string subKey);
-    Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds);
+    Task<MimoriaValue> GetMapValueAsync(string key, string subKey, bool takeLock = true);
+    Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds, bool takeLock = true);
 
-    Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key);
-    Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds);
+    Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool takeLock = true);
+    Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds, bool takeLock = true);
 
-    Task<bool> ExistsAsync(string key);
+    Task<bool> ExistsAsync(string key, bool takeLock = true);
 
-    Task DeleteAsync(string key);
+    Task DeleteAsync(string key, bool takeLock = true);
 }
