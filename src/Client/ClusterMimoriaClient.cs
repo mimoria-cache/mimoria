@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -10,7 +10,7 @@ using Varelen.Mimoria.Core;
 
 namespace Varelen.Mimoria.Client;
 
-public sealed class ClusterMimoriaClient : IMimoriaClient
+public sealed class ClusterMimoriaClient : IClusterMimoriaClient
 {
     private readonly List<IMimoriaClient> mimoriaClients;
     private readonly string password;
@@ -32,15 +32,15 @@ public sealed class ClusterMimoriaClient : IMimoriaClient
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private IMimoriaClient GetPrimary()
     {
-        foreach (IMimoriaClient item in this.mimoriaClients)
+        foreach (IMimoriaClient mimoriaClient in this.mimoriaClients)
         {
-            if (item.IsPrimary && item.IsConnected)
+            if (mimoriaClient.IsPrimary && mimoriaClient.IsConnected)
             {
-                return item;
+                return mimoriaClient;
             }
         }
 
-        throw new InvalidOperationException("No leader available");
+        throw new InvalidOperationException("No primary available");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -107,9 +107,18 @@ public sealed class ClusterMimoriaClient : IMimoriaClient
     public Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default)
         => this.GetStringAsync(key, preferSecondary: false, cancellationToken);
 
-    public Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public async Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IMimoriaClient mimoriaClient = this.GetPrimary();
+
+            await mimoriaClient.AddListAsync(key, value, ttl, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            // TODO: Retry?
+        }
     }
 
     public IBulkOperation Bulk()
@@ -127,14 +136,33 @@ public sealed class ClusterMimoriaClient : IMimoriaClient
         return mimoriaClient.ContainsListAsync(key, value, cancellationToken);
     }
 
-    public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
+    public async ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IMimoriaClient mimoriaClient = this.GetPrimary();
+
+            return await mimoriaClient.DecrementCounterAsync(key, decrement, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            // TODO: Retry?
+            return 0;
+        }
     }
 
-    public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IMimoriaClient mimoriaClient = this.GetPrimary();
+
+            await mimoriaClient.DeleteAsync(key, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            // TODO: Retry?
+        }
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
@@ -146,48 +174,81 @@ public sealed class ClusterMimoriaClient : IMimoriaClient
     }
 
     public ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
+        => this.ExistsAsync(key, preferSecondary: false, cancellationToken);
+
+    public ValueTask<bool> ExistsAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.ExistsAsync(key, cancellationToken);
+    }
+
+    public Task<byte[]?> GetBytesAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.GetBytesAsync(key, cancellationToken);
     }
 
     public Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
+        => this.GetBytesAsync(key, preferSecondary: false, cancellationToken);
 
     public Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+        => this.GetListAsync(key, preferSecondary: false, cancellationToken);
+
+    public Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.GetListAsync(key, cancellationToken);
     }
 
     public IAsyncEnumerable<string> GetListEnumerableAsync(string key, CancellationToken cancellationToken = default)
+        => this.GetListEnumerableAsync(key, preferSecondary: false, cancellationToken);
+
+    public IAsyncEnumerable<string> GetListEnumerableAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.GetListEnumerableAsync(key, cancellationToken);
     }
 
     public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default)
+        => this.GetMapAsync(key, preferSecondary: false, cancellationToken);
+
+    public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.GetMapAsync(key, cancellationToken);
+    }
+
+    public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, bool preferSecondary, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.GetMapValueAsync(key, subKey, cancellationToken);
     }
 
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)
+        => this.GetMapValueAsync(key, subKey, preferSecondary: false, cancellationToken);
+
+    public Task<T?> GetObjectBinaryAsync<T>(string key, bool preferSecondary, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.GetObjectBinaryAsync<T>(key, cancellationToken);
     }
 
     public Task<T?> GetObjectBinaryAsync<T>(string key, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
+        => this.GetObjectBinaryAsync<T>(key, preferSecondary: false, cancellationToken);
+
+    public Task<T?> GetObjectJsonAsync<T>(string key, bool preferSecondary, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+        return mimoriaClient.GetObjectJsonAsync<T>(key, jsonSerializerOptions, cancellationToken);
     }
 
     public Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
-    {
-        throw new NotImplementedException();
-    }
+        => this.GetObjectJsonAsync<T>(key, preferSecondary: false, jsonSerializerOptions, cancellationToken);
 
     public Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        IMimoriaClient mimoriaClient = this.GetPrimary();
+        return mimoriaClient.GetStatsAsync(cancellationToken);
     }
 
     public async ValueTask<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
@@ -226,9 +287,18 @@ public sealed class ClusterMimoriaClient : IMimoriaClient
         throw new NotImplementedException();
     }
 
-    public Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public async Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
-        throw new NotImplementedException();
+        try
+        {
+            IMimoriaClient mimoriaClient = this.GetPrimary();
+
+            await mimoriaClient.SetMapAsync(key, map, ttl, cancellationToken);
+        }
+        catch (TimeoutException)
+        {
+            // TODO: Retry?
+        }
     }
 
     public Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default)
