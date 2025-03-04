@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cache.Locking;
 
 namespace Varelen.Mimoria.Server.Cache;
@@ -39,4 +40,8 @@ public interface ICache : IDisposable
     Task<bool> ExistsAsync(string key, bool takeLock = true);
 
     Task DeleteAsync(string key, bool takeLock = true);
+
+    void Serialize(IByteBuffer byteBuffer);
+
+    void Deserialize(IByteBuffer byteBuffer);
 }

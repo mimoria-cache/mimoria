@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cache.Locking;
 using Varelen.Mimoria.Server.PubSub;
 
@@ -386,6 +387,173 @@ public sealed class ExpiringDictionaryCache : ICache
         catch (Exception exception)
         {
             this.logger.LogError(exception, "Error during periodically cleanup of expired keys");
+        }
+    }
+
+    public void Serialize(IByteBuffer byteBuffer)
+    {
+        byteBuffer.WriteVarUInt((uint)this.cache.Count);
+        foreach (var (key, entry) in this.cache)
+        {
+            byteBuffer.WriteString(key);
+
+            switch (entry.Value)
+            {
+                case long l:
+                    {
+                        byteBuffer.WriteByte((byte)CacheValueType.Counter);
+                        byteBuffer.WriteLong(l);
+                        break;
+                    }
+                case string s:
+                    {
+                        byteBuffer.WriteByte((byte)CacheValueType.String);
+                        byteBuffer.WriteString(s);
+                        break;
+                    }
+                case List<string> list:
+                    {
+                        byteBuffer.WriteByte((byte)CacheValueType.List);
+                        byteBuffer.WriteVarUInt((uint)list.Count);
+                        foreach (string item in list)
+                        {
+                            byteBuffer.WriteString(item);
+                        }
+                        break;
+                    }
+                case Dictionary<string, MimoriaValue> map:
+                    {
+                        byteBuffer.WriteByte((byte)CacheValueType.Map);
+                        byteBuffer.WriteVarUInt((uint)map.Count);
+                        foreach (var (mapKey, mapValue) in map)
+                        {
+                            byteBuffer.WriteString(mapKey);
+                            byteBuffer.WriteByte((byte)mapValue.Type);
+
+                            switch (mapValue.Type)
+                            {
+                                case MimoriaValue.ValueType.Null:
+                                    byteBuffer.WriteByte(0);
+                                    break;
+                                case MimoriaValue.ValueType.Bytes:
+                                    byteBuffer.WriteBytes((byte[])mapValue.Value!);
+                                    break;
+                                case MimoriaValue.ValueType.String:
+                                    byteBuffer.WriteString((string?)mapValue.Value);
+                                    break;
+                                case MimoriaValue.ValueType.Int:
+                                    byteBuffer.WriteInt((int)mapValue.Value!);
+                                    break;
+                                case MimoriaValue.ValueType.Long:
+                                    byteBuffer.WriteLong((long)mapValue.Value!);
+                                    break;
+                                case MimoriaValue.ValueType.Double:
+                                    byteBuffer.WriteDouble((double)mapValue.Value!);
+                                    break;
+                                case MimoriaValue.ValueType.Bool:
+                                    byteBuffer.WriteBool((bool)mapValue.Value!);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                        break;
+                    }
+                default:
+                    break;
+            }
+
+            byteBuffer.WriteVarUInt(entry.TtlMilliseconds);
+        }
+    }
+
+    public void Deserialize(IByteBuffer byteBuffer)
+    {
+        uint count = byteBuffer.ReadVarUInt();
+
+        // TODO: Allocate the cache dictionary with the given capacity
+
+        for (uint i = 0; i < count; i++)
+        {
+            string key = byteBuffer.ReadString()!;
+
+            var valueType = (CacheValueType)byteBuffer.ReadByte();
+            object? obj = null;
+
+            switch (valueType)
+            {
+                case CacheValueType.Null:
+                    obj = null;
+                    break;
+                case CacheValueType.String:
+                    obj = byteBuffer.ReadString();
+                    break;
+                case CacheValueType.List:
+                    uint listCount = byteBuffer.ReadVarUInt();
+                    var list = new List<string>(capacity: (int)listCount);
+
+                    for (int j = 0; j < listCount; j++)
+                    {
+                        list.Add(byteBuffer.ReadString()!);
+                    }
+
+                    obj = list;
+                    break;
+                case CacheValueType.Map:
+                    uint mapCount = byteBuffer.ReadVarUInt();
+
+                    var dictionary = new Dictionary<string, MimoriaValue>(capacity: (int)mapCount);
+
+                    for (int j = 0; j < mapCount; j++)
+                    {
+                        string mapKey = byteBuffer.ReadString()!;
+                        var mapValue = MimoriaValue.Null;
+
+                        var mapValueType = (MimoriaValue.ValueType)byteBuffer.ReadByte();
+
+                        switch (mapValueType)
+                        {
+                            case MimoriaValue.ValueType.Null:
+                                mapValue = MimoriaValue.Null;
+                                break;
+                            case MimoriaValue.ValueType.Bytes:
+                                break;
+                            case MimoriaValue.ValueType.String:
+                                mapValue = byteBuffer.ReadString();
+                                break;
+                            case MimoriaValue.ValueType.Int:
+                                mapValue = byteBuffer.ReadInt();
+                                break;
+                            case MimoriaValue.ValueType.Long:
+                                mapValue = byteBuffer.ReadLong();
+                                break;
+                            case MimoriaValue.ValueType.Double:
+                                mapValue = byteBuffer.ReadDouble();
+                                break;
+                            case MimoriaValue.ValueType.Bool:
+                                mapValue = byteBuffer.ReadBool();
+                                break;
+                            default:
+                                mapValue = MimoriaValue.Null;
+                                break;
+                        }
+
+                        dictionary[mapKey] = mapValue;
+                    }
+
+                    obj = dictionary;
+                    break;
+                case CacheValueType.Counter:
+                    obj = byteBuffer.ReadLong();
+                    break;
+                default:
+                    break;
+            }
+
+            uint ttl = byteBuffer.ReadVarUInt();
+
+            bool added = this.cache.TryAdd(key, new Entry<object?>(obj, ttl));
+            Debug.Assert(added, $"Resynced key '{key}' was not added to cache");
         }
     }
 

@@ -5,6 +5,7 @@
 using Microsoft.Extensions.Logging;
 
 using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cache.Locking;
 
 namespace Varelen.Mimoria.Server.Cache;
@@ -126,6 +127,16 @@ public class LoggingCache : ICache
     {
         this.logger.LogInformation("Delete: '{Key}'", key);
         await this.cache.DeleteAsync(key, takeLock);
+    }
+
+    public void Serialize(IByteBuffer byteBuffer)
+    {
+        this.cache.Serialize(byteBuffer);
+    }
+
+    public void Deserialize(IByteBuffer byteBuffer)
+    {
+        this.cache.Deserialize(byteBuffer);
     }
 
     public void Dispose()
