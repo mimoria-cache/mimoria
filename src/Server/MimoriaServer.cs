@@ -7,11 +7,13 @@ using Microsoft.Extensions.Options;
 
 using System.Diagnostics;
 using System.Net;
+using System.Runtime.CompilerServices;
 
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Bully;
 using Varelen.Mimoria.Server.Cache;
+using Varelen.Mimoria.Server.Cache.Locking;
 using Varelen.Mimoria.Server.Cluster;
 using Varelen.Mimoria.Server.Network;
 using Varelen.Mimoria.Server.Options;
@@ -169,11 +171,11 @@ public sealed class MimoriaServer : IMimoriaServer
         }
         else
         {
-        if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
-        {
-            this.clusterReadyTaskCompletionSource.SetResult();
+            if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
+            {
+                this.clusterReadyTaskCompletionSource.SetResult();
+            }
         }
-    }
     }
 
     private void HandleTcpConnectionDisconnected(TcpConnection tcpConnection)
@@ -554,78 +556,109 @@ public sealed class MimoriaServer : IMimoriaServer
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Bulk, requestId, StatusCode.Ok);
         responseBuffer.WriteVarUInt(operationCount);
 
-        for (int i = 0; i < operationCount; i++)
+        // TODO: Prime for dictionary, but better default?
+        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        async ValueTask LockIfNeededAsync(string key)
         {
-            var operation = (Operation)byteBuffer.ReadByte();
-            switch (operation)
+            if (!keyReleasers.ContainsKey(key))
             {
-                case Operation.Login:
-                    break;
-                case Operation.GetString:
-                    {
-                        string key = byteBuffer.ReadString()!;
-                        string? value = await this.cache.GetStringAsync(key);
+                keyReleasers[key] = await this.cache.AutoRemovingAsyncKeyedLocking.LockAsync(key);
+            }
+        }
 
-                        responseBuffer.WriteByte((byte)Operation.GetString);
-                        responseBuffer.WriteString(value);
+        try
+        {
+            for (int i = 0; i < operationCount; i++)
+            {
+                var operation = (Operation)byteBuffer.ReadByte();
+                switch (operation)
+                {
+                    case Operation.Login:
+                        throw new ArgumentException($"Operation '{nameof(Operation.Login)}' cannot be in a bulk operation");
+                    case Operation.GetString:
+                        {
+                            string key = byteBuffer.ReadString()!;
+
+                            await LockIfNeededAsync(key);
+
+                            string? value = await this.cache.GetStringAsync(key, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.GetString);
+                            responseBuffer.WriteString(value);
+                            break;
+                        }
+                    case Operation.SetString:
+                        {
+                            string key = byteBuffer.ReadString()!;
+                            string? value = byteBuffer.ReadString();
+                            uint ttl = byteBuffer.ReadUInt();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.SetStringAsync(key, value, ttl, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.SetString);
+                        }
                         break;
-                    }
-                case Operation.SetString:
-                    {
-                        string key = byteBuffer.ReadString()!;
-                        string? value = byteBuffer.ReadString();
-                        uint ttl = byteBuffer.ReadUInt();
-
-                        await this.cache.SetStringAsync(key, value, ttl);
-
-                        responseBuffer.WriteByte((byte)Operation.SetString);
-                    }
-                    break;
-                case Operation.SetObjectBinary:
-                    break;
-                case Operation.GetObjectBinary:
-                    break;
-                case Operation.GetList:
-                    break;
-                case Operation.AddList:
-                    break;
-                case Operation.RemoveList:
-                    break;
-                case Operation.ContainsList:
-                    break;
-                case Operation.Exists:
-                    {
-                        string key = byteBuffer.ReadString()!;
-
-                        bool exists = await this.cache.ExistsAsync(key);
-
-                        responseBuffer.WriteByte((byte)Operation.Exists);
-                        responseBuffer.WriteBool(exists);
+                    case Operation.SetObjectBinary:
                         break;
-                    }
-                case Operation.Delete:
-                    {
-                        string key = byteBuffer.ReadString()!;
-
-                        await this.cache.DeleteAsync(key);
-
-                        responseBuffer.WriteByte((byte)Operation.Delete);
+                    case Operation.GetObjectBinary:
                         break;
-                    }
-                case Operation.GetStats:
-                    break;
-                case Operation.GetBytes:
-                    break;
-                case Operation.SetBytes:
-                    break;
-                case Operation.SetCounter:
-                    break;
-                case Operation.IncrementCounter:
-                    break;
-                case Operation.Bulk:
-                    break;
-                default:
-                    break;
+                    case Operation.GetList:
+                        break;
+                    case Operation.AddList:
+                        break;
+                    case Operation.RemoveList:
+                        break;
+                    case Operation.ContainsList:
+                        break;
+                    case Operation.Exists:
+                        {
+                            string key = byteBuffer.ReadString()!;
+
+                            await LockIfNeededAsync(key);
+
+                            bool exists = await this.cache.ExistsAsync(key, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.Exists);
+                            responseBuffer.WriteBool(exists);
+                            break;
+                        }
+                    case Operation.Delete:
+                        {
+                            string key = byteBuffer.ReadString()!;
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.DeleteAsync(key, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.Delete);
+                            break;
+                        }
+                    case Operation.GetStats:
+                        break;
+                    case Operation.GetBytes:
+                        break;
+                    case Operation.SetBytes:
+                        break;
+                    case Operation.SetCounter:
+                        break;
+                    case Operation.IncrementCounter:
+                        break;
+                    case Operation.Bulk:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        finally
+        {
+            foreach (var (_, releaser) in keyReleasers)
+            {
+                releaser?.Dispose();
             }
         }
 
