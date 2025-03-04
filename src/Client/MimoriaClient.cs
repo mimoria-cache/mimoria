@@ -492,7 +492,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
         uint operationCount = response.ReadVarUInt();
 
-        var list = new List<object?>((int)operationCount);
+        var list = new List<object?>(capacity: (int)operationCount);
 
         for (uint i = 0; i < operationCount; i++)
         {
