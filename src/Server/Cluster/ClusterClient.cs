@@ -5,8 +5,11 @@
 using Microsoft.Extensions.Logging;
 
 using System.Buffers.Binary;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
@@ -26,12 +29,14 @@ public sealed class ClusterClient
     private readonly ICache cache;
     private readonly string password;
     private readonly IPEndPoint remoteEndPoint;
+    private readonly ConcurrentDictionary<uint, TaskCompletionSource> waitingResponses;
 
     private readonly PooledByteBuffer buffer = new(DefaultBufferSize);
 
     private int expectedPacketLength;
     private int receivedBytes;
     private bool connected;
+    private uint requestIdCounter;
 
     public bool Connected => Volatile.Read(ref this.connected);
 
@@ -43,6 +48,8 @@ public sealed class ClusterClient
         this.cache = cache;
         this.password = password;
         this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+        this.waitingResponses = [];
+        this.requestIdCounter = 0;
     }
 
     public async Task ConnectAsync()
@@ -91,7 +98,7 @@ public sealed class ClusterClient
                     return;
                 }
 
-                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(buffer);
+                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan());
                 this.receivedBytes = received - 4;
                 this.buffer.WriteBytes(buffer.AsSpan(4, received - 4));
 
@@ -154,7 +161,7 @@ public sealed class ClusterClient
                                             string? value = byteBuffer.ReadString();
                                             uint ttlMilliseconds = byteBuffer.ReadUInt();
 
-                                            this.cache.SetString(key, value, ttlMilliseconds);
+                                            await this.cache.SetStringAsync(key, value, ttlMilliseconds);
                                             break;
                                         }
                                     case Operation.SetObjectBinary:
@@ -188,6 +195,18 @@ public sealed class ClusterClient
                             await this.SendAsync(batchBuffer.Bytes.AsMemory(0, batchBuffer.Size));
                             break;
                         }
+                    case Operation.Sync:
+                        {
+                            this.logger.LogDebug("Received sync with '{ByteCount}' bytes", byteBuffer.Size);
+
+                            this.cache.Deserialize(byteBuffer);
+
+                            if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource? taskComplectionSource))
+                            {
+                                taskComplectionSource.SetResult();
+                            }
+                            break;
+                        }
                 }
 
                 this.buffer.Clear();
@@ -205,8 +224,31 @@ public sealed class ClusterClient
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private ValueTask SendAsync(Memory<byte> buffer)
         => this.socket!.SendAllAsync(buffer);
+
+    public async ValueTask SendAndWaitForResponseAsync(uint requestId, IByteBuffer byteBuffer)
+    {
+        try
+        {
+            var taskCompletionSource = new TaskCompletionSource();
+            bool added = this.waitingResponses.TryAdd(requestId, taskCompletionSource);
+            Debug.Assert(added, "Task completion was not added to dictionary");
+
+            await this.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
+
+            await taskCompletionSource.Task;
+        }
+        finally
+        {
+            byteBuffer.Dispose();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public uint IncrementRequestId()
+        => Interlocked.Increment(ref this.requestIdCounter);
 
     public void Disconnect(bool reconnect = true)
     {

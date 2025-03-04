@@ -104,10 +104,11 @@ public enum Operation : byte
     Publish = 23,
 
     // Cluster
-    ClusterLogin = 250,
-    ElectionMessage = 251,
-    AliveMessage = 252,
-    VictoryMessage = 253,
-    HeartbeatMessage = 254,
-    Batch = 255
+    ClusterLogin = 249,
+    ElectionMessage = 250,
+    AliveMessage = 251,
+    VictoryMessage = 252,
+    HeartbeatMessage = 253,
+    Batch = 254,
+    Sync = 255
 }

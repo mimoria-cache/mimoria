@@ -9,6 +9,8 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
+using Varelen.Mimoria.Server.Cache;
+
 namespace Varelen.Mimoria.Server.Cluster;
 
 public sealed class ClusterServer
@@ -17,25 +19,29 @@ public sealed class ClusterServer
     public delegate void MessageEvent(int leader);
 
     private readonly ILogger<ClusterServer> logger;
+    private readonly ILogger<ClusterConnection> connectionLogger;
     private readonly Socket socket;
     private readonly ConcurrentDictionary<int, ClusterConnection> clients;
     private readonly int expectedClients;
     internal readonly string password;
+    private readonly ICache cache;
 
     public ConcurrentDictionary<int, ClusterConnection> Clients => clients;
 
     public event MessageEvent? AliveReceived;
     public event ClusterEvent? AllClientsConnected;
 
-    public ClusterServer(ILogger<ClusterServer> logger, string ip, int port, int expectedClients, string password)
+    public ClusterServer(ILogger<ClusterServer> logger, ILogger<ClusterConnection> connectionLogger, string ip, int port, int expectedClients, string password, ICache cache)
     {
         this.logger = logger;
+        this.connectionLogger = connectionLogger;
         this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
         this.socket.Bind(new IPEndPoint(IPAddress.Parse(ip), port));
         this.socket.Listen(10);
         this.clients = [];
         this.expectedClients = expectedClients;
         this.password = password;
+        this.cache = cache;
     }
 
     public void Start()
@@ -51,7 +57,7 @@ public sealed class ClusterServer
             {
                 Socket clientSocket = await this.socket.AcceptAsync(CancellationToken.None);
 
-                var clusterConnection = new ClusterConnection(-1, this, clientSocket);
+                var clusterConnection = new ClusterConnection(this.connectionLogger, -1, this, clientSocket, this.cache);
                 clusterConnection.Authenticated += HandleClusterConnectionAuthenticated;
                 clusterConnection.AliveReceived += HandleClusterConnectionAliveReceived;
                 _ = clusterConnection.ReceiveAsync();
@@ -81,7 +87,7 @@ public sealed class ClusterServer
     {
         this.clients.TryAdd(clusterConnection.Id, clusterConnection);
 
-        this.logger.LogInformation("New cluster connection from '{RemoteAddress}' (clients connected: '{ClientConnectedCount}', clients expected: '{ClientsExpectedCount}'", clusterConnection.RemoteEndPoint, clients.Count, expectedClients);
+        this.logger.LogInformation("New cluster connection from '{RemoteAddress}' (clients connected: '{ClientConnectedCount}', clients expected: '{ClientsExpectedCount}')", clusterConnection.RemoteEndPoint, clients.Count, expectedClients);
 
         Debug.Assert(this.clients.Count <= this.expectedClients, $"Client count is larger than expected count ('{this.clients.Count}' vs. '{this.expectedClients}')");
 

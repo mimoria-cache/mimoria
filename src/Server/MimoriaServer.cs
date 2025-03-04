@@ -5,6 +5,7 @@
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
+using System.Diagnostics;
 using System.Net;
 
 using Varelen.Mimoria.Core;
@@ -63,7 +64,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
         if (this.monitor.CurrentValue.Cluster is not null)
         {
-            this.clusterServer = new ClusterServer(this.loggerFactory.CreateLogger<ClusterServer>(), this.monitor.CurrentValue.Cluster.Ip, this.monitor.CurrentValue.Cluster?.Port ?? 0, this.monitor.CurrentValue.Cluster?.Nodes?.Length ?? 0, this.monitor.CurrentValue.Cluster?.Password!);
+            this.clusterServer = new ClusterServer(this.loggerFactory.CreateLogger<ClusterServer>(), this.loggerFactory.CreateLogger<ClusterConnection>(), this.monitor.CurrentValue.Cluster.Ip, this.monitor.CurrentValue.Cluster?.Port ?? 0, this.monitor.CurrentValue.Cluster?.Nodes?.Length ?? 0, this.monitor.CurrentValue.Cluster?.Password!, this.cache);
             this.clusterServer.AllClientsConnected += HandleAllClientsConnected;
             this.clusterServer.AliveReceived += HandleAliveReceived;
             this.clusterServer.Start();
@@ -141,10 +142,38 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private void HandleLeaderElected()
     {
+        if (this.bullyAlgorithm?.IsLeader == false)
+        {
+            Debug.Assert(this.clusterClients.ContainsKey(this.bullyAlgorithm.Leader));
+
+            this.logger.LogInformation("Sending resync request to leader '{Leader}'", this.bullyAlgorithm.Leader);
+
+            if (this.clusterClients.TryGetValue(this.bullyAlgorithm.Leader, out ClusterClient? leaderClusterClient))
+            {
+                uint requestId = leaderClusterClient.IncrementRequestId();
+
+                var syncRequestBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);   
+                syncRequestBuffer.EndPacket();
+
+                // TODO: Refactor this..
+                leaderClusterClient.SendAndWaitForResponseAsync(requestId, syncRequestBuffer)
+                    .AsTask()
+                    .ContinueWith(t =>
+                    {
+                        if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
+                        {
+                            this.clusterReadyTaskCompletionSource.SetResult();
+                        }
+                    });
+            }
+        }
+        else
+        {
         if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
         {
             this.clusterReadyTaskCompletionSource.SetResult();
         }
+    }
     }
 
     private void HandleTcpConnectionDisconnected(TcpConnection tcpConnection)
@@ -378,9 +407,10 @@ public sealed class MimoriaServer : IMimoriaServer
     private async ValueTask HandleExistsAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadString()!;
+        bool exists = await this.cache.ExistsAsync(key);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Exists, requestId, StatusCode.Ok);
-        responseBuffer.WriteByte(await this.cache.ExistsAsync(key) ? (byte)1 : (byte)0);
+        responseBuffer.WriteByte(exists ? (byte)1 : (byte)0);
         responseBuffer.EndPacket();
 
         await tcpConnection.SendAsync(responseBuffer);

@@ -16,7 +16,6 @@ public sealed class TcpConnection
 
     public ulong Id { get; private set; }
     public Socket Socket { get; set; }
-    // TODO: Configurable?
     public byte[] ReceiveBuffer { get; } = GC.AllocateArray<byte>(length: DefaultBufferSize, pinned: true);
     public IByteBuffer ByteBuffer { get; } = new PooledByteBuffer();
     public int ExpectedPacketLength { get; set; }

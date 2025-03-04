@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using Microsoft.Extensions.Logging;
+
 using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
@@ -11,6 +13,7 @@ using System.Runtime.CompilerServices;
 
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Server.Cache;
 
 namespace Varelen.Mimoria.Server.Cluster;
 
@@ -21,10 +24,13 @@ public sealed class ClusterConnection
     public delegate void ClusterConnectionEvent(ClusterConnection clusterConnection);
     public delegate void MessageEvent(int leader);
 
+    private readonly ILogger<ClusterConnection> logger;
     private readonly ClusterServer clusterServer;
     private readonly Socket socket;
+    private readonly ICache cache;
     private readonly ConcurrentDictionary<uint, TaskCompletionSource> waitingResponses;
     private readonly PooledByteBuffer buffer;
+
     private bool connected;
     private uint requestIdCounter;
     private int expectedPacketLength;
@@ -39,10 +45,12 @@ public sealed class ClusterConnection
     public event ClusterConnectionEvent? Authenticated;
     public event MessageEvent? AliveReceived;
 
-    public ClusterConnection(int id, ClusterServer clusterServer, Socket socket)
+    public ClusterConnection(ILogger<ClusterConnection> logger, int id, ClusterServer clusterServer, Socket socket, ICache cache)
     {
+        this.logger = logger;
         this.Id = id;
         this.socket = socket;
+        this.cache = cache;
         this.clusterServer = clusterServer;
         this.connected = true;
         this.waitingResponses = [];
@@ -114,6 +122,19 @@ public sealed class ClusterConnection
                             {
                                 taskComplectionSource.SetResult();
                             }
+                            break;
+                        }
+                    case Operation.Sync:
+                        {
+                            this.logger.LogDebug("Primary sync request from '{RemoteEndPoint}' with request id '{RequestId}'", this.RemoteEndPoint, requestId);
+                            
+                            var syncBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);
+
+                            this.cache.Serialize(syncBuffer);
+
+                            syncBuffer.EndPacket();
+
+                            await this.SendAsync(syncBuffer);
                             break;
                         }
                 }
