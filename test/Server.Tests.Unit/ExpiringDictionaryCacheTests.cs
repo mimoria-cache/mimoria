@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using FluentAssertions;
-
 using Microsoft.Extensions.Logging.Abstractions;
 
 using Varelen.Mimoria.Core;
@@ -26,7 +24,7 @@ public class ExpiringDictionaryCacheTests
         string? value = await sut.GetStringAsync("key");
 
         // Assert
-        value.Should().Be("Mimoria");
+        Assert.Equal("Mimoria", value);
     }
 
     [Fact]
@@ -45,8 +43,8 @@ public class ExpiringDictionaryCacheTests
         string? secondValue = await sut.GetStringAsync("key");
 
         // Assert
-        firstValue.Should().Be("Mimoria");
-        secondValue.Should().BeNull();
+        Assert.Equal("Mimoria", firstValue);
+        Assert.Null(secondValue);
     }
 
     [Fact]
@@ -64,7 +62,7 @@ public class ExpiringDictionaryCacheTests
         byte[]? actualValue = await sut.GetBytesAsync(key);
 
         // Assert
-        actualValue.Should().BeEquivalentTo(value);
+        Assert.Equal(value, actualValue);
     }
 
     [Fact]
@@ -89,7 +87,7 @@ public class ExpiringDictionaryCacheTests
         Dictionary<string, MimoriaValue>? actualValue = await sut.GetMapAsync(key);
 
         // Assert
-        actualValue.Should().BeEquivalentTo(value);
+        Assert.Equal(value, actualValue);
     }
 
     [Fact]
@@ -110,8 +108,8 @@ public class ExpiringDictionaryCacheTests
         await Task.Delay(500);
 
         // Assert
-        sut.Hits.Should().Be(IterationCount);
-        sut.ExpiredKeys.Should().BeGreaterThan(0);
+        Assert.Equal((ulong)IterationCount, sut.Hits);
+        Assert.True(sut.ExpiredKeys > 0);
     }
 
     [Fact]
@@ -122,10 +120,10 @@ public class ExpiringDictionaryCacheTests
 
         const int TaskCount = 10;
         const int IterationCount = 10_000;
-        const int TotalIterationCount = TaskCount * IterationCount;
+        const ulong TotalIterationCount = TaskCount * IterationCount;
 
         int run = 0;
-        int operations = 0;
+        ulong operations = 0;
 
         // Act
         var tasks = new List<Task>(capacity: TaskCount);
@@ -150,10 +148,10 @@ public class ExpiringDictionaryCacheTests
         await Task.WhenAll(tasks);
 
         // Assert
-        run.Should().Be(TaskCount);
-        operations.Should().Be(TotalIterationCount);
-        sut.Size.Should().Be(0);
-        (sut.Hits + sut.Misses).Should().Be(TotalIterationCount);
+        Assert.Equal(TaskCount, run);
+        Assert.Equal(TotalIterationCount, operations);
+        Assert.Equal((ulong)0, sut.Size);
+        Assert.Equal(TotalIterationCount, sut.Hits + sut.Misses);
     }
 
     [Fact]
@@ -165,10 +163,10 @@ public class ExpiringDictionaryCacheTests
         const string Key = "key";
         const int TaskCount = 10;
         const int IterationCount = 10_000;
-        const int TotalIterationCount = TaskCount * IterationCount;
+        const ulong TotalIterationCount = TaskCount * IterationCount;
 
         int run = 0;
-        int operations = 0;
+        ulong operations = 0;
 
         // Act
         var tasks = new List<Task>(capacity: TaskCount);
@@ -191,12 +189,12 @@ public class ExpiringDictionaryCacheTests
         await Task.WhenAll(tasks);
 
         // Assert
-        run.Should().Be(TaskCount);
-        operations.Should().Be(TotalIterationCount);
-        sut.Size.Should().Be(1);
-        (sut.Hits + sut.Misses).Should().Be(TotalIterationCount);
+        Assert.Equal(TaskCount, run);
+        Assert.Equal(TotalIterationCount, operations);
+        Assert.Equal((ulong)1, sut.Size);
+        Assert.Equal(TotalIterationCount, sut.Hits + sut.Misses);
         long counterValue = await sut.IncrementCounterAsync(Key, 0);
-        counterValue.Should().Be(TotalIterationCount);
+        Assert.Equal(TotalIterationCount, (ulong)counterValue);
     }
 
     [Fact]
@@ -239,9 +237,9 @@ public class ExpiringDictionaryCacheTests
         await Task.WhenAll(tasks);
 
         // Assert
-        run.Should().Be(TaskCount);
-        operations.Should().Be(TotalIterationCount);
-        sut.Size.Should().Be(0);
+        Assert.Equal(TaskCount, run);
+        Assert.Equal(TotalIterationCount, operations);
+        Assert.Equal((ulong)0, sut.Size);
     }
 
     private static ExpiringDictionaryCache CreateCache(TimeSpan expireCheckInterval)
