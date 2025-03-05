@@ -17,11 +17,11 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     private readonly IReadOnlyList<IMimoriaClient> mimoriaClients;
     private readonly IConsistentHashing consistentHashing;
 
-    public int? ServerId => null;
+    public IReadOnlyList<IMimoriaClient> MimoriaClients => this.mimoriaClients;
 
-    public IReadOnlyList<IMimoriaClient> MimoriaClients => mimoriaClients;
+    public int? ServerId => throw new NotSupportedException();
 
-    public bool IsConnected => false;
+    public bool IsConnected => throw new NotSupportedException();
 
     public bool IsPrimary => true;
 
