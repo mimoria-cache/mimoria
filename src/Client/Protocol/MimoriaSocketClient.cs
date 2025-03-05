@@ -98,6 +98,12 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         taskCompletionSource.SetResult(byteBuffer);
     }
 
+    protected override void HandleDisconnect()
+    {
+        this.taskCompletionSources.Clear();
+        this.subscriptions.Clear();
+    }
+
     public async Task<IByteBuffer> SendAndWaitForResponseAsync(uint requestId, IByteBuffer byteBuffer, CancellationToken cancellationToken = default)
     {
         try
