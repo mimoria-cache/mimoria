@@ -21,7 +21,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
     public event ISocketClient.SocketHandler? Disconnected;
     public event ISocketClient.SocketHandler? Connected;
 
-    private readonly Socket socket;
+    private Socket? socket;
     private readonly byte[] receiveBuffer = GC.AllocateArray<byte>(length: 65527, pinned: true);
     private readonly PooledByteBuffer buffer = new();
 
@@ -32,19 +32,6 @@ public abstract class AsyncTcpSocketClient : ISocketClient
 
     public bool IsConnected => this.connected;
 
-    protected AsyncTcpSocketClient()
-    {
-        this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
-        {
-            NoDelay = true
-        };
-        this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-        this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, DefaultTcpKeepAliveTime);
-        this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, DefaultTcpKeepAliveInterval);
-        this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, DefaultTcpKeepAliveRetryCount);
-        // TODO: Dual mode
-    }
-
     public async ValueTask ConnectAsync(string hostnameOrIp, int port, CancellationToken cancellationToken = default)
     {
         if (this.connected)
@@ -54,8 +41,29 @@ public abstract class AsyncTcpSocketClient : ISocketClient
 
         IPAddress[] ipAddresses = await Dns.GetHostAddressesAsync(hostnameOrIp, cancellationToken);
         // TODO: Decide which to use. Prefer IPv4 or IPv6 addresses?
-        IPAddress? ipAddress = ipAddresses.FirstOrDefault() ?? throw new ArgumentException("Only IPv4 addresses are currently supported");
-        await this.socket.ConnectAsync(ipAddress, port, cancellationToken);
+        IPAddress? ipAddress = ipAddresses.FirstOrDefault()
+            ?? throw new ArgumentException("Only IPv4 addresses are currently supported");
+
+        try
+        {
+            this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
+            {
+                NoDelay = true
+            };
+            this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+            this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, DefaultTcpKeepAliveTime);
+            this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, DefaultTcpKeepAliveInterval);
+            this.socket.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, DefaultTcpKeepAliveRetryCount);
+
+            await this.socket.ConnectAsync(ipAddress, port, cancellationToken);
+        }
+        catch (Exception)
+        {
+            this.socket?.Close();
+            throw;
+        }
+
+        this.buffer.Clear();
 
         this.connected = true;
 
@@ -68,11 +76,11 @@ public abstract class AsyncTcpSocketClient : ISocketClient
     {
         try
         {
-            await this.socket.SendAllAsync(new ReadOnlyMemory<byte>(byteBuffer.Bytes, 0, byteBuffer.Size), cancellationToken);
+            await this.socket!.SendAllAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size), cancellationToken);
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
-            await this.DisconnectAsync(cancellationToken);
+            await this.DisconnectAsync(cancellationToken: cancellationToken);
         }
         finally
         {
@@ -89,7 +97,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         {
             while (this.connected)
             {
-                int received = await socket.ReceiveAsync(receiveBuffer.AsMemory(), SocketFlags.None);
+                int received = await socket!.ReceiveAsync(receiveBuffer.AsMemory(), SocketFlags.None);
                 if (received == 0)
                 {
                     await this.DisconnectAsync();
@@ -128,32 +136,41 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         }
     }
 
-    public async ValueTask DisconnectAsync(CancellationToken cancellationToken = default)
+    public ValueTask DisconnectAsync(bool force = false, CancellationToken cancellationToken = default)
     {
         if (!this.connected)
         {
-            return;
+            return ValueTask.CompletedTask;
         }
 
         this.connected = false;
 
         try
         {
-            await this.socket.DisconnectAsync(reuseSocket: true, cancellationToken);
+            this.socket?.Shutdown(SocketShutdown.Both);
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
             // Ignored
         }
+        finally
+        {
+            this.socket?.Close();
+        }
 
         this.HandleDisconnect();
 
-        this.Disconnected?.Invoke();
+        if (!force)
+        { 
+            this.Disconnected?.Invoke();
+        }
+
+        return ValueTask.CompletedTask;
     }
 
     public void Dispose()
     {
-        this.socket.Dispose();
+        this.socket?.Dispose();
         this.buffer.Dispose();
         GC.SuppressFinalize(this);
     }

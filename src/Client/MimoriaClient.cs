@@ -6,11 +6,10 @@ using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
-using Varelen.Mimoria.Client.Retry;
-using Varelen.Mimoria.Core.Buffer;
-using Varelen.Mimoria.Core;
-using Varelen.Mimoria.Client.Protocol;
 using Varelen.Mimoria.Client.Network;
+using Varelen.Mimoria.Client.Retry;
+using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Client;
 
@@ -107,7 +106,7 @@ public sealed class MimoriaClient : IMimoriaClient
                 await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
             if (response.ReadByte() != 1)
             {
-                throw new MimoriaConnectionException($"Login to Mimoria instance at {ip}:{port} failed. Given password did not match configured password");
+                throw new MimoriaConnectionException($"Login to Mimoria instance at '{this.ip}:{this.port}' failed. Given password did not match configured password");
             }
             this.ServerId = response.ReadInt();
             this.isPrimary = response.ReadBool();
@@ -116,10 +115,7 @@ public sealed class MimoriaClient : IMimoriaClient
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
-    {
-        this.connecting = true;
-        await this.mimoriaSocketClient.DisconnectAsync(cancellationToken);
-    }
+        => await this.mimoriaSocketClient.DisconnectAsync(force: true, cancellationToken);
 
     public async Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default)
     {

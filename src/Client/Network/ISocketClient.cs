@@ -17,5 +17,5 @@ public interface ISocketClient : IDisposable
 
     ValueTask ConnectAsync(string hostnameOrIp, int port, CancellationToken cancellationToken = default);
     ValueTask SendAsync(IByteBuffer byteBuffer, CancellationToken cancellationToken = default);
-    ValueTask DisconnectAsync(CancellationToken cancellationToken = default);
+    ValueTask DisconnectAsync(bool force = false, CancellationToken cancellationToken = default);
 }
