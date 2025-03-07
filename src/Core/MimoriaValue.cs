@@ -69,6 +69,60 @@ public readonly struct MimoriaValue
         this.Type = ValueType.Bool;
     }
 
+    public override bool Equals(object? obj)
+    {
+        if (obj is not MimoriaValue other || this.Type != other.Type)
+        {
+            return false;
+        }
+
+        return this.Type switch
+        {
+            ValueType.Null => true,
+            ValueType.Bytes => ((byte[])this.Value!).SequenceEqual((byte[])other.Value!),
+            ValueType.String => (string)this.Value! == (string)other.Value!,
+            ValueType.Int => (int)this.Value! == (int)other.Value!,
+            ValueType.Long => (long)this.Value! == (long)other.Value!,
+            ValueType.Double => (double)this.Value! == (double)other.Value!,
+            ValueType.Bool => (bool)this.Value! == (bool)other.Value!,
+            _ => false,
+        };
+    }
+
+    public override int GetHashCode()
+    {
+        var hashCode = new HashCode();
+        hashCode.Add((int)this.Type);
+
+        switch (this.Type)
+        {
+            case ValueType.Null:
+                break;
+            case ValueType.Bytes:
+                hashCode.AddBytes((byte[])this.Value!);
+                break;
+            case ValueType.String:
+                hashCode.Add((string)this.Value!);
+                break;
+            case ValueType.Int:
+                hashCode.Add((int)this.Value!);
+                break;
+            case ValueType.Long:
+                hashCode.Add((long)this.Value!);
+                break;
+            case ValueType.Double:
+                hashCode.Add((double)this.Value!);
+                break;
+            case ValueType.Bool:
+                hashCode.Add((bool)this.Value!);
+                break;
+            default:
+                throw new InvalidOperationException($"Unknown type '{this.Type}'");
+        }
+
+        return hashCode.ToHashCode();
+    }
+
     public override string? ToString()
     {
         return this.Type switch
@@ -80,7 +134,6 @@ public readonly struct MimoriaValue
             _ => throw new InvalidOperationException($"Unkown type {this.Type}"),
         };
     }
-
 
     public static implicit operator MimoriaValue(byte[]? value)
         => new(value);
@@ -100,6 +153,9 @@ public readonly struct MimoriaValue
     public static implicit operator MimoriaValue(bool value)
         => new(value);
 
+    public static implicit operator int(MimoriaValue value)
+        => (int)value.Value!;
+
     public static implicit operator string?(MimoriaValue value)
     {
         return value.Type switch
@@ -111,4 +167,9 @@ public readonly struct MimoriaValue
             _ => throw new InvalidOperationException(),
         };
     }
+    public static bool operator ==(MimoriaValue left, MimoriaValue right)
+        => left.Equals(right);
+
+    public static bool operator !=(MimoriaValue left, MimoriaValue right)
+        => !(left == right);
 }
