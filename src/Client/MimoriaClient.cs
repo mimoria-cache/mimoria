@@ -551,12 +551,12 @@ public sealed class MimoriaClient : IMimoriaClient
 
     public async Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
-        uint requestId = this.GetNextRequestId();
-
         (Subscription subscription, bool alreadySubscribed) = this.mimoriaSocketClient.Subscribe(channel);
 
         if (!alreadySubscribed)
         {
+            uint requestId = this.GetNextRequestId();
+
             IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Subscribe, requestId);
             byteBuffer.WriteString(channel);
             byteBuffer.EndPacket();
