@@ -18,38 +18,45 @@ namespace Varelen.Mimoria.Server.Network;
 public abstract class AsyncTcpSocketServer : ISocketServer
 {
     private readonly ILogger<AsyncTcpSocketServer> logger;
-    private readonly Socket socket;
     private readonly ConcurrentDictionary<ulong, TcpConnection> connections;
+    
+    private Socket? socket;
     private ulong connectionIdCounter;
+    private bool running;
 
     public ulong Connections => (ulong)this.connections.Count;
 
     protected AsyncTcpSocketServer(ILogger<AsyncTcpSocketServer> logger)
     {
         this.logger = logger;
-        // TODO: Keep alive
+        this.connections = [];
+    }
+
+    public void Start(string ip, ushort port, ushort backlog = 50)
+    {
+        if (this.running)
+        {
+            return;
+        }
+
         this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp)
         {
             NoDelay = true
         };
         this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
-        this.connections = [];
-        // TODO: Dual mode
-    }
-
-    public void Start(string ip, ushort port, ushort backlog = 50)
-    {
         this.socket.Bind(new IPEndPoint(IPAddress.Parse(ip), port));
         this.socket.Listen(backlog);
 
         _ = this.AcceptAsync();
+
+        this.running = true;
     }
 
     private async Task AcceptAsync()
     {
         try
         {
-            while (this.socket.IsBound)
+            while (this.socket!.IsBound)
             {
                 Socket clientSocket = await this.socket.AcceptAsync();
                 clientSocket.NoDelay = true;
@@ -149,9 +156,16 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
     public void Stop()
     {
+        if (!this.running)
+        {
+            return;
+        }
+
+        this.running = false;
+
         try
         {
-            this.socket.Shutdown(SocketShutdown.Both);
+            this.socket!.Shutdown(SocketShutdown.Both);
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
@@ -159,8 +173,10 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         }
         finally
         {
-            this.socket.Close();
+            this.socket!.Close();
         }
+
+        this.socket = null;
 
         foreach (var (_, tcpConnection) in this.connections)
         {
