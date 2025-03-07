@@ -64,7 +64,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         this.Leader = -1;
     }
 
-    public async Task StartElectionAsync()
+    private async Task StartElectionAsync()
     {
         if (this.leaderElected)
         {
@@ -80,7 +80,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         int maxNodeId = this.nodeIds.Max();
         bool hasHighest = this.id > maxNodeId;
 
-        this.logger.LogDebug("My id is '{Id}' and highest node id is '{HighestNodeId}'", this.id, maxNodeId);
+        this.logger.LogDebug("My id is '{Id}' and highest other node id is '{HighestOtherNodeId}'", this.id, maxNodeId);
 
         if (hasHighest)
         {
@@ -103,9 +103,15 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
             await Task.Delay(this.electionTimeout);
 
+            if (this.leaderElected)
+            {
+                this.logger.LogInformation("We already got leader '{LeaderId}' by victory message during election", this.Leader);
+                return;
+            }
+
             if (this.receivedAlives == 0)
             {
-                this.logger.LogInformation("I am the new leader, no other node answered");
+                this.logger.LogInformation("I am the new leader, no other higher node answered");
 
                 this.IsLeader = true;
                 this.Leader = this.id;
