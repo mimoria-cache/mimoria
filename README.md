@@ -1,5 +1,7 @@
 # mimoria
 
+[![Build and Test](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml)
+
 Performant cross-platform distributed key-value cache server written in .NET 9.
 
 Currently under development.
@@ -28,7 +30,7 @@ Currently under development.
   - [X] C# (with micro caching and DI support)
   - [ ] TypeScript/Node
 - [X] json and binary object serialization
-- [X] IPv4 and IPv6 support
+- [ ] IPv4 and IPv6 support
 
 ## Installation
 
