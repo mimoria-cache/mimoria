@@ -2,7 +2,10 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Runtime.CompilerServices;
 using System.Text;
+
+[assembly: InternalsVisibleTo("Varelen.Mimoria.Server")]
 
 namespace Varelen.Mimoria.Core;
 
