@@ -78,8 +78,8 @@ public sealed class MimoriaServer : IMimoriaServer
                 this.clusterServer,
                 TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderHeartbeatIntervalMs),
                 TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderMissingTimeoutMs),
-                TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.ElectionTimeoutMs));
-            this.bullyAlgorithm.LeaderElected += HandleLeaderElected;
+                TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.ElectionTimeoutMs),
+                this.HandleLeaderElectedAsync);
 
             this.logger.LogInformation("In cluster mode, using nodes: '{}'", string.Join(',', this.monitor.CurrentValue.Cluster!.Nodes.Select(n => $"{n.Host}:{n.Port}")));
 
@@ -142,9 +142,11 @@ public sealed class MimoriaServer : IMimoriaServer
         this.logger.LogInformation("Mimoria server started on '{Ip}:{Port}'", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
     }
 
-    private void HandleLeaderElected()
+    private async Task HandleLeaderElectedAsync()
     {
-        if (this.bullyAlgorithm?.IsLeader == false)
+        Debug.Assert(this.bullyAlgorithm is not null, "bullyAlgorithm is null");
+
+        if (!this.bullyAlgorithm!.IsLeader)
         {
             Debug.Assert(this.clusterClients.ContainsKey(this.bullyAlgorithm.Leader));
 
@@ -157,8 +159,9 @@ public sealed class MimoriaServer : IMimoriaServer
                 var syncRequestBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);   
                 syncRequestBuffer.EndPacket();
 
-                // TODO: Refactor this..
-                leaderClusterClient.SendAndWaitForResponseAsync(requestId, syncRequestBuffer)
+                // TODO: Awaiting this ends in a deadlock because it sends an operation and waits for it to be received
+                // but only can receive it if the sent operation response is received..
+                _ = leaderClusterClient.SendAndWaitForResponseAsync(requestId, syncRequestBuffer)
                     .AsTask()
                     .ContinueWith(t =>
                     {
@@ -191,11 +194,8 @@ public sealed class MimoriaServer : IMimoriaServer
             this.clusterServer.AliveReceived -= HandleAliveReceived;
             this.clusterServer.Stop();
         }
-        if (this.bullyAlgorithm is not null)
-        {
-            this.bullyAlgorithm.LeaderElected -= HandleLeaderElected;
-            this.bullyAlgorithm.Stop();
-        }
+
+        this.bullyAlgorithm?.Stop();
         this.mimoriaSocketServer.Disconnected -= HandleTcpConnectionDisconnected;
         this.mimoriaSocketServer.Stop();
         this.pubSubService.Dispose();

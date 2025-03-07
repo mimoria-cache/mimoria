@@ -71,7 +71,7 @@ public sealed class ClusterClient
 
                 await this.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
 
-                _ = ReceiveAsync();
+                _ = this.ReceiveAsync();
             }
             catch (Exception)
             {
@@ -138,7 +138,8 @@ public sealed class ClusterClient
                     case Operation.VictoryMessage:
                         {
                             int leaderId = byteBuffer.ReadInt();
-                            this.bullyAlgorithm.HandleVictory(leaderId);
+
+                            await this.bullyAlgorithm.HandleVictoryAsync(leaderId);
                             break;
                         }
                     case Operation.HeartbeatMessage:

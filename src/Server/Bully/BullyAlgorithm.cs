@@ -4,9 +4,13 @@
 
 using Microsoft.Extensions.Logging;
 
+using System.Runtime.CompilerServices;
+
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cluster;
+
+[assembly: InternalsVisibleTo("Varelen.Mimoria.Server.Tests.Integration")]
 
 namespace Varelen.Mimoria.Server.Bully;
 
@@ -32,7 +36,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
     private int lastAliveReceivedLeader;
     private bool leaderElected;
 
-    public event IBullyAlgorithm.BullyEvent? LeaderElected;
+    internal Func<Task> leaderElectedAsyncCallback;
 
     public bool IsLeader { get; private set; }
 
@@ -47,7 +51,8 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         ClusterServer clusterServer,
         TimeSpan leaderHeartbeatInterval,
         TimeSpan leaderMissingTimeout,
-        TimeSpan electionTimeout)
+        TimeSpan electionTimeout,
+        Func<Task> leaderElectedAsyncCallback)
     {
         this.logger = logger;
         this.id = id;
@@ -62,6 +67,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         this.receivedAlives = 0;
         this.leaderElected = false;
         this.Leader = -1;
+        this.leaderElectedAsyncCallback = leaderElectedAsyncCallback;
     }
 
     private async Task StartElectionAsync()
@@ -91,7 +97,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
             await this.SendVictoryMessageAsync();
 
-            this.LeaderElected?.Invoke();
+            await this.OnLeaderElectedAsync();
 
             _ = this.StartLeaderHeartbeatAsync();
         }
@@ -119,7 +125,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
                 await this.SendVictoryMessageAsync();
 
-                this.LeaderElected?.Invoke();
+                await this.OnLeaderElectedAsync();
 
                 _ = this.StartLeaderHeartbeatAsync();
             }
@@ -137,10 +143,14 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
                 this.logger.LogInformation("Received '{ReceivedAlives}' alives, I am a member and current leader is '{LeaderId}'", this.receivedAlives, this.Leader);
 
                 this.leaderElected = true;
-                this.LeaderElected?.Invoke();
+                await this.OnLeaderElectedAsync();
             }
         }
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async Task OnLeaderElectedAsync()
+        => await this.leaderElectedAsyncCallback();
 
     private async Task SendElectionMessageAsync()
     {
@@ -228,7 +238,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         this.logger.LogTrace("Received heartbeat from leader '{LeaderId}'", leaderId);
     }
 
-    public void HandleVictory(int leaderId)
+    public async Task HandleVictoryAsync(int leaderId)
     {
         this.lastReceivedHeartbeat = DateTime.Now;
         this.Leader = leaderId;
@@ -237,7 +247,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
         this.logger.LogInformation("New leader is '{LeaderId}'", leaderId);
 
-        this.LeaderElected?.Invoke();
+        await this.OnLeaderElectedAsync();
     }
 
     public void Stop()
