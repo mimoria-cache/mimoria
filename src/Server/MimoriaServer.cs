@@ -453,6 +453,7 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadRequiredKey();
         uint objectLength = byteBuffer.ReadUInt();
+        
         if (objectLength > ProtocolDefaults.MaxByteArrayLength)
         {
             throw new ArgumentException($"Read binary object length '{objectLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
@@ -509,6 +510,7 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadRequiredKey();
         uint valueLength = byteBuffer.ReadVarUInt();
+        
         if (valueLength > ProtocolDefaults.MaxByteArrayLength)
         {
             throw new ArgumentException($"Read bytes length '{valueLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
@@ -700,6 +702,7 @@ public sealed class MimoriaServer : IMimoriaServer
         MimoriaValue value = byteBuffer.ReadValue();
         uint ttlMilliseconds = byteBuffer.ReadUInt();
 
+        // TODO: This could also outgrow max allowed map count
         await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetMapValue, requestId, StatusCode.Ok);
@@ -730,6 +733,11 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadRequiredKey();
         uint count = byteBuffer.ReadVarUInt();
+
+        if (count > ProtocolDefaults.MaxMapCount)
+        {
+            throw new ArgumentException($"Read map count '{count}' exceeded max allowed count '{ProtocolDefaults.MaxMapCount}'");
+        }
 
         var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
         for (int i = 0; i < count; i++)

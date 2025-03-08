@@ -9,4 +9,5 @@ public static class ProtocolDefaults
     public const int MinPacketLength = 4;
     public const int MaxPasswordLength = 4096;
     public const int MaxByteArrayLength = 128_000_000;
+    public const int MaxMapCount = 1_000_000;
 }
