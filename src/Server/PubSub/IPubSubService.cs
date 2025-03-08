@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -9,8 +9,8 @@ namespace Varelen.Mimoria.Server.PubSub;
 
 public interface IPubSubService : IDisposable
 {
-    void Subscribe(string channel, TcpConnection tcpConnection);
-    void Unsubscribe(string channel, TcpConnection tcpConnection);
-    void Unsubscribe(TcpConnection tcpConnection);
-    ValueTask PublishAsync(string channel, MimoriaValue payload);
+    Task SubscribeAsync(string channel, TcpConnection tcpConnection);
+    Task UnsubscribeAsync(string channel, TcpConnection tcpConnection);
+    Task UnsubscribeAsync(TcpConnection tcpConnection);
+    Task PublishAsync(string channel, MimoriaValue payload);
 }

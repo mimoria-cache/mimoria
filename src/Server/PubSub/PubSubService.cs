@@ -1,133 +1,111 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
 using Microsoft.Extensions.Logging;
 
+using System.Collections.Concurrent;
+
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Server.Cache.Locking;
 using Varelen.Mimoria.Server.Network;
 
 namespace Varelen.Mimoria.Server.PubSub;
 
 public sealed class PubSubService : IPubSubService
 {
+    // Prime number to favor the dictionary implementation
+    private const int InitialCacheSize = 503;
+
     private readonly ILogger<PubSubService> logger;
-    private readonly Dictionary<string, List<TcpConnection>> subscriptions;
-    private readonly ReaderWriterLockSlim subscriptionsReadWriteLock;
+    private readonly ConcurrentDictionary<string, List<TcpConnection>> subscriptions;
+    private readonly AutoRemovingAsyncKeyedLocking autoRemovingAsyncKeyedLocking;
 
     public PubSubService(ILogger<PubSubService> logger)
     {
         this.logger = logger;
         this.subscriptions = [];
-        this.subscriptionsReadWriteLock = new ReaderWriterLockSlim();
+        this.autoRemovingAsyncKeyedLocking = new AutoRemovingAsyncKeyedLocking(InitialCacheSize);
     }
 
-    public void Subscribe(string channel, TcpConnection tcpConnection)
+    public async Task SubscribeAsync(string channel, TcpConnection tcpConnection)
     {
-        this.subscriptionsReadWriteLock.EnterWriteLock();
+        using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 
-        try
+        this.logger.LogInformation("Connection '{RemoteEndPoint}' subscribed to channel '{Channel}'", tcpConnection.RemoteEndPoint, channel);
+
+        if (this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
         {
-            this.logger.LogInformation("Connection '{RemoteEndPoint}' subscribed to channel '{Channel}'", tcpConnection.RemoteEndPoint, channel);
-
-            if (this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
+            if (tcpConnections.Contains(tcpConnection))
             {
-                if (tcpConnections.Contains(tcpConnection))
-                {
-                    // Subscribing to a channel twice is a noop
-                    return;
-                }
-
-                tcpConnections.Add(tcpConnection);
+                // Subscribing to a channel twice is a noop
                 return;
             }
 
-            this.subscriptions.Add(channel, [tcpConnection]);
+            tcpConnections.Add(tcpConnection);
+            return;
         }
-        finally
-        {
-            this.subscriptionsReadWriteLock.ExitWriteLock();
-        }
+
+        this.subscriptions.TryAdd(channel, [tcpConnection]);
     }
 
-    public void Unsubscribe(TcpConnection tcpConnection)
+    public async Task UnsubscribeAsync(TcpConnection tcpConnection)
     {
-        this.subscriptionsReadWriteLock.EnterWriteLock();
-
-        try
+        // Just try to remove the connection from all channels
+        int unsubscribedChannels = 0;
+        foreach (var (channel, tcpConnections) in this.subscriptions)
         {
-            // Just try to remove the connection from all channels
-            int unsubscribedChannels = 0;
-            foreach (var (_, tcpConnections) in this.subscriptions)
+            using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
+
+            if (tcpConnections.Remove(tcpConnection))
             {
-                if (tcpConnections.Remove(tcpConnection))
-                {
-                    unsubscribedChannels++;
-                }
+                unsubscribedChannels++;
             }
+        }
 
-            this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from '{ChannelCount}' channels", tcpConnection.RemoteEndPoint, unsubscribedChannels);
-        }
-        finally
-        {
-            this.subscriptionsReadWriteLock.ExitWriteLock();
-        }
+        this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from '{ChannelCount}' channels", tcpConnection.RemoteEndPoint, unsubscribedChannels);
     }
 
-    public void Unsubscribe(string channel, TcpConnection tcpConnection)
+    public async Task UnsubscribeAsync(string channel, TcpConnection tcpConnection)
     {
-        this.subscriptionsReadWriteLock.EnterWriteLock();
+        using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 
-        try
+        this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from channel '{Channel}'", tcpConnection.RemoteEndPoint, channel);
+
+        if (!this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
         {
-            this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from channel '{Channel}'", tcpConnection.RemoteEndPoint, channel);
-
-            if (!this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
-            {
-                return;
-            }
-
-            tcpConnections.Remove(tcpConnection);
+            return;
         }
-        finally
-        {
-            this.subscriptionsReadWriteLock.ExitWriteLock();
-        }
+
+        tcpConnections.Remove(tcpConnection);
     }
 
-    public async ValueTask PublishAsync(string channel, MimoriaValue payload)
+    public async Task PublishAsync(string channel, MimoriaValue payload)
     {
-        this.subscriptionsReadWriteLock.EnterReadLock();
+        using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 
-        try
+        if (!this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
         {
-            if (!this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
-            {
-                return;
-            }
-
-            using IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Publish);
-            byteBuffer.WriteString(channel);
-            byteBuffer.WriteValue(payload);
-            byteBuffer.EndPacket();
-
-            foreach (TcpConnection tcpConnection in tcpConnections)
-            {
-                byteBuffer.Retain();
-                await tcpConnection.SendAsync(byteBuffer);
-            }
+            return;
         }
-        finally
+
+        using IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Publish);
+        byteBuffer.WriteString(channel);
+        byteBuffer.WriteValue(payload);
+        byteBuffer.EndPacket();
+
+        foreach (TcpConnection tcpConnection in tcpConnections)
         {
-            this.subscriptionsReadWriteLock.ExitReadLock();
+            byteBuffer.Retain();
+            await tcpConnection.SendAsync(byteBuffer);
         }
     }
 
     public void Dispose()
     {
         this.subscriptions.Clear();
-        this.subscriptionsReadWriteLock.Dispose();
+        this.autoRemovingAsyncKeyedLocking.Dispose();
         GC.SuppressFinalize(this);
     }
 }

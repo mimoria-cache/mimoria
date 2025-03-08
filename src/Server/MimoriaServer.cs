@@ -186,7 +186,8 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private void HandleTcpConnectionDisconnected(TcpConnection tcpConnection)
     {
-        this.pubSubService.Unsubscribe(tcpConnection);
+        // TODO: Async events
+        _ = this.pubSubService.UnsubscribeAsync(tcpConnection);
     }
 
     public void Stop()
@@ -758,35 +759,35 @@ public sealed class MimoriaServer : IMimoriaServer
         await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask HandleSubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleSubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string channel = byteBuffer.ReadRequiredKey();
 
-        this.pubSubService.Subscribe(channel, tcpConnection);
+        await this.pubSubService.SubscribeAsync(channel, tcpConnection);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Subscribe, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
-        return tcpConnection.SendAsync(responseBuffer);
+        await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask HandleUnsubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandleUnsubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string channel = byteBuffer.ReadRequiredKey();
 
-        this.pubSubService.Unsubscribe(channel, tcpConnection);
+        await this.pubSubService.UnsubscribeAsync(channel, tcpConnection);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Unsubscribe, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
-        return tcpConnection.SendAsync(responseBuffer);
+        await tcpConnection.SendAsync(responseBuffer);
     }
 
-    private ValueTask HandlePublishAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    private async ValueTask HandlePublishAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string channel = byteBuffer.ReadRequiredKey();
         MimoriaValue payload = byteBuffer.ReadValue();
 
-        return this.pubSubService.PublishAsync(channel, payload);
+        await this.pubSubService.PublishAsync(channel, payload);
     }
 }
