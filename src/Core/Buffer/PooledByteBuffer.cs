@@ -19,6 +19,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     public const uint MaxStringSizeBytes = 128_000_000;
     public const uint MaxByteArraySizeBytes = 128_000_000;
     private const byte GuidByteSize = 16;
+    private const byte MaxUtf8CharLength = 4;
 
     private static readonly DefaultObjectPool<PooledByteBuffer> Pool = new(new PooledByteBufferPooledObjectPolicy());
 
@@ -233,7 +234,7 @@ public sealed class PooledByteBuffer : IByteBuffer
             return;
         }
 
-        byte[] data = ArrayPool<byte>.Shared.Rent(value.Length);
+        byte[] data = ArrayPool<byte>.Shared.Rent(value.Length * MaxUtf8CharLength);
 
         try
         {
