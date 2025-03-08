@@ -698,7 +698,7 @@ public sealed class MimoriaServer : IMimoriaServer
     private async ValueTask HandleSetMapValueAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         string key = byteBuffer.ReadRequiredKey();
-        string subKey = byteBuffer.ReadString()!;
+        string subKey = byteBuffer.ReadRequiredKey();
         MimoriaValue value = byteBuffer.ReadValue();
         uint ttlMilliseconds = byteBuffer.ReadUInt();
 
