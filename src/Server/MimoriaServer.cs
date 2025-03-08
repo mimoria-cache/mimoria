@@ -452,6 +452,11 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadString()!;
         uint objectLength = byteBuffer.ReadUInt();
+        if (objectLength > ProtocolDefaults.MaxByteArrayLength)
+        {
+            throw new ArgumentException($"Read binary object length '{objectLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
+        }
+
         byte[]? bytes = null;
         if (objectLength > 0)
         {
@@ -503,6 +508,10 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadString()!;
         uint valueLength = byteBuffer.ReadVarUInt();
+        if (valueLength > ProtocolDefaults.MaxByteArrayLength)
+        {
+            throw new ArgumentException($"Read bytes length '{valueLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
+        }
 
         if (valueLength > 0)
         {

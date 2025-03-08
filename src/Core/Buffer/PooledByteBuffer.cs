@@ -237,7 +237,7 @@ public sealed class PooledByteBuffer : IByteBuffer
 
         try
         {
-            int written = Encoding.UTF8.GetBytes(value, data);
+            int written = Encoding.UTF8.GetBytes(value.AsSpan(), data.AsSpan());
             if (written > MaxStringSizeBytes)
             {
                 throw new ArgumentException($"Written string value length '{written}' exceeded max allowed length '{MaxStringSizeBytes}'");
