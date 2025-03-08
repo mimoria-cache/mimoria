@@ -152,7 +152,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
     private async Task OnLeaderElectedAsync()
         => await this.leaderElectedAsyncCallback();
 
-    private async Task SendElectionMessageAsync()
+    private async ValueTask SendElectionMessageAsync()
     {
         using var electionMessageBuffer = PooledByteBuffer.FromPool(Operation.ElectionMessage, requestId: 0);
         electionMessageBuffer.EndPacket();
@@ -165,7 +165,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         }
     }
 
-    private async Task SendVictoryMessageAsync()
+    private async ValueTask SendVictoryMessageAsync()
     {
         using var victoryMessageBuffer = PooledByteBuffer.FromPool(Operation.VictoryMessage, requestId: 0);
         victoryMessageBuffer.WriteInt(this.id);

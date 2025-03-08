@@ -67,10 +67,16 @@ public sealed class ClusterServer
         {
             // Ignore
         }
+        catch (Exception exception)
+        {
+            this.logger.LogError(exception, "Unexpected error while accepting connections");
+        }
     }
 
     public void HandleConnectionDisconnect(ClusterConnection clusterConnection)
     {
+        Debug.Assert(!clusterConnection.Connected, "Cluster connection is still connected");
+
         clusterConnection.Authenticated -= HandleClusterConnectionAuthenticated;
         clusterConnection.AliveReceived -= HandleClusterConnectionAliveReceived;
         
@@ -85,7 +91,8 @@ public sealed class ClusterServer
 
     private void HandleClusterConnectionAuthenticated(ClusterConnection clusterConnection)
     {
-        this.clients.TryAdd(clusterConnection.Id, clusterConnection);
+        bool added = this.clients.TryAdd(clusterConnection.Id, clusterConnection);
+        Debug.Assert(added, "Cluster connection was not added");
 
         this.logger.LogInformation("New cluster connection from '{RemoteAddress}' (clients connected: '{ClientConnectedCount}', clients expected: '{ClientsExpectedCount}')", clusterConnection.RemoteEndPoint, clients.Count, expectedClients);
 

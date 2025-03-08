@@ -276,7 +276,7 @@ public sealed class ClusterClient
         if (reconnect)
         {
             this.buffer.Clear();
-            _ = ConnectAsync();
+            _ = this.ConnectAsync();
         }
         else
         {
@@ -285,7 +285,5 @@ public sealed class ClusterClient
     }
 
     public void Close()
-    {
-        this.Disconnect(reconnect: false);
-    }
+        => this.Disconnect(reconnect: false);
 }
