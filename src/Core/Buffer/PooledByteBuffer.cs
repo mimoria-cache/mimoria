@@ -455,6 +455,12 @@ public sealed class PooledByteBuffer : IByteBuffer
                 return MimoriaValue.Null;
             case MimoriaValue.ValueType.Bytes:
                 uint length = this.ReadVarUInt();
+
+                if (length > ProtocolDefaults.MaxByteArrayLength)
+                {
+                    throw new ArgumentException($"Read bytes length '{length}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
+                }
+
                 // TODO: Hm, pooling possible? Problem is it's returned to the user
                 byte[] bytes = new byte[length];
                 this.ReadBytes(bytes);
