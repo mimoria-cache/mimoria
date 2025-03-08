@@ -54,6 +54,14 @@ public sealed class MimoriaOptionsValidation : IValidateOptions<MimoriaOptions>
             {
                 return ValidateOptionsResult.Fail($"Cluster section needs at least one node in 'Nodes' configured");
             }
+
+            foreach (MimoriaOptions.NodeOptions nodeOptions in options.Cluster.Nodes)
+            {
+                if (nodeOptions.Id is null || nodeOptions.Host is null || nodeOptions.Port is null)
+                {
+                    return ValidateOptionsResult.Fail($"Cluster -> Nodes entries need 'Id', 'Host' and 'Port'");
+                }
+            }
         }
 
         return ValidateOptionsResult.Success;

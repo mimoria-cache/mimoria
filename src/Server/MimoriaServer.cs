@@ -75,7 +75,7 @@ public sealed class MimoriaServer : IMimoriaServer
             this.bullyAlgorithm = new BullyAlgorithm(
                 this.loggerFactory.CreateLogger<BullyAlgorithm>(),
                 this.monitor.CurrentValue.Cluster!.Id,
-                this.monitor.CurrentValue.Cluster!.Nodes.Select(n => n.Id).ToArray(),
+                this.monitor.CurrentValue.Cluster!.Nodes.Select(n => n.Id!.Value).ToArray(),
                 this.clusterServer,
                 TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderHeartbeatIntervalMs),
                 TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderMissingTimeoutMs),
@@ -118,12 +118,12 @@ public sealed class MimoriaServer : IMimoriaServer
             foreach (MimoriaOptions.NodeOptions node in this.monitor.CurrentValue.Cluster.Nodes)
             {
                 // TODO: Handle DNS error?
-                var addresses = await Dns.GetHostAddressesAsync(node.Host);
+                var addresses = await Dns.GetHostAddressesAsync(node.Host!);
 
-                var clusterClient = new ClusterClient(this.loggerFactory.CreateLogger<ClusterClient>(), this.monitor.CurrentValue.Cluster.Id, addresses[0].ToString(), node.Port, this.bullyAlgorithm!, this.cache, this.monitor.CurrentValue.Cluster.Password!);
+                var clusterClient = new ClusterClient(this.loggerFactory.CreateLogger<ClusterClient>(), this.monitor.CurrentValue.Cluster.Id, addresses[0].ToString(), node.Port!.Value, this.bullyAlgorithm!, this.cache, this.monitor.CurrentValue.Cluster.Password!);
                 await clusterClient.ConnectAsync();
                 
-                this.clusterClients.Add(node.Id, clusterClient);
+                this.clusterClients.Add(node.Id!.Value, clusterClient);
             }
 
             this.logger.LogInformation("Waiting for node to be ready");

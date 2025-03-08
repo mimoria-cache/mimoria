@@ -26,9 +26,9 @@ public class MimoriaOptions
 
     public class NodeOptions
     {
-        public int Id { get; set; }
-        public string Host { get; set; } = "127.0.0.1";
-        public int Port { get; set; }
+        public int? Id { get; set; }
+        public string? Host { get; set; }
+        public int? Port { get; set; }
     }
 
     public class ReplicationOptions
