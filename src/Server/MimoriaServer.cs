@@ -15,6 +15,7 @@ using Varelen.Mimoria.Server.Bully;
 using Varelen.Mimoria.Server.Cache;
 using Varelen.Mimoria.Server.Cache.Locking;
 using Varelen.Mimoria.Server.Cluster;
+using Varelen.Mimoria.Server.Extensions;
 using Varelen.Mimoria.Server.Network;
 using Varelen.Mimoria.Server.Options;
 using Varelen.Mimoria.Server.Protocol;
@@ -292,7 +293,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleGetStringAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         string? value = await this.cache.GetStringAsync(key);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetString, requestId, StatusCode.Ok);
@@ -304,7 +305,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleSetStringAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         string? value = byteBuffer.ReadString();
         uint ttlMilliseconds = byteBuffer.ReadUInt();
 
@@ -323,7 +324,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleGetListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId, StatusCode.Ok);
 
@@ -351,7 +352,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleAddListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         string? value = byteBuffer.ReadString();
         uint ttlMilliseconds = byteBuffer.ReadUInt();
 
@@ -371,7 +372,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleRemoveListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         string? value = byteBuffer.ReadString();
 
         // TODO: Should null values not be allowed in lists?
@@ -390,7 +391,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleContainsListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         string? value = byteBuffer.ReadString();
 
         // TODO: Should we just return false?
@@ -410,7 +411,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleExistsAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         bool exists = await this.cache.ExistsAsync(key);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Exists, requestId, StatusCode.Ok);
@@ -422,7 +423,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleDeleteAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
 
         await this.cache.DeleteAsync(key);
 
@@ -434,7 +435,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleGetObjectBinaryAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         byte[]? value = await this.cache.GetBytesAsync(key);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetObjectBinary, requestId, StatusCode.Ok);
@@ -450,7 +451,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleSetObjectBinaryAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         uint objectLength = byteBuffer.ReadUInt();
         if (objectLength > ProtocolDefaults.MaxByteArrayLength)
         {
@@ -489,7 +490,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleGetBytesAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         byte[]? value = await this.cache.GetBytesAsync(key);
         uint valueLength = value is not null ? (uint)value.Length : 0;
 
@@ -506,7 +507,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleSetBytesAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         uint valueLength = byteBuffer.ReadVarUInt();
         if (valueLength > ProtocolDefaults.MaxByteArrayLength)
         {
@@ -535,7 +536,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleSetCounterAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         long value = byteBuffer.ReadLong();
 
         await this.cache.SetCounterAsync(key, value);
@@ -548,7 +549,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleIncrementCounterAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         long increment = byteBuffer.ReadLong();
 
         long value = await this.cache.IncrementCounterAsync(key, increment);
@@ -590,7 +591,7 @@ public sealed class MimoriaServer : IMimoriaServer
                         throw new ArgumentException($"Operation '{nameof(Operation.Login)}' cannot be in a bulk operation");
                     case Operation.GetString:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
 
                             await LockIfNeededAsync(key);
 
@@ -602,7 +603,7 @@ public sealed class MimoriaServer : IMimoriaServer
                         }
                     case Operation.SetString:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             string? value = byteBuffer.ReadString();
                             uint ttl = byteBuffer.ReadUInt();
 
@@ -627,7 +628,7 @@ public sealed class MimoriaServer : IMimoriaServer
                         break;
                     case Operation.Exists:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
 
                             await LockIfNeededAsync(key);
 
@@ -639,7 +640,7 @@ public sealed class MimoriaServer : IMimoriaServer
                         }
                     case Operation.Delete:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
 
                             await LockIfNeededAsync(key);
 
@@ -680,7 +681,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleGetMapValueAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         string subKey = byteBuffer.ReadString()!;
 
         MimoriaValue value = await this.cache.GetMapValueAsync(key, subKey);
@@ -694,7 +695,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleSetMapValueAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         string subKey = byteBuffer.ReadString()!;
         MimoriaValue value = byteBuffer.ReadValue();
         uint ttlMilliseconds = byteBuffer.ReadUInt();
@@ -709,7 +710,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleGetMapAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
 
         Dictionary<string, MimoriaValue> map = await this.cache.GetMapAsync(key);
 
@@ -727,7 +728,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandleSetMapAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string key = byteBuffer.ReadString()!;
+        string key = byteBuffer.ReadRequiredKey();
         uint count = byteBuffer.ReadVarUInt();
 
         var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
@@ -751,7 +752,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private ValueTask HandleSubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string channel = byteBuffer.ReadString()!;
+        string channel = byteBuffer.ReadRequiredKey();
 
         this.pubSubService.Subscribe(channel, tcpConnection);
 
@@ -763,7 +764,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private ValueTask HandleUnsubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string channel = byteBuffer.ReadString()!;
+        string channel = byteBuffer.ReadRequiredKey();
 
         this.pubSubService.Unsubscribe(channel, tcpConnection);
 
@@ -775,7 +776,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private ValueTask HandlePublishAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
-        string channel = byteBuffer.ReadString()!;
+        string channel = byteBuffer.ReadRequiredKey();
         MimoriaValue payload = byteBuffer.ReadValue();
 
         return this.pubSubService.PublishAsync(channel, payload);
