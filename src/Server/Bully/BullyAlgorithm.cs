@@ -10,7 +10,7 @@ using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cluster;
 
-[assembly: InternalsVisibleTo("Varelen.Mimoria.Server.Tests.Integration")]
+[assembly: InternalsVisibleTo("Varelen.Mimoria.Tests.Integration")]
 
 namespace Varelen.Mimoria.Server.Bully;
 
