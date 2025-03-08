@@ -742,7 +742,7 @@ public sealed class MimoriaServer : IMimoriaServer
         var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
         for (int i = 0; i < count; i++)
         {
-            string subKey = byteBuffer.ReadString()!;
+            string subKey = byteBuffer.ReadRequiredKey();
             MimoriaValue subValue = byteBuffer.ReadValue();
 
             map[subKey] = subValue;
