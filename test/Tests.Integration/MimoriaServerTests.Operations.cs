@@ -16,7 +16,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "string:key";
         const string value = "value";
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetStringAsync(key, value);
@@ -33,7 +33,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "bytes:key";
         byte[] value = [1, 2, 3, 4, 5];
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetBytesAsync(key, value);
@@ -50,7 +50,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "json:key";
         var value = new User(2, "Mimoria");
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetObjectJsonAsync(key, value);
@@ -66,7 +66,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         // Arrange
         const string key = "counter:key";
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         long one = await mimoriaClient.IncrementCounterAsync(key, increment: 100);
@@ -83,7 +83,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         // Arrange
         const string key = "counter:key";
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         long one = await mimoriaClient.DecrementCounterAsync(key, decrement: 100);
@@ -101,7 +101,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "counter:key";
         const int value = 1337;
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetCounterAsync(key, value);
@@ -115,7 +115,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
     public async Task Operations_Given_MimoriaClient_When_GetStats_Then_CorrectValueIsReturned()
     {
         // Arrange
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         Stats stats = await mimoriaClient.GetStatsAsync();
@@ -139,7 +139,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
             { "five", new byte[] { 1, 2, 3, 4 } }
         };
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetMapAsync(key, value);
@@ -157,7 +157,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string subKey = "subkey";
         var value = new byte[] { 1, 2, 3, 4 };
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetMapValueAsync(key, subKey, value);
@@ -174,7 +174,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "list:key";
         const string value = "one";
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.AddListAsync(key, value);

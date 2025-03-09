@@ -13,7 +13,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "string:reconnect:key";
         const string value = "value";
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Assert
         Assert.True(mimoriaClient.IsConnected);

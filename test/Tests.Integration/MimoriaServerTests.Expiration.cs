@@ -13,7 +13,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "string:expiration:key";
         const string value = "value";
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetStringAsync(key, value, TimeSpan.FromMilliseconds(10));
@@ -31,7 +31,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         const string key = "string:expiration:key";
         const string value = "value";
 
-        var mimoriaClient = await this.ConnectToServerAsync();
+        await using var mimoriaClient = await this.ConnectToServerAsync();
 
         // Act
         await mimoriaClient.SetStringAsync(key, value, TimeSpan.FromMilliseconds(500));
