@@ -153,8 +153,20 @@ public readonly struct MimoriaValue
     public static implicit operator MimoriaValue(bool value)
         => new(value);
 
+    public static implicit operator byte[](MimoriaValue value)
+        => (byte[])value.Value!;
+
     public static implicit operator int(MimoriaValue value)
         => (int)value.Value!;
+
+    public static implicit operator long(MimoriaValue value)
+        => (long)value.Value!;
+
+    public static implicit operator double(MimoriaValue value)
+        => (double)value.Value!;
+
+    public static implicit operator bool(MimoriaValue value)
+        => (bool)value.Value!;
 
     public static implicit operator string?(MimoriaValue value)
     {
