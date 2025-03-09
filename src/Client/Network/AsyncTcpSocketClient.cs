@@ -164,14 +164,19 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         { 
             this.Disconnected?.Invoke();
         }
+        else
+        {
+            this.socket?.Dispose();
+            this.buffer.Dispose();
+        }
 
         return ValueTask.CompletedTask;
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
-        this.socket?.Dispose();
-        this.buffer.Dispose();
+        await this.DisconnectAsync(force: true);
+        
         GC.SuppressFinalize(this);
     }
 }

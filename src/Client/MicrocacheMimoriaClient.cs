@@ -332,4 +332,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
 
         return Task.FromResult<Stats>(default);
     }
+
+    public async ValueTask DisposeAsync()
+        => await this.DisconnectAsync();
 }

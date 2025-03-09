@@ -253,4 +253,7 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         int serverId = this.consistentHashing.GetServerId(key);
         return this.idMimoriaClients[serverId];
     }
+
+    public async ValueTask DisposeAsync()
+        => await this.DisconnectAsync();
 }

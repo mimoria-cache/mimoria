@@ -327,4 +327,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         IMimoriaClient mimoriaClient = this.GetPrimary();
         return mimoriaClient.UnsubscribeAsync(channel, cancellationToken);
     }
+
+    public async ValueTask DisposeAsync()
+        => await this.DisconnectAsync();
 }

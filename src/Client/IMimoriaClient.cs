@@ -8,7 +8,7 @@ using Varelen.Mimoria.Core;
 
 namespace Varelen.Mimoria.Client;
 
-public interface IMimoriaClient
+public interface IMimoriaClient : IAsyncDisposable
 {
     /// <summary>
     /// <para>Gets the globally unique id of the server connected to.</para>

@@ -6,7 +6,7 @@ using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Client.Network;
 
-public interface ISocketClient : IDisposable
+public interface ISocketClient : IAsyncDisposable
 {
     public delegate void SocketHandler();
 
