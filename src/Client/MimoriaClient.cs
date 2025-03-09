@@ -597,6 +597,9 @@ public sealed class MimoriaClient : IMimoriaClient
         await this.mimoriaSocketClient.SendAndForgetAsync(byteBuffer, cancellationToken);
     }
 
+    public ValueTask DisposeAsync()
+        => this.mimoriaSocketClient.DisposeAsync();
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private uint GetNextRequestId()
         => Interlocked.Increment(ref this.requestIdCounter);
