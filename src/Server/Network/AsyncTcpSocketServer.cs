@@ -121,7 +121,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
                     tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(0, received));
                 }
 
-                IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+                using IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
                 byteBuffer.WriteBytes(tcpConnection.ByteBuffer.Bytes.AsSpan(0, tcpConnection.ExpectedPacketLength));
 
                 await this.HandlePacketReceived(tcpConnection, byteBuffer);
