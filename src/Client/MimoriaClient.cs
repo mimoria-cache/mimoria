@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Text.Json;
 
 using Varelen.Mimoria.Client.Network;
+using Varelen.Mimoria.Client.Protocol;
 using Varelen.Mimoria.Client.Retry;
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
