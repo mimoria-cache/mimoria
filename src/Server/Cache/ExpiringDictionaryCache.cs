@@ -206,7 +206,7 @@ public sealed class ExpiringDictionaryCache : ICache
         // TODO: Auto removal configurable?
         if (list.Count == 0)
         {
-            this.cache.Remove(key, out _);
+            await this.DeleteInternalAsync(key);
         }
     }
 
@@ -335,7 +335,21 @@ public sealed class ExpiringDictionaryCache : ICache
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
-        _ = this.cache.Remove(key, out _);
+        await this.DeleteInternalAsync(key);
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async ValueTask DeleteInternalAsync(string key)
+    {
+        bool removed = this.cache.Remove(key, out _);
+        if (!removed)
+        {
+            // TODO: This can happen if it was removed concurrently, so we
+            // should not publish a key deletion again, right?
+            return;
+        }
+
+        await this.pubSubService.PublishAsync(Channels.KeyDeletion, key);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

@@ -12,6 +12,11 @@ public static class Channels
     public const string KeyExpiration = "__expiration";
 
     /// <summary>
+    /// Published to if a key is deleted. Payload is the key (string) which was deleted.
+    /// </summary>
+    public const string KeyDeletion = "__deletion";
+
+    /// <summary>
     /// Published to if the primary server changed. Payload is the id (int) of the new primary server.
     /// </summary>
     public const string PrimaryChanged = "__primary:changed";
