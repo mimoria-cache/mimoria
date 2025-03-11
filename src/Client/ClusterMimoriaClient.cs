@@ -40,7 +40,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
             }
         }
 
-        throw new InvalidOperationException("No primary available");
+        throw new NoPrimaryAvailableException();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -69,7 +69,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
             }
         }
 
-        return readingMimoriaClient ?? throw new InvalidOperationException("No client for reading available");
+        return readingMimoriaClient ?? throw new NoSecondaryAvailableException();
     }
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
