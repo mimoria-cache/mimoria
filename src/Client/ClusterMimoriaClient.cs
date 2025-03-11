@@ -266,6 +266,9 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         }
     }
 
+    public ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
+        => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
+
     public Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetPrimary();

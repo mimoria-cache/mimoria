@@ -360,6 +360,9 @@ public sealed class MimoriaClient : IMimoriaClient
         return IncrementCounterAsync(key, -decrement, cancellationToken);
     }
 
+    public ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
+        => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
+
     public async ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();

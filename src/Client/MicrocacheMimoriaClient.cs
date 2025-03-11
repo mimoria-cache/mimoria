@@ -258,6 +258,9 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, -decrement, cancellationToken);
 
+    public ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
+        => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
+
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? mapObject))

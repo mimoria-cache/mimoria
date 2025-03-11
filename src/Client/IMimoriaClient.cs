@@ -75,7 +75,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// </summary>
     /// <param name="key">The key where the counter is stored.</param>
     /// <param name="increment">The increment amount.</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The new value.</returns>
     ValueTask<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default);
 
@@ -84,9 +84,19 @@ public interface IMimoriaClient : IAsyncDisposable
     /// </summary>
     /// <param name="key">The key where the counter is stored.</param>
     /// <param name="increment">The decrement amount.</param>
-    /// <param name="cancellationToken"></param>
+    /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The new value.</returns>
     ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Gets the counter value for the key.
+    /// 
+    /// Shortcut for IncrementCounterAsync(key, increment: 0).
+    /// </summary>
+    /// <param name="key">The key where the counter is stored.</param>
+    /// <param name="cancellationToken">The cancellation token.</param>
+    /// <returns>The new value.</returns>
+    ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default);
 
     Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default);
 

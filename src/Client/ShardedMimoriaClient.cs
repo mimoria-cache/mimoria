@@ -185,6 +185,9 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, -decrement, cancellationToken);
 
+    public ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
+        => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
+
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken)
     {
         IMimoriaClient mimoriaClient = this.GetMimoriaClient(key);
