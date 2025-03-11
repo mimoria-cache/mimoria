@@ -20,16 +20,18 @@ Currently under development.
 
 ## Features
 
+- [X] publish and subscribe (built-in channels like key expiration or deletion)
+- [ ] cluster support for primary and secondary servers
+- [X] client libraries
+  - [X] C# (with micro caching and DI support)
+  - [ ] TypeScript/Node
+  - [ ] Rust
+- [X] json and binary object serialization
 - [X] cross platform (Windows, Linux, macOS and ARM)
 - [X] retry policies and resilience for
   - [X] connect and auto reconnect
   - [X] operation response timeout
   - [x] built-in exponential and linear retry policy
-- [ ] cluster support for primary and secondary servers
-- [X] client libraries
-  - [X] C# (with micro caching and DI support)
-  - [ ] TypeScript/Node
-- [X] json and binary object serialization
 - [ ] IPv4 and IPv6 support
 
 ## Installation
