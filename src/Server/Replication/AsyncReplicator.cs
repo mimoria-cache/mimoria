@@ -89,7 +89,7 @@ public sealed class AsyncReplicator : IReplicator
             byteBuffer.WriteByte((byte)Operation.SetString);
             byteBuffer.WriteString(key);
             byteBuffer.WriteString(value);
-            byteBuffer.WriteUInt(ttlMilliseconds);
+            byteBuffer.WriteVarUInt(ttlMilliseconds);
 
             this.operationsBuffers.Enqueue(byteBuffer);
         }

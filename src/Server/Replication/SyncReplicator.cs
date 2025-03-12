@@ -45,7 +45,7 @@ public sealed class SyncReplicator : IReplicator
             byteBuffer.WriteByte((byte)Operation.SetString);
             byteBuffer.WriteString(key);
             byteBuffer.WriteString(value);
-            byteBuffer.WriteUInt(ttlMilliseconds);
+            byteBuffer.WriteVarUInt(ttlMilliseconds);
             byteBuffer.EndPacket();
 
             return clusterConnection.Value.SendAndWaitForResponseAsync(requestId, byteBuffer).AsTask();

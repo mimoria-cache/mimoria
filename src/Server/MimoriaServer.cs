@@ -308,7 +308,7 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadRequiredKey();
         string? value = byteBuffer.ReadString();
-        uint ttlMilliseconds = byteBuffer.ReadUInt();
+        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
         await this.cache.SetStringAsync(key, value, ttlMilliseconds);
 
@@ -355,7 +355,7 @@ public sealed class MimoriaServer : IMimoriaServer
     {
         string key = byteBuffer.ReadRequiredKey();
         string? value = byteBuffer.ReadString();
-        uint ttlMilliseconds = byteBuffer.ReadUInt();
+        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
         // TODO: Should null values not be allowed in lists?
         if (value is null)
@@ -522,12 +522,12 @@ public sealed class MimoriaServer : IMimoriaServer
             byte[] value = new byte[valueLength];
             byteBuffer.ReadBytes(value.AsSpan());
 
-            uint ttlMilliseconds = byteBuffer.ReadUInt();
+            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
             await this.cache.SetBytesAsync(key, value, ttlMilliseconds);
         }
         else
         {
-            uint ttlMilliseconds = byteBuffer.ReadUInt();
+            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
             await this.cache.SetBytesAsync(key, null, ttlMilliseconds);
         }
 
@@ -701,7 +701,7 @@ public sealed class MimoriaServer : IMimoriaServer
         string key = byteBuffer.ReadRequiredKey();
         string subKey = byteBuffer.ReadRequiredKey();
         MimoriaValue value = byteBuffer.ReadValue();
-        uint ttlMilliseconds = byteBuffer.ReadUInt();
+        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
         // TODO: This could also outgrow max allowed map count
         await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds);
@@ -749,7 +749,7 @@ public sealed class MimoriaServer : IMimoriaServer
             map[subKey] = subValue;
         }
 
-        uint ttlMilliseconds = byteBuffer.ReadUInt();
+        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
         await this.cache.SetMapAsync(key, map, ttlMilliseconds);
 
