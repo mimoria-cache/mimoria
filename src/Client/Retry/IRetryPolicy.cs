@@ -6,5 +6,10 @@ namespace Varelen.Mimoria.Client.Retry;
 
 public interface IRetryPolicy
 {
-    public Task<T> ExecuteAsync<T>(Func<Task<T>> function, CancellationToken cancellationToken = default);
+    public Task ExecuteAsync(Func<Task> function, CancellationToken cancellationToken = default);
+}
+
+public interface IRetryPolicy<T>
+{
+    public Task<T> ExecuteAsync(Func<Task<T>> function, CancellationToken cancellationToken = default);
 }

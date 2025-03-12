@@ -21,7 +21,7 @@ public sealed class RetryPolicyBaseTests
         // Act and Assert
         try
         {
-            await policy.ExecuteAsync<bool>(() =>
+            await policy.ExecuteAsync(() =>
             {
                 executionCount++;
                 throw new ArgumentException();
@@ -39,7 +39,7 @@ public sealed class RetryPolicyBaseTests
     {
         // Arrange
         const byte maxRetries = 4;
-        IRetryPolicy policy = new StaticRetryPolicy(maxRetries);
+        IRetryPolicy<bool> policy = new StaticRetryPolicy<bool>(maxRetries);
         byte executionCount = 0;
 
         // Act
@@ -60,6 +60,17 @@ public sealed class RetryPolicyBaseTests
     }
 
     private class StaticRetryPolicy : RetryPolicyBase
+    {
+        public StaticRetryPolicy(byte maxRetries)
+            : base(maxRetries, typeof(ArgumentException))
+        {
+        }
+
+        public override int GetDelay(byte currentRetry)
+            => 10;
+    }
+
+    private class StaticRetryPolicy<T> : RetryPolicyBase<T>
     {
         public StaticRetryPolicy(byte maxRetries)
             : base(maxRetries, typeof(ArgumentException))

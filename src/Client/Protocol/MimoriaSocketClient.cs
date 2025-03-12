@@ -17,7 +17,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     private static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMilliseconds(250);
 
     private readonly TimeSpan operationTimeout;
-    private readonly IRetryPolicy operationRetryPolicy;
+    private readonly IRetryPolicy<IByteBuffer> operationRetryPolicy;
     private readonly ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer>> taskCompletionSources;
     private readonly ConcurrentDictionary<string, List<Subscription>> subscriptions;
     private readonly ReaderWriterLockSlim subscriptionsReadWriteLock;
@@ -32,12 +32,12 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     }
 
     public MimoriaSocketClient(TimeSpan operationTimeout)
-        : this(operationTimeout, new ExponentialRetryPolicy(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException)))
+        : this(operationTimeout, new ExponentialRetryPolicy<IByteBuffer>(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException)))
     {
 
     }
 
-    public MimoriaSocketClient(TimeSpan operationTimeout, IRetryPolicy operationRetryPolicy)
+    public MimoriaSocketClient(TimeSpan operationTimeout, IRetryPolicy<IByteBuffer> operationRetryPolicy)
     {
         this.operationTimeout = operationTimeout;
         this.operationRetryPolicy = operationRetryPolicy;

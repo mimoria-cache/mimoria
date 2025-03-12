@@ -17,3 +17,17 @@ public sealed class LinearRetryPolicy : RetryPolicyBase
     public override int GetDelay(byte currentRetry)
         => currentRetry * this.initialDelay;
 }
+
+public sealed class LinearRetryPolicy<T> : RetryPolicyBase<T>
+{
+    private readonly int initialDelay;
+
+    public LinearRetryPolicy(int initialDelay, byte maxRetries, params Type[] transientExceptions)
+        : base(maxRetries, transientExceptions)
+    {
+        this.initialDelay = initialDelay;
+    }
+
+    public override int GetDelay(byte currentRetry)
+        => currentRetry * this.initialDelay;
+}
