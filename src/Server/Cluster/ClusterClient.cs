@@ -160,7 +160,7 @@ public sealed class ClusterClient
                                         {
                                             string key = byteBuffer.ReadString()!;
                                             string? value = byteBuffer.ReadString();
-                                            uint ttlMilliseconds = byteBuffer.ReadUInt();
+                                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
                                             await this.cache.SetStringAsync(key, value, ttlMilliseconds);
                                             break;
