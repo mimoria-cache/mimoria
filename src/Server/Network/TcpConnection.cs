@@ -10,7 +10,7 @@ using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Server.Network;
 
-public sealed class TcpConnection
+public sealed class TcpConnection : ITcpConnection
 {
     private const int DefaultBufferSize = 65535;
 
