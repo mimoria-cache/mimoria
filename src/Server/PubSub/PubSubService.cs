@@ -19,7 +19,7 @@ public sealed class PubSubService : IPubSubService
     private const int InitialCacheSize = 503;
 
     private readonly ILogger<PubSubService> logger;
-    private readonly ConcurrentDictionary<string, List<TcpConnection>> subscriptions;
+    private readonly ConcurrentDictionary<string, List<ITcpConnection>> subscriptions;
     private readonly AutoRemovingAsyncKeyedLocking autoRemovingAsyncKeyedLocking;
 
     public PubSubService(ILogger<PubSubService> logger)
@@ -29,13 +29,13 @@ public sealed class PubSubService : IPubSubService
         this.autoRemovingAsyncKeyedLocking = new AutoRemovingAsyncKeyedLocking(InitialCacheSize);
     }
 
-    public async Task SubscribeAsync(string channel, TcpConnection tcpConnection)
+    public async Task SubscribeAsync(string channel, ITcpConnection tcpConnection)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 
         this.logger.LogInformation("Connection '{RemoteEndPoint}' subscribed to channel '{Channel}'", tcpConnection.RemoteEndPoint, channel);
 
-        if (this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
+        if (this.subscriptions.TryGetValue(channel, out List<ITcpConnection>? tcpConnections))
         {
             if (tcpConnections.Contains(tcpConnection))
             {
@@ -50,7 +50,7 @@ public sealed class PubSubService : IPubSubService
         this.subscriptions.TryAdd(channel, [tcpConnection]);
     }
 
-    public async Task UnsubscribeAsync(TcpConnection tcpConnection)
+    public async Task UnsubscribeAsync(ITcpConnection tcpConnection)
     {
         // Just try to remove the connection from all channels
         int unsubscribedChannels = 0;
@@ -67,35 +67,35 @@ public sealed class PubSubService : IPubSubService
         this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from '{ChannelCount}' channels", tcpConnection.RemoteEndPoint, unsubscribedChannels);
     }
 
-    public async Task UnsubscribeAsync(string channel, TcpConnection tcpConnection)
+    public async ValueTask UnsubscribeAsync(string channel, ITcpConnection tcpConnection)
     {
-        using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
-
         this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from channel '{Channel}'", tcpConnection.RemoteEndPoint, channel);
 
-        if (!this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
+        if (!this.subscriptions.TryGetValue(channel, out List<ITcpConnection>? tcpConnections))
         {
             return;
         }
+
+        using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 
         tcpConnections.Remove(tcpConnection);
     }
 
-    public async Task PublishAsync(string channel, MimoriaValue payload)
+    public async ValueTask PublishAsync(string channel, MimoriaValue payload)
     {
-        using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
-
-        if (!this.subscriptions.TryGetValue(channel, out List<TcpConnection>? tcpConnections))
+        if (!this.subscriptions.TryGetValue(channel, out List<ITcpConnection>? tcpConnections))
         {
             return;
         }
+
+        using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 
         using IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Publish);
         byteBuffer.WriteString(channel);
         byteBuffer.WriteValue(payload);
         byteBuffer.EndPacket();
 
-        foreach (TcpConnection tcpConnection in tcpConnections)
+        foreach (ITcpConnection tcpConnection in tcpConnections)
         {
             byteBuffer.Retain();
             await tcpConnection.SendAsync(byteBuffer);

@@ -9,8 +9,8 @@ namespace Varelen.Mimoria.Server.PubSub;
 
 public interface IPubSubService : IDisposable
 {
-    Task SubscribeAsync(string channel, TcpConnection tcpConnection);
-    Task UnsubscribeAsync(string channel, TcpConnection tcpConnection);
-    Task UnsubscribeAsync(TcpConnection tcpConnection);
-    Task PublishAsync(string channel, MimoriaValue payload);
+    Task SubscribeAsync(string channel, ITcpConnection tcpConnection);
+    ValueTask UnsubscribeAsync(string channel, ITcpConnection tcpConnection);
+    Task UnsubscribeAsync(ITcpConnection tcpConnection);
+    ValueTask PublishAsync(string channel, MimoriaValue payload);
 }
