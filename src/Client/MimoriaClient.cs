@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -35,7 +36,17 @@ public sealed class MimoriaClient : IMimoriaClient
 
     public bool IsConnected => this.mimoriaSocketClient.IsConnected;
 
-    public bool IsPrimary => this.isPrimary;
+    public bool IsPrimary
+    {
+        get => this.isPrimary;
+        set => this.isPrimary = value;
+    }
+
+    public MimoriaClient(IPEndPoint ipEndPoint, string password = "")
+        : this(ipEndPoint.Address.ToString(), (ushort)ipEndPoint.Port, password)
+    {
+
+    }
 
     public MimoriaClient(string ip, ushort port, string password = "")
         : this(ip, port, password, new MimoriaSocketClient())
@@ -44,7 +55,7 @@ public sealed class MimoriaClient : IMimoriaClient
     }
 
     public MimoriaClient(string ip, ushort port, string password, IMimoriaSocketClient mimoriaSocketClient)
-        : this(ip, port, password, mimoriaSocketClient, new ExponentialRetryPolicy(initialDelay: 250, maxRetries: 4, typeof(SocketException)))
+        : this(ip, port, password, mimoriaSocketClient, new LinearRetryPolicy(initialDelay: 250, maxRetries: 255, typeof(SocketException)))
     {
 
     }
@@ -111,7 +122,6 @@ public sealed class MimoriaClient : IMimoriaClient
             }
             this.ServerId = response.ReadInt();
             this.isPrimary = response.ReadBool();
-            return true;
         }, cancellationToken);
     }
 
@@ -342,7 +352,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
-    public async ValueTask<long> IncrementCounterAsync(string key, long increment = 1, CancellationToken cancellationToken = default)
+    public async Task<long> IncrementCounterAsync(string key, long increment = 1, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
@@ -355,12 +365,12 @@ public sealed class MimoriaClient : IMimoriaClient
         return response.ReadLong();
     }
 
-    public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
+    public Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
     {
         return IncrementCounterAsync(key, -decrement, cancellationToken);
     }
 
-    public ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
+    public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
 
     public async ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)

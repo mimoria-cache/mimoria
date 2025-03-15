@@ -23,7 +23,11 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
 
     public bool IsConnected => this.mimoriaClient.IsConnected;
 
-    public bool IsPrimary => this.mimoriaClient.IsPrimary;
+    public bool IsPrimary
+    {
+        get => this.mimoriaClient.IsPrimary;
+        set => this.mimoriaClient.IsPrimary = value;
+    }
 
     public IReadOnlyList<IMimoriaClient> MimoriaClients => this.mimoriaClient is IShardedMimoriaClient s ? s.MimoriaClients : Array.Empty<IMimoriaClient>();
 
@@ -252,13 +256,13 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetCounterAsync(key, value, cancellationToken);
     }
 
-    public ValueTask<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
+    public Task<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
         => this.mimoriaClient.IncrementCounterAsync(key, increment, cancellationToken);
 
-    public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
+    public Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, -decrement, cancellationToken);
 
-    public ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
+    public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
 
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)

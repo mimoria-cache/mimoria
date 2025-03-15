@@ -23,7 +23,7 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
 
     public bool IsConnected => throw new NotSupportedException();
 
-    public bool IsPrimary => true;
+    public bool IsPrimary { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
     public ShardedMimoriaClient(string password, params IPEndPoint[] ipEndPoints)
         : this(new ConsistentHashing(new Murmur3Hasher()), password, ipEndPoints)
@@ -176,16 +176,16 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         return mimoriaClient.SetCounterAsync(key, value, cancellationToken);
     }
 
-    public ValueTask<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
+    public Task<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetMimoriaClient(key);
         return mimoriaClient.IncrementCounterAsync(key, increment, cancellationToken);
     }
 
-    public ValueTask<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
+    public Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, -decrement, cancellationToken);
 
-    public ValueTask<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
+    public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
 
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken)

@@ -10,14 +10,17 @@ namespace Varelen.Mimoria.Client;
 
 public interface IClusterMimoriaClient : IMimoriaClient
 {
+    public IReadOnlyList<IMimoriaClient> MimoriaClients { get; }
+
     Task<string?> GetStringAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
-    
+
     /// <summary>
     /// Gets the list at the key without allocating a new list instance.
     /// </summary>
     /// <param name="key">The key.</param>
+    /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
-    /// <returns></returns>
+    /// <returns>The async enumerable enumerating the values.</returns>
     IAsyncEnumerable<string> GetListEnumerableAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
     
     Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
