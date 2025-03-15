@@ -404,7 +404,7 @@ public sealed class MimoriaServer : IMimoriaServer
         bool contains = await this.cache.ContainsListAsync(key, value);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.ContainsList, requestId, StatusCode.Ok);
-        responseBuffer.WriteByte(contains ? (byte)1 : (byte)0);
+        responseBuffer.WriteBool(contains);
         responseBuffer.EndPacket();
 
         await tcpConnection.SendAsync(responseBuffer);
@@ -590,8 +590,6 @@ public sealed class MimoriaServer : IMimoriaServer
                 var operation = (Operation)byteBuffer.ReadByte();
                 switch (operation)
                 {
-                    case Operation.Login:
-                        throw new ArgumentException($"Operation '{nameof(Operation.Login)}' cannot be in a bulk operation");
                     case Operation.GetString:
                         {
                             string key = byteBuffer.ReadRequiredKey();
@@ -622,13 +620,87 @@ public sealed class MimoriaServer : IMimoriaServer
                     case Operation.GetObjectBinary:
                         break;
                     case Operation.GetList:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+
+                            await LockIfNeededAsync(key);
+
+                            int writeIndexBefore = responseBuffer.WriteIndex;
+
+                            responseBuffer.WriteByte((byte)Operation.GetList);
+
+                            // TODO: This as a var uint would be cool, but we save a list copy using the enumerator
+                            responseBuffer.WriteUInt(0);
+
+                            uint count = 0;
+                            await foreach (string s in this.cache.GetListAsync(key, takeLock: false))
+                            {
+                                responseBuffer.WriteString(s);
+                                count++;
+                            }
+
+                            int writeIndexAfter = responseBuffer.WriteIndex;
+                            responseBuffer.WriteIndex = writeIndexBefore;
+                            responseBuffer.WriteUInt(count);
+                            responseBuffer.WriteIndex = writeIndexAfter;
+                            break;
+                        }
                     case Operation.AddList:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            string? value = byteBuffer.ReadString();
+                            uint ttl = byteBuffer.ReadUInt();
+
+                            // TODO: Should null values not be allowed in lists?
+                            if (value is null)
+                            {
+                                throw new ArgumentException($"Cannot remove null value from list under key '{key}'");
+                            }
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.AddListAsync(key, value, ttl, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.AddList);
+                            break;
+                        }
                     case Operation.RemoveList:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            string? value = byteBuffer.ReadString();
+
+                            // TODO: Should null values not be allowed in lists?
+                            if (value is null)
+                            {
+                                throw new ArgumentException($"Cannot remove null value from list under key '{key}'");
+                            }
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.RemoveListAsync(key, value, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.RemoveList);
+                            break;
+                        }
                     case Operation.ContainsList:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            string? value = byteBuffer.ReadString();
+
+                            // TODO: Should we just return false?
+                            if (value is null)
+                            {
+                                throw new ArgumentException($"Cannot check if null value exist in list '{key}'");
+                            }
+
+                            await LockIfNeededAsync(key);
+
+                            bool contains = await this.cache.ContainsListAsync(key, value, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.ContainsList);
+                            responseBuffer.WriteBool(contains);
+                            break;
+                        }
                     case Operation.Exists:
                         {
                             string key = byteBuffer.ReadRequiredKey();
@@ -652,20 +724,79 @@ public sealed class MimoriaServer : IMimoriaServer
                             responseBuffer.WriteByte((byte)Operation.Delete);
                             break;
                         }
-                    case Operation.GetStats:
-                        break;
                     case Operation.GetBytes:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+
+                            await LockIfNeededAsync(key);
+
+                            byte[]? value = await this.cache.GetBytesAsync(key, takeLock: false);
+                            uint valueLength = value is not null ? (uint)value.Length : 0;
+
+                            responseBuffer.WriteByte((byte)Operation.GetBytes);
+                            responseBuffer.WriteVarUInt(valueLength);
+                            if (valueLength > 0)
+                            {
+                                responseBuffer.WriteBytes(value);
+                            }
+                            break;
+                        }
                     case Operation.SetBytes:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            uint valueLength = byteBuffer.ReadUInt();
+
+                            if (valueLength > ProtocolDefaults.MaxByteArrayLength)
+                            {
+                                throw new ArgumentException($"Read bytes length '{valueLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
+                            }
+
+                            await LockIfNeededAsync(key);
+
+                            if (valueLength > 0)
+                            {
+                                var value = new byte[valueLength];
+                                byteBuffer.ReadBytes(value.AsSpan());
+                                uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                                await this.cache.SetBytesAsync(key, value, ttlMilliseconds, takeLock: false);
+                            }
+                            else
+                            {
+                                uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                                await this.cache.SetBytesAsync(key, null, ttlMilliseconds, takeLock: false);
+                            }
+
+                            responseBuffer.WriteByte((byte)Operation.SetBytes);
+                            break;
+                        }
                     case Operation.SetCounter:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            long value = byteBuffer.ReadLong();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.SetCounterAsync(key, value, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.SetCounter);
+                            responseBuffer.EndPacket();
+                            break;
+                        }
                     case Operation.IncrementCounter:
-                        break;
-                    case Operation.Bulk:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            long increment = byteBuffer.ReadLong();
+
+                            await LockIfNeededAsync(key);
+
+                            long value = await this.cache.IncrementCounterAsync(key, increment, takeLock: false);
+
+                            responseBuffer.WriteByte((byte)Operation.IncrementCounter);
+                            responseBuffer.WriteLong(value);
+                            break;
+                        }
                     default:
-                        break;
+                        throw new ArgumentException($"Operation '{nameof(Operation.Login)}' cannot be in a bulk operation");
                 }
             }
         }
