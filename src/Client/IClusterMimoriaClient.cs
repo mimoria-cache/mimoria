@@ -12,6 +12,21 @@ public interface IClusterMimoriaClient : IMimoriaClient
 {
     public IReadOnlyList<IMimoriaClient> MimoriaClients { get; }
 
+    /// <summary>
+    /// Gets the server id of the current primary.
+    /// </summary>
+    new int? ServerId { get; }
+
+    /// <summary>
+    /// Returns true if we are connected to all servers.
+    /// </summary>
+    new bool IsConnected { get; }
+
+    /// <summary>
+    /// Is not supported for the cluster client.
+    /// </summary>
+    new bool IsPrimary { get; internal set; }
+
     Task<string?> GetStringAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>

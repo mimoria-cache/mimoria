@@ -17,8 +17,14 @@ public interface IMimoriaClient : IAsyncDisposable
     /// </summary>
     int? ServerId { get; }
 
+    /// <summary>
+    /// Returns true if we are connected to the server.
+    /// </summary>
     bool IsConnected { get; }
 
+    /// <summary>
+    /// Only usable when connected to a cluster using the cluster client.
+    /// </summary>
     bool IsPrimary { get; internal set; }
 
     /// <summary>

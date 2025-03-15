@@ -23,19 +23,10 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     private readonly int primaryRetryCount;
     private readonly int primaryRetryDelay;
 
-    /// <summary>
-    /// Gets the server id of the current primary.
-    /// </summary>
     public int? ServerId => this.mimoriaClients.Where(mimoriaClient => mimoriaClient.IsPrimary).First().ServerId;
 
-    /// <summary>
-    /// Returns true if we are connected to all servers.
-    /// </summary>
     public bool IsConnected => this.mimoriaClients.All(mimoriaClient => mimoriaClient.IsConnected);
 
-    /// <summary>
-    /// Is not supported for the cluster client.
-    /// </summary>
     public bool IsPrimary { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
     public IReadOnlyList<IMimoriaClient> MimoriaClients => this.mimoriaClients;
