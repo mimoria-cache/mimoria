@@ -179,9 +179,9 @@ public sealed class MimoriaServer : IMimoriaServer
             {
                 this.clusterReadyTaskCompletionSource.SetResult();
             }
-
-            await this.pubSubService.PublishAsync(Channels.PrimaryChanged, this.bullyAlgorithm.Leader);
         }
+
+        await this.pubSubService.PublishAsync(Channels.PrimaryChanged, this.bullyAlgorithm.Leader);
     }
 
     private void HandleTcpConnectionDisconnected(TcpConnection tcpConnection)
