@@ -93,11 +93,15 @@ public sealed class AutoRemovingAsyncKeyedLocking : IDisposable
     /// </summary>
     /// <param name="key">The key to check for.</param>
     [Conditional("DEBUG")]
-    public void DebugAssertKeyHasReleaserLock(string key)
+    internal void DebugAssertKeyHasReleaserLock(string key)
     {
         Debug.Assert(this.releasersByKey.ContainsKey(key), $"Key '{key}' has no active releaser");
         Debug.Assert(this.releasersByKey[key].Semaphore.CurrentCount == 0, $"Semaphore current count is not zero for releaser with key '{key}'");
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool HasActiveLock(string key)
+        => this.releasersByKey.ContainsKey(key);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void Release(ReferenceCountedReleaser releaser)
