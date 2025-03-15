@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics;
+
 using Varelen.Mimoria.Server.Cache.Locking;
 
 namespace Varelen.Mimoria.Server.Tests.Unit.Cache.Locking;
@@ -61,5 +63,30 @@ public class AutoRemovingAsyncKeyedLockingTests
             Assert.NotNull(releaser);
             Assert.True(this.sut.HasActiveLock(key));
         }
+    }
+
+    [Fact]
+    public async Task LockAsync_Given_MultipleCallsConcurrently_Then_ExecutesSequentiallyAsync()
+    {
+        const string key = "key";
+        const int iterations = 3;
+        const int expectedElapsedMilliseconds = 3_000;
+
+        var start = Stopwatch.StartNew();
+
+        await Parallel.ForAsync(0, iterations, async (_, cancellationToken) =>
+        {
+            using ReferenceCountedReleaser? releaser = await this.sut.LockAsync(key);
+
+            Assert.NotNull(releaser);
+            Assert.True(this.sut.HasActiveLock(key));
+
+            await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+        });
+
+        start.Stop();
+
+        Assert.True(start.ElapsedMilliseconds >= expectedElapsedMilliseconds);
+        Assert.False(this.sut.HasActiveLock(key));
     }
 }
