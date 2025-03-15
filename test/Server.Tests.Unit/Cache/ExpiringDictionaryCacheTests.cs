@@ -8,7 +8,7 @@ using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Server.Cache;
 using Varelen.Mimoria.Server.PubSub;
 
-namespace Varelen.Mimoria.Server.Tests.Unit;
+namespace Varelen.Mimoria.Server.Tests.Unit.Cache;
 
 public class ExpiringDictionaryCacheTests
 {
