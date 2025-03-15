@@ -48,6 +48,13 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
         bulkOperation.SetString(key, value, ttl);
     }
 
+    public void IncrementCounter(string key, long increment = 1)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+
+        bulkOperation.IncrementCounter(key, increment);
+    }
+
     public void Exists(string key)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);

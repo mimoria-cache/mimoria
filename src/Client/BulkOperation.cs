@@ -41,6 +41,15 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount++;
     }
 
+    public void IncrementCounter(string key, long increment = 1)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.IncrementCounter);
+        this.byteBuffer.WriteString(key);
+        this.byteBuffer.WriteLong(increment);
+
+        this.operationCount++;
+    }
+
     public void Exists(string key)
     {
         this.byteBuffer.WriteByte((byte)Operation.Exists);

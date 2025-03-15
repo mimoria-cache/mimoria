@@ -552,7 +552,11 @@ public sealed class MimoriaClient : IMimoriaClient
                 case Operation.SetCounter:
                     break;
                 case Operation.IncrementCounter:
-                    break;
+                    {
+                        long value = response.ReadLong();
+                        list.Add(value);
+                        break;
+                    }
                 case Operation.Bulk:
                     break;
                 default:
