@@ -133,7 +133,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     {
         if (retry > this.primaryRetryCount)
         {
-            throw new TimeoutException("No primary was available even after extended retrying");
+            throw new NoPrimaryAvailableException("No primary was available even after extended retrying");
         }
 
         try
@@ -152,7 +152,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     {
         if (retry > this.primaryRetryCount)
         {
-            throw new TimeoutException("No primary was available even after extended retrying");
+            throw new NoPrimaryAvailableException("No primary was available even after extended retrying");
         }
 
         try
