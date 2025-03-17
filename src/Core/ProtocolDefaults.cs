@@ -10,4 +10,5 @@ public static class ProtocolDefaults
     public const int MaxPasswordLength = 4096;
     public const int MaxByteArrayLength = 128_000_000;
     public const int MaxMapCount = 1_000_000;
+    public const int MaxListCount = 1_000_000;
 }

@@ -220,7 +220,7 @@ public class ExpiringDictionaryCacheTests
             {
                 for (int i = 0; i < IterationCount; i++)
                 {
-                    await sut.AddListAsync("key", "value", 0);
+                    await sut.AddListAsync("key", "value", 0, ProtocolDefaults.MaxListCount);
                     await sut.RemoveListAsync("key", "value");
                     await foreach (var item in sut.GetListAsync("key"))
                     {

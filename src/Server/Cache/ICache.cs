@@ -24,7 +24,7 @@ public interface ICache : IDisposable
     Task<byte[]?> GetBytesAsync(string key, bool takeLock = true);
 
     IAsyncEnumerable<string> GetListAsync(string key, bool takeLock = true);
-    Task AddListAsync(string key, string value, uint ttlMilliseconds, bool takeLock = true);
+    Task AddListAsync(string key, string value, uint ttlMilliseconds, uint maxCount, bool takeLock = true);
     Task RemoveListAsync(string key, string value, bool takeLock = true);
     Task<bool> ContainsListAsync(string key, string value, bool takeLock = true);
 

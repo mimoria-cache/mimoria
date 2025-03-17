@@ -172,7 +172,7 @@ public sealed class ExpiringDictionaryCache : ICache
         }
     }
 
-    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, bool takeLock = true)
+    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, uint maxCount, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
@@ -184,6 +184,11 @@ public sealed class ExpiringDictionaryCache : ICache
 
         var list = entry!.Value as List<string>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
+
+        if (list.Count + 1 > maxCount)
+        {
+            throw new ArgumentException($"List under key '{key}' has reached its maximum count of '{maxCount}'");
+        }
 
         list.Add(value);
     }
