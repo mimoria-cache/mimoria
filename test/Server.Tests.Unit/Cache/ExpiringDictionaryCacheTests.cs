@@ -12,6 +12,9 @@ namespace Varelen.Mimoria.Server.Tests.Unit.Cache;
 
 public class ExpiringDictionaryCacheTests
 {
+    private const int MaxTestListCount = 10;
+    private const int MaxTestMapCount = 10;
+
     [Fact]
     public async Task GetString_When_SetString_And_GetString_Then_CorrectValueIsReturnedAsync()
     {
@@ -88,6 +91,70 @@ public class ExpiringDictionaryCacheTests
 
         // Assert
         Assert.Equal(value, actualValue);
+    }
+
+    [Fact]
+    public async Task AddList_When_AddList_And_ReachingMaxCount_Then_ArgumentExceptionIsThrown()
+    {
+        // Arrange
+        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+
+        const string key = "key";
+
+        // Act
+        for (int i = 0; i < MaxTestListCount; i++)
+        {
+            await sut.AddListAsync(key, $"value{i}", 0, MaxTestListCount);
+        }
+
+        // Act & Assert
+        var argumentException = await Assert.ThrowsAsync<ArgumentException>(() => sut.AddListAsync(key, "value", 0, MaxTestListCount));
+        Assert.Equal($"List under key '{key}' has reached its maximum count of '{MaxTestListCount}'", argumentException.Message);
+    }
+
+    [Fact]
+    public async Task SetMapValue_When_SetMapValue_And_ReachingMaxCount_Then_ArgumentExceptionIsThrown()
+    {
+        // Arrange
+        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+
+        const string key = "key";
+        const string subKey = "subkey";
+
+        // Act
+        for (int i = 0; i < MaxTestMapCount; i++)
+        {
+            await sut.SetMapValueAsync(key, $"{subKey}{i}", "value", 0, MaxTestMapCount);
+        }
+
+        // Act & Assert
+        var argumentException = await Assert.ThrowsAsync<ArgumentException>(() => sut.SetMapValueAsync(key, $"{subKey}{MaxTestMapCount}", "value", 0, MaxTestMapCount));
+        Assert.Equal($"Map under key '{key}' has reached its maximum count of '{MaxTestMapCount}'", argumentException.Message);
+
+        var map = await sut.GetMapAsync(key);
+        Assert.Equal((ulong)MaxTestMapCount, (ulong)map.Count);
+    }
+
+    [Fact]
+    public async Task SetMapValue_When_SetMapValue_And_SettingSameKey_Then_NoExceptionIsThrown()
+    {
+        // Arrange
+        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+
+        const string key = "key";
+        const string subKey = "subkey";
+
+        // Act
+        for (int i = 0; i < MaxTestMapCount; i++)
+        {
+            await sut.SetMapValueAsync(key, $"{subKey}{i}", "value", 0, MaxTestMapCount);
+        }
+
+        await sut.SetMapValueAsync(key, $"{subKey}{MaxTestMapCount - 1}", "value", 0, MaxTestMapCount);
+
+        // Assert
+        var map = await sut.GetMapAsync(key);
+        Assert.Equal((ulong)MaxTestMapCount, (ulong)map.Count);
     }
 
     [Fact]
