@@ -834,8 +834,7 @@ public sealed class MimoriaServer : IMimoriaServer
         MimoriaValue value = byteBuffer.ReadValue();
         uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
-        // TODO: This could also outgrow max allowed map count
-        await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds);
+        await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds, ProtocolDefaults.MaxMapCount);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetMapValue, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();

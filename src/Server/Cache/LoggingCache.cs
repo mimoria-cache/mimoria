@@ -99,10 +99,10 @@ public class LoggingCache : ICache
         return this.cache.GetMapValueAsync(key, subKey, takeLock);
     }
 
-    public async Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds, bool takeLock = true)
+    public async Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds, uint maxCount, bool takeLock = true)
     {
         this.logger.LogInformation("SetMapValue: '{Key}' -> '{SubKey}'='{Value}' (ttl='{Ttl}')", key, subKey, value, ttlMilliseconds);
-        await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds, takeLock);
+        await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds, maxCount, takeLock);
     }
 
     public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool takeLock = true)

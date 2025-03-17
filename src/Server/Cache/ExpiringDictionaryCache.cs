@@ -287,7 +287,7 @@ public sealed class ExpiringDictionaryCache : ICache
         return value;
     }
 
-    public async Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds, bool takeLock = true)
+    public async Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds, uint maxCount, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
         
@@ -303,7 +303,17 @@ public sealed class ExpiringDictionaryCache : ICache
         var map = entry!.Value as Dictionary<string, MimoriaValue>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a map");
 
+        int countBefore = map.Count;
+
         map[subKey] = value;
+
+        if (map.Count > countBefore && map.Count > maxCount)
+        {
+            bool removed = map.Remove(subKey);
+            Debug.Assert(removed, "Subkey was not removed from map as it reached max allowed count");
+
+            throw new ArgumentException($"Map under key '{key}' has reached its maximum count of '{maxCount}'");
+        }
     }
 
     public async Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool takeLock = true)

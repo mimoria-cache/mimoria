@@ -32,7 +32,7 @@ public interface ICache : IDisposable
     Task<long> IncrementCounterAsync(string key, long increment, bool takeLock = true);
 
     Task<MimoriaValue> GetMapValueAsync(string key, string subKey, bool takeLock = true);
-    Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds, bool takeLock = true);
+    Task SetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds, uint maxCount, bool takeLock = true);
 
     Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool takeLock = true);
     Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds, bool takeLock = true);
