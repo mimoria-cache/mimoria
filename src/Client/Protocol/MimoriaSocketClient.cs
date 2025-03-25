@@ -165,7 +165,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private Task<IByteBuffer> AddResponseTask(uint requestId)
     {
-        var taskCompletionSource = new TaskCompletionSource<IByteBuffer>();
+        var taskCompletionSource = new TaskCompletionSource<IByteBuffer>(TaskCreationOptions.RunContinuationsAsynchronously);
         this.taskCompletionSources[requestId] = taskCompletionSource;
         return taskCompletionSource.Task;
     }
