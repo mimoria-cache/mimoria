@@ -9,6 +9,8 @@ namespace Varelen.Mimoria.Client.Protocol;
 
 public interface IMimoriaSocketClient : ISocketClient
 {
+    ICollection<string> SubscribedChannels { get; }
+
     Task<IByteBuffer> SendAndWaitForResponseAsync(uint requestId, IByteBuffer buffer, CancellationToken cancellationToken = default);
 
     ValueTask SendAndForgetAsync(IByteBuffer buffer, CancellationToken cancellationToken = default);

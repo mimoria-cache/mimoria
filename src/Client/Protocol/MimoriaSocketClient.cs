@@ -22,6 +22,8 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     private readonly ConcurrentDictionary<string, List<Subscription>> subscriptions;
     private readonly ReaderWriterLockSlim subscriptionsReadWriteLock;
 
+    ICollection<string> IMimoriaSocketClient.SubscribedChannels => this.subscriptions.Keys;
+
     /// <summary>
     /// Create a new Mimoria socket client with the default timeout of 250 milliseconds.
     /// </summary>
@@ -98,9 +100,15 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         taskCompletionSource.SetResult(byteBuffer);
     }
 
-    protected override void HandleDisconnect()
+    protected override void HandleDisconnect(bool force)
     {
         this.taskCompletionSources.Clear();
+
+        if (!force)
+        {
+            return;
+        }
+
         this.subscriptions.Clear();
     }
 

@@ -69,7 +69,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
 
         this.Connected?.Invoke();
 
-        _ = ReceiveAsync();
+        _ = this.ReceiveAsync();
     }
 
     public async ValueTask SendAsync(IByteBuffer byteBuffer, CancellationToken cancellationToken = default)
@@ -89,7 +89,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
     }
 
     protected abstract void OnPacketReceived(IByteBuffer byteBuffer);
-    protected abstract void HandleDisconnect();
+    protected abstract void HandleDisconnect(bool force);
 
     private async Task ReceiveAsync()
     {
@@ -97,14 +97,14 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         {
             while (this.connected)
             {
-                int received = await socket!.ReceiveAsync(receiveBuffer.AsMemory(), SocketFlags.None);
+                int received = await this.socket!.ReceiveAsync(this.receiveBuffer.AsMemory(), SocketFlags.None);
                 if (received == 0)
                 {
                     await this.DisconnectAsync();
                     return;
                 }
 
-                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(receiveBuffer);
+                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(this.receiveBuffer);
                 this.receivedBytes = received - 4;
                 this.buffer.WriteBytes(this.receiveBuffer.AsSpan(4, received - 4));
 
@@ -158,7 +158,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
             this.socket?.Close();
         }
 
-        this.HandleDisconnect();
+        this.HandleDisconnect(force);
 
         if (!force)
         { 

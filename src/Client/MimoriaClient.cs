@@ -122,7 +122,23 @@ public sealed class MimoriaClient : IMimoriaClient
             }
             this.ServerId = response.ReadInt();
             this.isPrimary = response.ReadBool();
+
+            await this.ResubscribeIfNeeded();
         }, cancellationToken);
+    }
+
+    private async ValueTask ResubscribeIfNeeded()
+    {
+        var subscribedChannels = this.mimoriaSocketClient.SubscribedChannels;
+        if (subscribedChannels.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var channel in subscribedChannels)
+        {
+            await this.SendSubscribeAsync(channel);
+        }
     }
 
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
