@@ -363,7 +363,7 @@ public sealed class MimoriaServer : IMimoriaServer
             throw new ArgumentException($"Cannot remove null value from list under key '{key}'");
         }
 
-        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId, StatusCode.Ok);
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.AddList, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
         await this.cache.AddListAsync(key, value, ttlMilliseconds, ProtocolDefaults.MaxListCount);
