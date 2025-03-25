@@ -366,7 +366,7 @@ public sealed class MimoriaServer : IMimoriaServer
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetList, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
-        await this.cache.AddListAsync(key, value, ProtocolDefaults.MaxListCount, ttlMilliseconds);
+        await this.cache.AddListAsync(key, value, ttlMilliseconds, ProtocolDefaults.MaxListCount);
 
         await tcpConnection.SendAsync(responseBuffer);
     }
