@@ -66,6 +66,31 @@ Console.WriteLine(stats);
 // Uptime: 6, Connections: 1, CacheSize: 1, CacheHits: 1, CacheMisses: 0, CacheHitRatio: 1 (100%)
 ```
 
+Pub Sub with add list subscription and expiring list value:
+
+```c#
+IMimoriaClient mimoriaClient = new MimoriaClient("127.0.0.1", 6565, "password");
+await mimoriaClient.ConnectAsync();
+
+var subscription = await mimoriaClient.SubscribeAsync(Channels.ForListAdded("elements"));
+subscription.Payload += HandleListAdded;
+
+static void HandleListAdded(MimoriaValue payload)
+{
+    string element = payload!;
+
+    Console.WriteLine($"Added to the elements list: {element}");
+}
+
+await mimoriaClient.AddListAsync("elements", "Water");
+await mimoriaClient.AddListAsync("elements", "Air", ttl: default, valueTtl: TimeSpan.FromSeconds(1));
+
+await Task.Delay(TimeSpan.FromSeconds(2));
+
+List<string> list = await mimoriaClient.GetListAsync("elements");
+// List only contains 'Water'
+```
+
 Cluster servers (primary and secondaries):
 
 ```c#
