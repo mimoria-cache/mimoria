@@ -104,12 +104,90 @@ public class ExpiringDictionaryCacheTests
         // Act
         for (int i = 0; i < MaxTestListCount; i++)
         {
-            await sut.AddListAsync(key, $"value{i}", 0, MaxTestListCount);
+            await sut.AddListAsync(key, $"value{i}", 0, 0, MaxTestListCount);
         }
 
         // Act & Assert
-        var argumentException = await Assert.ThrowsAsync<ArgumentException>(() => sut.AddListAsync(key, "value", 0, MaxTestListCount));
+        var argumentException = await Assert.ThrowsAsync<ArgumentException>(() => sut.AddListAsync(key, "value", 0, 0, MaxTestListCount));
         Assert.Equal($"List under key '{key}' has reached its maximum count of '{MaxTestListCount}'", argumentException.Message);
+    }
+
+    [Fact]
+    public async Task AddList_When_AddListWithDuplicates_Then_BothValuesAreAdded()
+    {
+        // Arrange
+        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+
+        const string key = "key";
+
+        // Act
+        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
+        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
+
+        // Assert
+        var values = new List<string>();
+        await foreach (string value in sut.GetListAsync(key))
+        {
+            values.Add(value);
+        }
+        
+        Assert.Equal(1U, sut.Size);
+        Assert.Equal(2, values.Count);
+        Assert.Equal("value", values[0]);
+        Assert.Equal("value", values[1]);
+    }
+
+    [Fact]
+    public async Task AddList_When_AddListWithDuplicates_And_Remove_Then_OnlyFirstValueIsRemoved()
+    {
+        // Arrange
+        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+
+        const string key = "key";
+
+        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
+        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
+
+        // Act
+        await sut.RemoveListAsync(key, "value");
+
+        // Assert
+        var values = new List<string>();
+        await foreach (string value in sut.GetListAsync(key))
+        {
+            values.Add(value);
+        }
+
+        Assert.Equal(1U, sut.Size);
+        Assert.Single(values);
+        Assert.Equal("value", values[0]);
+    }
+
+    [Fact]
+    public async Task AddList_When_AddListWithValueExpire_Then_ExpiredAreRemoved()
+    {
+        // Arrange
+        using var sut = CreateCache(TimeSpan.FromMilliseconds(500));
+
+        const string key = "key";
+
+        // Act
+        await sut.AddListAsync(key, "value1", 0, valueTtlMilliseconds: 250, MaxTestListCount);
+        await sut.AddListAsync(key, "value2", 0, valueTtlMilliseconds: 250, MaxTestListCount);
+        await sut.AddListAsync(key, "value3", 0, valueTtlMilliseconds: 5_000, MaxTestListCount);
+
+        await Task.Delay(1_000);
+
+        // Assert
+        var values = new List<string>();
+        await foreach (string value in sut.GetListAsync(key))
+        {
+            values.Add(value);
+        }
+
+        Assert.Equal(1U, sut.Size);
+        Assert.Single(values);
+        Assert.Equal("value3", values[0]);
     }
 
     [Fact]
@@ -287,7 +365,7 @@ public class ExpiringDictionaryCacheTests
             {
                 for (int i = 0; i < IterationCount; i++)
                 {
-                    await sut.AddListAsync("key", "value", 0, ProtocolDefaults.MaxListCount);
+                    await sut.AddListAsync("key", "value", ttlMilliseconds: 0, valueTtlMilliseconds: 0, ProtocolDefaults.MaxListCount);
                     await sut.RemoveListAsync("key", "value");
                     await foreach (var item in sut.GetListAsync("key"))
                     {
