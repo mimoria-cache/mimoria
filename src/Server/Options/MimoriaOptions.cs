@@ -11,7 +11,14 @@ public class MimoriaOptions
     public ushort Backlog { get; set; } = 50;
     public string? Password { get; set; }
 
+    public CacheOptions Cache { get; set; } = new CacheOptions();
+
     public ClusterOptions? Cluster { get; set; }
+
+    public class CacheOptions
+    {
+        public TimeSpan ExpirationCheckInterval { get; set; } = TimeSpan.FromMinutes(10);
+    }
 
     public class ClusterOptions
     {

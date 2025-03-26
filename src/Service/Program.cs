@@ -32,9 +32,18 @@ await Host.CreateDefaultBuilder(args)
         services.AddSingleton<IMimoriaSocketServer, MimoriaSocketServer>();
         services.AddSingleton<IPubSubService, PubSubService>();
 #if DEBUG
-        services.AddSingleton<ICache>(serviceProvider => new LoggingCache(serviceProvider.GetRequiredService<ILogger<LoggingCache>>(), new ExpiringDictionaryCache(serviceProvider.GetRequiredService<ILogger<ExpiringDictionaryCache>>(), serviceProvider.GetRequiredService<IPubSubService>(), TimeSpan.FromMinutes(5))));
+        services.AddSingleton<ICache>(serviceProvider =>
+        {
+            var mimoriaOptions = serviceProvider.GetRequiredService<IOptions<MimoriaOptions>>();
+            var expiringDictionaryCache = new ExpiringDictionaryCache(serviceProvider.GetRequiredService<ILogger<ExpiringDictionaryCache>>(), serviceProvider.GetRequiredService<IPubSubService>(), mimoriaOptions.Value.Cache.ExpirationCheckInterval);
+            return new LoggingCache(serviceProvider.GetRequiredService<ILogger<LoggingCache>>(), expiringDictionaryCache);
+        });
 #else
-        services.AddSingleton<ICache>(serviceProvider => new ExpiringDictionaryCache(serviceProvider.GetRequiredService<ILogger<ExpiringDictionaryCache>>(), serviceProvider.GetRequiredService<IPubSubService>(), TimeSpan.FromMinutes(5)));
+        services.AddSingleton<ICache>(serviceProvider =>
+        {
+            var mimoriaOptions = serviceProvider.GetRequiredService<IOptions<MimoriaOptions>>();
+            return new ExpiringDictionaryCache(serviceProvider.GetRequiredService<ILogger<ExpiringDictionaryCache>>(), serviceProvider.GetRequiredService<IPubSubService>(), mimoriaOptions.Value.Cache.ExpirationCheckInterval);
+        });
 #endif
         services.AddSingleton<IMimoriaServer, MimoriaServer>();
 
