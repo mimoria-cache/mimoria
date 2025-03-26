@@ -45,10 +45,10 @@ public sealed class ClusterConnection
     public event ClusterConnectionEvent? Authenticated;
     public event MessageEvent? AliveReceived;
 
-    public ClusterConnection(ILogger<ClusterConnection> logger, int id, ClusterServer clusterServer, Socket socket, ICache cache)
+    public ClusterConnection(ILogger<ClusterConnection> logger, ClusterServer clusterServer, Socket socket, ICache cache)
     {
         this.logger = logger;
-        this.Id = id;
+        this.Id = -1;
         this.socket = socket;
         this.cache = cache;
         this.clusterServer = clusterServer;

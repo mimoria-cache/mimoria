@@ -20,11 +20,15 @@ public sealed class ClusterServer
 
     private readonly ILogger<ClusterServer> logger;
     private readonly ILogger<ClusterConnection> connectionLogger;
+    private readonly string ip;
+    private readonly int port;
     private readonly Socket socket;
     private readonly ConcurrentDictionary<int, ClusterConnection> clients;
     private readonly int expectedClients;
     internal readonly string password;
     private readonly ICache cache;
+
+    private bool running;
 
     public ConcurrentDictionary<int, ClusterConnection> Clients => clients;
 
@@ -35,9 +39,9 @@ public sealed class ClusterServer
     {
         this.logger = logger;
         this.connectionLogger = connectionLogger;
+        this.ip = ip;
+        this.port = port;
         this.socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
-        this.socket.Bind(new IPEndPoint(IPAddress.Parse(ip), port));
-        this.socket.Listen(10);
         this.clients = [];
         this.expectedClients = expectedClients;
         this.password = password;
@@ -46,6 +50,11 @@ public sealed class ClusterServer
 
     public void Start()
     {
+        this.socket.Bind(new IPEndPoint(IPAddress.Parse(this.ip), this.port));
+        this.socket.Listen(10);
+
+        this.running = true;
+
         _ = this.AcceptAsync();
     }
 
@@ -53,13 +62,14 @@ public sealed class ClusterServer
     {
         try
         {
-            while (this.socket.IsBound)
+            while (this.running)
             {
                 Socket clientSocket = await this.socket.AcceptAsync(CancellationToken.None);
 
-                var clusterConnection = new ClusterConnection(this.connectionLogger, -1, this, clientSocket, this.cache);
+                var clusterConnection = new ClusterConnection(this.connectionLogger, this, clientSocket, this.cache);
                 clusterConnection.Authenticated += HandleClusterConnectionAuthenticated;
                 clusterConnection.AliveReceived += HandleClusterConnectionAliveReceived;
+
                 _ = clusterConnection.ReceiveAsync();
             }
         }
@@ -70,6 +80,8 @@ public sealed class ClusterServer
         catch (Exception exception)
         {
             this.logger.LogError(exception, "Unexpected error while accepting connections");
+
+            this.Stop();
         }
     }
 
@@ -79,9 +91,9 @@ public sealed class ClusterServer
 
         clusterConnection.Authenticated -= HandleClusterConnectionAuthenticated;
         clusterConnection.AliveReceived -= HandleClusterConnectionAliveReceived;
-        
+
         bool removed = this.clients.TryRemove(clusterConnection.Id, out _);
-        Debug.Assert(removed, $"Cluster client with id {clusterConnection.Id} did not exist in clients dictionary");
+        Debug.Assert(clusterConnection.Id == -1 || removed, $"Cluster client with id '{clusterConnection.Id}' did not exist in clients dictionary");
     }
 
     private void HandleClusterConnectionAliveReceived(int leader)
@@ -106,6 +118,11 @@ public sealed class ClusterServer
 
     public void Stop()
     {
+        if (!Interlocked.Exchange(ref this.running, false))
+        {
+            return;
+        }
+
         this.socket.Close();
 
         foreach (var (_, clusterConnection) in this.clients)
