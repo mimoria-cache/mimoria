@@ -33,7 +33,9 @@ public sealed class PooledByteBuffer : IByteBuffer
     public byte[] Bytes => this.buffer;
     public int WriteIndex
     {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         get => this.writeIndex;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         set => this.writeIndex = value;
     }
     public uint ReferenceCount => this.referenceCount;
@@ -89,9 +91,7 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void WriteLengthPlaceholder()
-    {
-        this.WriteUInt(0);
-    }
+        => this.WriteUInt(0);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void EnsureBufferSize(int sizeToAdd)
@@ -123,6 +123,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBool(bool value)
     {
         this.EnsureBufferSize(1);
@@ -130,6 +131,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.buffer[this.writeIndex++] = (byte)(value ? 1 : 0);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteByte(byte value)
     {
         this.EnsureBufferSize(1);
@@ -137,6 +139,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.buffer[this.writeIndex++] = value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteUInt(uint value)
     {
         this.EnsureBufferSize(4);
@@ -145,6 +148,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += 4;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteInt(int value)
     {
         this.EnsureBufferSize(4);
@@ -154,6 +158,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     }
 
     // Based on the source code of the BinaryWriter.Write7BitEncodedInt() method from the .NET Foundation.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteVarUInt(uint value)
     {
         // Instead of using this.WriteByte() multiple times below
@@ -168,6 +173,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.buffer[this.writeIndex++] = (byte)value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteLong(long value)
     {
         this.EnsureBufferSize(8);
@@ -176,6 +182,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += 8;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteULong(ulong value)
     {
         this.EnsureBufferSize(8);
@@ -184,6 +191,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += 8;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe void WriteFloat(float value)
     {
         this.EnsureBufferSize(4);
@@ -194,6 +202,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += 4;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteDouble(double value)
     {
         this.EnsureBufferSize(4);
@@ -202,6 +211,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += 8;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteGuid(in Guid guid)
     {
         this.EnsureBufferSize(GuidByteSize);
@@ -211,20 +221,17 @@ public sealed class PooledByteBuffer : IByteBuffer
         this.writeIndex += GuidByteSize;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteDateTimeUtc(in DateTime dateTime)
-    {
-        this.WriteLong(dateTime.ToUniversalTime().Ticks);
-    }
+        => this.WriteLong(dateTime.ToUniversalTime().Ticks);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteDateOnly(in DateOnly dateOnly)
-    {
-        this.WriteInt(dateOnly.DayNumber);
-    }
+        => this.WriteInt(dateOnly.DayNumber);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteTimeOnly(in TimeOnly timeOnly)
-    {
-        this.WriteLong(timeOnly.Ticks);
-    }
+        => this.WriteLong(timeOnly.Ticks);
 
     public void WriteString(string? value)
     {
@@ -253,6 +260,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBytes(ReadOnlySpan<byte> source)
     {
         this.EnsureBufferSize(source.Length);
@@ -296,18 +304,21 @@ public sealed class PooledByteBuffer : IByteBuffer
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool ReadBool()
     {
         this.ThrowIfOutOfRange(1);
         return this.buffer[this.readIndex++] == 1;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public byte ReadByte()
     {
         this.ThrowIfOutOfRange(1);
         return this.buffer[this.readIndex++];
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint ReadUInt()
     {
         this.ThrowIfOutOfRange(4);
@@ -317,6 +328,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public int ReadInt()
     {
         this.ThrowIfOutOfRange(4);
@@ -327,6 +339,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     }
 
     // Based on the source code of the BinaryReader.Read7BitEncodedInt() method from the .NET Foundation.
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public uint ReadVarUInt()
     {
         uint value = 0;
@@ -341,6 +354,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public long ReadLong()
     {
         this.ThrowIfOutOfRange(8);
@@ -350,6 +364,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public ulong ReadULong()
     {
         this.ThrowIfOutOfRange(8);
@@ -359,6 +374,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public unsafe float ReadFloat()
     {
         this.ThrowIfOutOfRange(4);
@@ -368,6 +384,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public double ReadDouble()
     {
         this.ThrowIfOutOfRange(8);
@@ -377,6 +394,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         return value;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public Guid ReadGuid()
     {
         this.ThrowIfOutOfRange(GuidByteSize);
@@ -386,18 +404,21 @@ public sealed class PooledByteBuffer : IByteBuffer
         return guid;
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public DateTime ReadDateTimeUtc()
     {
         long ticks = this.ReadLong();
         return new DateTime(ticks, DateTimeKind.Utc);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public DateOnly ReadDateOnly()
     {
         int dayNumber = this.ReadInt();
         return DateOnly.FromDayNumber(dayNumber);
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public TimeOnly ReadTimeOnly()
     {
         long ticks = this.ReadLong();
@@ -434,6 +455,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ReadBytes(Span<byte> destination)
     {
         this.ThrowIfOutOfRange((uint)destination.Length);
@@ -484,6 +506,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     public void Retain()
         => Interlocked.Increment(ref this.referenceCount);
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void EndPacket()
     {
         int originalWriteIndex = this.writeIndex;
