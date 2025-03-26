@@ -1,6 +1,7 @@
 # mimoria
 
 [![Build and Test](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml)
+[![Publish Docker image](https://github.com/mimoria-cache/mimoria/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/mimoria-cache/mimoria/actions/workflows/docker-image.yml)
 
 Performant cross-platform distributed key-value cache server written in .NET 9.
 
