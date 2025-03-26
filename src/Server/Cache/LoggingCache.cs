@@ -63,10 +63,10 @@ public class LoggingCache : ICache
         return this.cache.GetListAsync(key, takeLock);
     }
 
-    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, uint maxCount, bool takeLock = true)
+    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, uint valueTtlMilliseconds, uint maxCount, bool takeLock = true)
     {
         this.logger.LogInformation("AddList: '{Key}'='{Value}' (ttl='{Ttl}')", key, value, ttlMilliseconds);
-        await this.cache.AddListAsync(key, value, ttlMilliseconds, maxCount, takeLock);
+        await this.cache.AddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds, maxCount, takeLock);
     }
 
     public async Task RemoveListAsync(string key, string value, bool takeLock = true)

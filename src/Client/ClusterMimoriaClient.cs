@@ -185,12 +185,12 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     public Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default)
         => this.GetStringAsync(key, preferSecondary: false, cancellationToken);
 
-    public Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default)
     {
         return RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.AddListAsync(key, value, ttl, cancellationToken);
+            return mimoriaClient.AddListAsync(key, value, ttl, valueTtl, cancellationToken);
         });
     }
 

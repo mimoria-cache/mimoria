@@ -91,10 +91,10 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
         return await mimoriaClient.GetListAsync(key, cancellationToken);
     }
 
-    public async Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public async Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetMimoriaClient(key);
-        await mimoriaClient.AddListAsync(key, value, ttl, cancellationToken);
+        await mimoriaClient.AddListAsync(key, value, ttl, valueTtl, cancellationToken);
     }
 
     public async Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default)

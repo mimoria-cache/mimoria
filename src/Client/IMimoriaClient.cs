@@ -53,7 +53,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <returns></returns>
     IAsyncEnumerable<string> GetListEnumerableAsync(string key, CancellationToken cancellationToken = default);
     Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default);
-    Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+    Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default);
     Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default);
     Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default);
 

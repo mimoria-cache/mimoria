@@ -356,6 +356,7 @@ public sealed class MimoriaServer : IMimoriaServer
         string key = byteBuffer.ReadRequiredKey();
         string? value = byteBuffer.ReadString();
         uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+        uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
 
         // TODO: Should null values not be allowed in lists?
         if (value is null)
@@ -366,7 +367,7 @@ public sealed class MimoriaServer : IMimoriaServer
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.AddList, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
 
-        await this.cache.AddListAsync(key, value, ttlMilliseconds, ProtocolDefaults.MaxListCount);
+        await this.cache.AddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds, ProtocolDefaults.MaxListCount);
 
         await tcpConnection.SendAsync(responseBuffer);
     }
@@ -650,6 +651,7 @@ public sealed class MimoriaServer : IMimoriaServer
                             string key = byteBuffer.ReadRequiredKey();
                             string? value = byteBuffer.ReadString();
                             uint ttl = byteBuffer.ReadUInt();
+                            uint valueTtl = byteBuffer.ReadUInt();
 
                             // TODO: Should null values not be allowed in lists?
                             if (value is null)
@@ -659,7 +661,7 @@ public sealed class MimoriaServer : IMimoriaServer
 
                             await LockIfNeededAsync(key);
 
-                            await this.cache.AddListAsync(key, value, ttl, ProtocolDefaults.MaxListCount, takeLock: false);
+                            await this.cache.AddListAsync(key, value, ttl, valueTtl, ProtocolDefaults.MaxListCount, takeLock: false);
 
                             responseBuffer.WriteByte((byte)Operation.AddList);
                             break;

@@ -24,7 +24,7 @@ public sealed class ExpiringDictionaryCache : ICache
     private const int InitialCacheSize = 1009;
     private const int InitialLocksCacheSize = 1009;
 
-    private const int InfiniteTimeToLive = 0;
+    public const int InfiniteTimeToLive = 0;
 
     private readonly ILogger<ExpiringDictionaryCache> logger;
     private readonly IPubSubService pubSubService;
@@ -161,28 +161,33 @@ public sealed class ExpiringDictionaryCache : ICache
             yield break;
         }
 
-        var list = entry!.Value as List<string>
+        var list = entry!.Value as ExpiringList<string>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         this.IncrementHits();
 
-        foreach (string item in list)
+        // TODO: Try to clear expired with every get?
+
+        foreach (var (value, _) in list.Get())
         {
-            yield return item;
+            yield return value;
         }
     }
 
-    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, uint maxCount, bool takeLock = true)
+    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, uint valueTtlMilliseconds, uint maxCount, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
         if (!this.cache.TryGetValue(key, out Entry<object?>? entry))
         {
-            this.cache[key] = new Entry<object?>(new List<string> { value }, ttlMilliseconds);
+            this.cache[key] = new Entry<object?>(new ExpiringList<string>(value, valueTtlMilliseconds), ttlMilliseconds);
+
+            await this.pubSubService.PublishAsync(Channels.ForListAdded(key), value);
+
             return;
         }
 
-        var list = entry!.Value as List<string>
+        var list = entry!.Value as ExpiringList<string>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         if (list.Count + 1 > maxCount)
@@ -190,7 +195,9 @@ public sealed class ExpiringDictionaryCache : ICache
             throw new ArgumentException($"List under key '{key}' has reached its maximum count of '{maxCount}'");
         }
 
-        list.Add(value);
+        list.Add(value, valueTtlMilliseconds);
+
+        await this.pubSubService.PublishAsync(Channels.ForListAdded(key), value);
     }
 
     public async Task RemoveListAsync(string key, string value, bool takeLock = true)
@@ -203,7 +210,7 @@ public sealed class ExpiringDictionaryCache : ICache
             return;
         }
 
-        var list = entry!.Value as List<string>
+        var list = entry!.Value as ExpiringList<string>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         list.Remove(value);
@@ -225,7 +232,7 @@ public sealed class ExpiringDictionaryCache : ICache
             return false;
         }
 
-        var list = entry!.Value as List<string>
+        var list = entry!.Value as ExpiringList<string>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         this.IncrementHits();
@@ -356,11 +363,12 @@ public sealed class ExpiringDictionaryCache : ICache
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async ValueTask DeleteInternalAsync(string key)
     {
+        Debug.Assert(this.autoRemovingAsyncKeyedLocking.HasActiveLock(key), $"We do not have a lock for key '{key}'");
+
         bool removed = this.cache.Remove(key, out _);
         if (!removed)
         {
-            // TODO: This can happen if it was removed concurrently, so we
-            // should not publish a key deletion again, right?
+            // Don't publish a key deletion again
             return;
         }
 
@@ -388,6 +396,7 @@ public sealed class ExpiringDictionaryCache : ICache
             while (await this.periodicTimer!.WaitForNextTickAsync())
             {
                 int keysDeleted = 0;
+                int listValuesDeleted = 0;
                 foreach (string key in this.cache.Keys)
                 {
                     using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key);
@@ -399,6 +408,11 @@ public sealed class ExpiringDictionaryCache : ICache
 
                     if (!entry.Expired)
                     {
+                        if (entry.Value is ExpiringList<string> list)
+                        {
+                            listValuesDeleted += list.RemoveExpired();
+                        }
+
                         continue;
                     }
 
@@ -410,7 +424,7 @@ public sealed class ExpiringDictionaryCache : ICache
                     await this.pubSubService.PublishAsync(Channels.KeyExpiration, key);
                 }
 
-                this.logger.LogInformation("Finished deleting '{TotalDeleted}' expired keys", keysDeleted);
+                this.logger.LogInformation("Finished deleting '{TotalDeleted}' expired keys and '{TotalListValuesDeleted}' expired list values", keysDeleted, listValuesDeleted);
             }
         }
         catch (Exception exception)
@@ -440,13 +454,14 @@ public sealed class ExpiringDictionaryCache : ICache
                         byteBuffer.WriteString(s);
                         break;
                     }
-                case List<string> list:
+                case ExpiringList<string> list:
                     {
                         byteBuffer.WriteByte((byte)CacheValueType.List);
                         byteBuffer.WriteVarUInt((uint)list.Count);
-                        foreach (string item in list)
+                        foreach (var (value, valueTtl) in list.Get())
                         {
-                            byteBuffer.WriteString(item);
+                            byteBuffer.WriteString(value);
+                            byteBuffer.WriteVarUInt(valueTtl);
                         }
                         break;
                     }
@@ -519,11 +534,11 @@ public sealed class ExpiringDictionaryCache : ICache
                     break;
                 case CacheValueType.List:
                     uint listCount = byteBuffer.ReadVarUInt();
-                    var list = new List<string>(capacity: (int)listCount);
+                    var list = new ExpiringList<string>(capacity: (int)listCount);
 
                     for (int j = 0; j < listCount; j++)
                     {
-                        list.Add(byteBuffer.ReadString()!);
+                        list.Add(value: byteBuffer.ReadString()!, ttl: byteBuffer.ReadVarUInt());
                     }
 
                     obj = list;

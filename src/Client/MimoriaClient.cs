@@ -213,7 +213,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return list;
     }
 
-    public async Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public async Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
@@ -221,6 +221,7 @@ public sealed class MimoriaClient : IMimoriaClient
         byteBuffer.WriteString(key);
         byteBuffer.WriteString(value);
         byteBuffer.WriteVarUInt((uint)ttl.TotalMilliseconds);
+        byteBuffer.WriteVarUInt((uint)valueTtl.TotalMilliseconds);
         byteBuffer.EndPacket();
 
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
@@ -589,16 +590,22 @@ public sealed class MimoriaClient : IMimoriaClient
 
         if (!alreadySubscribed)
         {
-            uint requestId = this.GetNextRequestId();
-
-            IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Subscribe, requestId);
-            byteBuffer.WriteString(channel);
-            byteBuffer.EndPacket();
-
-            using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+            await this.SendSubscribeAsync(channel, cancellationToken);
         }
 
         return subscription;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async Task SendSubscribeAsync(string channel, CancellationToken cancellationToken = default)
+    {
+        uint requestId = this.GetNextRequestId();
+
+        IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Subscribe, requestId);
+        byteBuffer.WriteString(channel);
+        byteBuffer.EndPacket();
+
+        using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
     public async Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)

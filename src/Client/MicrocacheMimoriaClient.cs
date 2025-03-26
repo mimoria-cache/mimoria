@@ -66,7 +66,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         this.expiration = expiration;
     }
 
-    public Task AddListAsync(string key, string value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
         {
@@ -80,7 +80,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
             this.memoryCache.Set(key, new List<string>() { value }, absoluteExpirationRelativeToNow: this.expiration);
         }
 
-        return this.mimoriaClient.AddListAsync(key, value, ttl, cancellationToken);
+        return this.mimoriaClient.AddListAsync(key, value, ttl, valueTtl, cancellationToken);
     }
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
