@@ -6,8 +6,34 @@
 		<Nullable>enable</Nullable>
 		<AssemblyName>Varelen.Mimoria.Client</AssemblyName>
 		<RootNamespace>Varelen.Mimoria.Client</RootNamespace>
+		<Version>0.0.1-alpha1</Version>
+		<VersionPrefix>0.0.1</VersionPrefix>
+		<VersionSuffix>alpha1</VersionSuffix>
+		<PackageVersion>0.0.1-alpha1</PackageVersion>
+		<AssemblyVersion>0.0.1.0</AssemblyVersion>
+		<FileVersion>0.0.1.0</FileVersion>
+		<ProductVersion>0.0.1</ProductVersion>
+		<Authors>varelen</Authors>
+		<Title>.NET mimoria client</Title>
+		<Description>.NET client for the performant cross-platform distributed key-value cache server mimoria.</Description>
+		<Copyright>Copyright © varelen 2025</Copyright>
+		<Summary>.NET client for the performant cross-platform distributed key-value cache server mimoria.</Summary>
+		<PackageId>Varelen.Mimoria.Client</PackageId>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/mimoria-cache/mimoria</RepositoryUrl>
+		<PackageProjectUrl>https://github.com/mimoria-cache/mimoria</PackageProjectUrl>
+		<NeutralLanguage>en-US</NeutralLanguage>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<IncludeSymbols>true</IncludeSymbols>
+		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
+		<PackageTags>mimoria distributed-cache key-value performant cache</PackageTags>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="..\..\LICENSE" Pack="true" PackagePath="" />
+		<None Include="..\..\README.md" Pack="true" PackagePath="README.md" />
+	</ItemGroup>
+	
 	<ItemGroup>
 		<PackageReference Include="Microsoft.Extensions.Caching.Memory" Version="8.0.1" />
 		<PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="8.0.2" />
