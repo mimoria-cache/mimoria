@@ -24,7 +24,7 @@
 		<RepositoryUrl>https://github.com/mimoria-cache/mimoria</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/mimoria-cache/mimoria</PackageProjectUrl>
 		<NeutralLanguage>en-US</NeutralLanguage>
-		<PackageLicenseFile>LICENSE</PackageLicenseFile>
+		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
