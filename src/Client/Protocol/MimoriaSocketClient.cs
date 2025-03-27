@@ -55,15 +55,15 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         {
             string channel = byteBuffer.ReadString()!;
 
+            if (!this.subscriptions.TryGetValue(channel, out List<Subscription>? foundSubscriptions))
+            {
+                return;
+            }
+
             this.subscriptionsReadWriteLock.EnterReadLock();
 
             try
             {
-                if (!this.subscriptions.TryGetValue(channel, out List<Subscription>? foundSubscriptions))
-                {
-                    return;
-                }
-
                 MimoriaValue payload = byteBuffer.ReadValue();
 
                 foreach (Subscription subscription in foundSubscriptions)
