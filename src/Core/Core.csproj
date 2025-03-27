@@ -24,13 +24,13 @@
 		<RepositoryUrl>https://github.com/mimoria-cache/mimoria</RepositoryUrl>
 		<PackageProjectUrl>https://github.com/mimoria-cache/mimoria</PackageProjectUrl>
 		<NeutralLanguage>en-US</NeutralLanguage>
-		<PackageLicenseFile>LICENSE.md</PackageLicenseFile>
+		<PackageLicenseFile>LICENSE</PackageLicenseFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 	</PropertyGroup>
 
 	<ItemGroup>
-		<None Include="..\..\LICENSE" Pack="true" PackagePath="LICENSE.md" />
+		<None Include="..\..\LICENSE" Pack="true" PackagePath="" />
 		<None Include="..\..\README.md" Pack="true" PackagePath="README.md" />
 	</ItemGroup>
 
