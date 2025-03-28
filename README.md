@@ -10,10 +10,11 @@ Currently under development.
 ## Content
 
 * [Features](#features)
-* [Installation](#installation)
+* [Installation server](#installation-server)
     * [Quickstart](#quickstart)
     * [Manual](#manual)
     * [From source](#from-source)
+* [Installation client](#installation-client)
 * [C# client examples](#c-client-examples)
 * [Config](#config)
 * [Contributing](#contributing)
@@ -35,15 +36,31 @@ Currently under development.
   - [x] built-in exponential and linear retry policy
 - [ ] IPv4 and IPv6 support
 
-## Installation
-
-TODO: Add instructions and Docker Hub / Nuget support
+## Installation server
 
 ### Quickstart
+
+You can run the server with Docker based on the main branch:
+```bash
+docker run -p 6565:6565 --name mimoria -e MIMORIA__PASSWORD=PleaseChooseAVeryLongOne varelen/mimoria:main
+```
+
+To change the port:
+```bash
+docker run -p 50000:50000 --name mimoria -e MIMORIA__PORT=50000 -e MIMORIA__PASSWORD=PleaseChooseAVeryLongOne varelen/mimoria:main
+```
 
 ### Manual
 
 ### From source
+
+## Installation client
+
+You can install the .NET client library from Nuget:
+
+```bash
+dotnet add package Varelen.Mimoria.Client
+```
 
 ## C# client examples
 
