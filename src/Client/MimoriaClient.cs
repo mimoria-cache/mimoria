@@ -141,6 +141,7 @@ public sealed class MimoriaClient : IMimoriaClient
         }
     }
 
+    /// <inheritdoc />
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
         => await this.mimoriaSocketClient.DisconnectAsync(force: true, cancellationToken);
 
@@ -637,6 +638,7 @@ public sealed class MimoriaClient : IMimoriaClient
         await this.mimoriaSocketClient.SendAndForgetAsync(byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public ValueTask DisposeAsync()
         => this.mimoriaSocketClient.DisposeAsync();
 

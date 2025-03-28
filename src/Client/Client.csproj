@@ -27,6 +27,7 @@
 		<IncludeSymbols>true</IncludeSymbols>
 		<SymbolPackageFormat>snupkg</SymbolPackageFormat>
 		<PackageTags>mimoria distributed-cache key-value performant cache</PackageTags>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 	</PropertyGroup>
 
 	<ItemGroup>
