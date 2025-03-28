@@ -233,7 +233,7 @@ public sealed class ClusterClient
     {
         try
         {
-            var taskCompletionSource = new TaskCompletionSource();
+            var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
             bool added = this.waitingResponses.TryAdd(requestId, taskCompletionSource);
             Debug.Assert(added, "Task completion was not added to dictionary");
 
