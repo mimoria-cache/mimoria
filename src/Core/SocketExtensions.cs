@@ -2,11 +2,15 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
 
 namespace Varelen.Mimoria.Core;
 
+/// <summary>
+/// A collection of socket extensions.
+/// </summary>
 public static class SocketExtensions
 {
     /// <summary>
@@ -28,5 +32,7 @@ public static class SocketExtensions
             offset += sent;
         }
         while (offset < total);
+
+        Debug.Assert(offset == total, "All data should have been sent");
     }
 }
