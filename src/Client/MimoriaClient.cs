@@ -15,6 +15,9 @@ using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Client;
 
+/// <summary>
+/// An implementation of a Mimoria client that communicates with a Mimoria server using sockets.
+/// </summary>
 public sealed class MimoriaClient : IMimoriaClient
 {
     private const uint ProtocolVersion = 1;
@@ -32,34 +35,49 @@ public sealed class MimoriaClient : IMimoriaClient
 
     private volatile bool connecting;
 
+    /// <inheritdoc />
     public int? ServerId { get; private set; }
 
+    /// <inheritdoc />
     public bool IsConnected => this.mimoriaSocketClient.IsConnected;
 
+    /// <inheritdoc />
     public bool IsPrimary
     {
         get => this.isPrimary;
         set => this.isPrimary = value;
     }
 
+    /// <summary>
+    /// Creates a new Mimoria client with the specified IP endpoint and password.
+    /// </summary>
     public MimoriaClient(IPEndPoint ipEndPoint, string password = "")
         : this(ipEndPoint.Address.ToString(), (ushort)ipEndPoint.Port, password)
     {
 
     }
 
+    /// <summary>
+    /// Creates a new Mimoria client with the specified IP address, port, and password.
+    /// </summary>
     public MimoriaClient(string ip, ushort port, string password = "")
         : this(ip, port, password, new MimoriaSocketClient())
     {
 
     }
 
+    /// <summary>
+    /// Creates a new Mimoria client with the specified IP address, port, password, and Mimoria socket client.
+    /// </summary>
     public MimoriaClient(string ip, ushort port, string password, IMimoriaSocketClient mimoriaSocketClient)
         : this(ip, port, password, mimoriaSocketClient, new LinearRetryPolicy(initialDelay: 250, maxRetries: 255, typeof(SocketException)))
     {
 
     }
 
+    /// <summary>
+    /// Creates a new Mimoria client with the specified IP address, port, password, Mimoria socket client, and connect retry policy.
+    /// </summary>
     public MimoriaClient(
         string ip,
         ushort port,
@@ -145,6 +163,7 @@ public sealed class MimoriaClient : IMimoriaClient
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
         => await this.mimoriaSocketClient.DisconnectAsync(force: true, cancellationToken);
 
+    /// <inheritdoc />
     public async Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -157,6 +176,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return response.ReadString();
     }
 
+    /// <inheritdoc />
     public async Task SetStringAsync(string key, string? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -170,6 +190,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<string> GetListEnumerableAsync(string key, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -191,6 +212,7 @@ public sealed class MimoriaClient : IMimoriaClient
         }
     }
 
+    /// <inheritdoc />
     public async Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -214,6 +236,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return list;
     }
 
+    /// <inheritdoc />
     public async Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -228,6 +251,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -240,6 +264,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -253,6 +278,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return response.ReadByte() == 1;
     }
 
+    /// <inheritdoc />
     public async Task<T?> GetObjectBinaryAsync<T>(string key, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
     {
         uint requestId = this.GetNextRequestId();
@@ -274,6 +300,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return typeInstance;
     }
 
+    /// <inheritdoc />
     public async Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -299,6 +326,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
         string? json = await this.GetStringAsync(key, cancellationToken);
@@ -310,6 +338,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return JsonSerializer.Deserialize<T>(json, jsonSerializerOptions);
     }
 
+    /// <inheritdoc />
     public async Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         string? json = t != null
@@ -319,6 +348,7 @@ public sealed class MimoriaClient : IMimoriaClient
         await this.SetStringAsync(key, json, ttl, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -340,6 +370,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return bytes;
     }
 
+    /// <inheritdoc />
     public async Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -358,6 +389,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -370,6 +402,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<long> IncrementCounterAsync(string key, long increment = 1, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -383,14 +416,17 @@ public sealed class MimoriaClient : IMimoriaClient
         return response.ReadLong();
     }
 
+    /// <inheritdoc />
     public Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
     {
         return IncrementCounterAsync(key, -decrement, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
 
+    /// <inheritdoc />
     public async ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -403,6 +439,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return response.ReadByte() == 1;
     }
 
+    /// <inheritdoc />
     public async Task DeleteAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -414,6 +451,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -433,6 +471,7 @@ public sealed class MimoriaClient : IMimoriaClient
         };
     }
 
+    /// <inheritdoc />
     public async Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -446,6 +485,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return response.ReadValue();
     }
 
+    /// <inheritdoc />
     public async Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -460,6 +500,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -485,6 +526,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return map;
     }
 
+    /// <inheritdoc />
     public async Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -503,9 +545,11 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public IBulkOperation Bulk()
         => new BulkOperation(this);
 
+    /// <inheritdoc />
     public async Task<List<object?>> ExecuteBulkAsync(BulkOperation bulkOperation, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
@@ -585,6 +629,7 @@ public sealed class MimoriaClient : IMimoriaClient
         return list;
     }
 
+    /// <inheritdoc />
     public async Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
         (Subscription subscription, bool alreadySubscribed) = this.mimoriaSocketClient.Subscribe(channel);
@@ -609,6 +654,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
         if (!this.mimoriaSocketClient.Unsubscribe(channel))
@@ -626,6 +672,7 @@ public sealed class MimoriaClient : IMimoriaClient
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();

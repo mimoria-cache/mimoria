@@ -11,6 +11,9 @@ using Varelen.Mimoria.Core.Network;
 
 namespace Varelen.Mimoria.Client.Network;
 
+/// <summary>
+/// A socket client implementation that communicates asynchronously with a server using TCP sockets.
+/// </summary>
 public abstract class AsyncTcpSocketClient : ISocketClient
 {
     // TODO: Review
@@ -18,7 +21,10 @@ public abstract class AsyncTcpSocketClient : ISocketClient
     private const int DefaultTcpKeepAliveInterval = 30;
     private const int DefaultTcpKeepAliveRetryCount = 3;
 
+    /// <inheritdoc />
     public event ISocketClient.SocketHandler? Disconnected;
+
+    /// <inheritdoc />
     public event ISocketClient.SocketHandler? Connected;
 
     private Socket? socket;
@@ -89,7 +95,15 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         }
     }
 
+    /// <summary>
+    /// Called when a packet is received.
+    /// </summary>
+    /// <param name="byteBuffer">The byte buffer containing the data.</param>
     protected abstract void OnPacketReceived(IByteBuffer byteBuffer);
+
+    /// <summary>
+    /// Called when the client is disconnected.
+    /// </summary>
     protected abstract void HandleDisconnect(bool force);
 
     private async Task ReceiveAsync()

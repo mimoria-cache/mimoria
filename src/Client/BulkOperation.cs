@@ -7,6 +7,9 @@ using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Client;
 
+/// <summary>
+/// An implementation of a bulk operation that can be executed on a Mimoria server.
+/// </summary>
 public sealed class BulkOperation : IBulkOperation, IDisposable
 {
     private readonly IByteBuffer byteBuffer;
@@ -23,6 +26,7 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount = 0;
     }
 
+    /// <inheritdoc />
     public void GetString(string key)
     {
         this.byteBuffer.WriteByte((byte)Operation.GetString);
@@ -31,6 +35,7 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount++;
     }
 
+    /// <inheritdoc />
     public void SetString(string key, string value, TimeSpan ttl = default)
     {
         this.byteBuffer.WriteByte((byte)Operation.SetString);
@@ -41,6 +46,7 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount++;
     }
 
+    /// <inheritdoc />
     public void IncrementCounter(string key, long increment = 1)
     {
         this.byteBuffer.WriteByte((byte)Operation.IncrementCounter);
@@ -50,6 +56,7 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount++;
     }
 
+    /// <inheritdoc />
     public void Exists(string key)
     {
         this.byteBuffer.WriteByte((byte)Operation.Exists);
@@ -58,6 +65,7 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount++;
     }
 
+    /// <inheritdoc />
     public void Delete(string key)
     {
         this.byteBuffer.WriteByte((byte)Operation.Delete);
@@ -66,9 +74,11 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.operationCount++;
     }
 
+    /// <inheritdoc />
     public Task<List<object?>> ExecuteAsync(CancellationToken cancellationToken = default)
         => this.mimoriaClient.ExecuteBulkAsync(this, cancellationToken);
 
+    /// <inheritdoc />
     public void Dispose()
     {
         this.byteBuffer.Dispose();

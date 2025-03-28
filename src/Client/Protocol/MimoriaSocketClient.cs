@@ -12,6 +12,9 @@ using Varelen.Mimoria.Client.Network;
 
 namespace Varelen.Mimoria.Client.Protocol;
 
+/// <summary>
+/// A TCP socket client implementation that communicates with a Mimoria server.
+/// </summary>
 public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketClient
 {
     private static readonly TimeSpan DefaultOperationTimeout = TimeSpan.FromMilliseconds(250);
@@ -25,7 +28,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     ICollection<string> IMimoriaSocketClient.SubscribedChannels => this.subscriptions.Keys;
 
     /// <summary>
-    /// Create a new Mimoria socket client with the default timeout of 250 milliseconds.
+    /// Creates a new Mimoria socket client with the default timeout of 250 milliseconds.
     /// </summary>
     public MimoriaSocketClient()
         : this(DefaultOperationTimeout)
@@ -33,12 +36,18 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
 
     }
 
+    /// <summary>
+    /// Creates a new Mimoria socket client with the specified operation timeout.
+    /// </summary>
     public MimoriaSocketClient(TimeSpan operationTimeout)
         : this(operationTimeout, new ExponentialRetryPolicy<IByteBuffer>(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException)))
     {
 
     }
 
+    /// <summary>
+    /// Creates a new Mimoria socket client with the specified operation timeout and operation retry policy.
+    /// </summary>
     public MimoriaSocketClient(TimeSpan operationTimeout, IRetryPolicy<IByteBuffer> operationRetryPolicy)
     {
         this.operationTimeout = operationTimeout;
@@ -48,6 +57,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         this.subscriptionsReadWriteLock = new ReaderWriterLockSlim();
     }
 
+    /// <inheritdoc />
     protected override void OnPacketReceived(IByteBuffer byteBuffer)
     {
         var operation = (Operation)byteBuffer.ReadByte();
@@ -100,6 +110,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         taskCompletionSource.SetResult(byteBuffer);
     }
 
+    /// <inheritdoc />
     protected override void HandleDisconnect(bool force)
     {
         this.taskCompletionSources.Clear();
@@ -112,6 +123,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         this.subscriptions.Clear();
     }
 
+    /// <inheritdoc />
     public async Task<IByteBuffer> SendAndWaitForResponseAsync(uint requestId, IByteBuffer byteBuffer, CancellationToken cancellationToken = default)
     {
         try
@@ -130,9 +142,11 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         }
     }
 
+    /// <inheritdoc />
     public ValueTask SendAndForgetAsync(IByteBuffer byteBuffer, CancellationToken cancellationToken = default)
         => this.SendAsync(byteBuffer, cancellationToken);
 
+    /// <inheritdoc />
     public (Subscription, bool alreadySubscribed) Subscribe(string channel)
     {
         this.subscriptionsReadWriteLock.EnterWriteLock();
@@ -156,6 +170,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         }
     }
 
+    /// <inheritdoc />
     public bool Unsubscribe(string channel)
     {
         this.subscriptionsReadWriteLock.EnterWriteLock();
