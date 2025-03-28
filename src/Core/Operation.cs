@@ -4,6 +4,9 @@
 
 namespace Varelen.Mimoria.Core;
 
+/// <summary>
+/// The operations that can be performed.
+/// </summary>
 public enum Operation : byte
 {
     /// <summary>
@@ -102,13 +105,32 @@ public enum Operation : byte
     /// Published a payload to a channel.
     /// </summary>
     Publish = 23,
-
-    // Cluster
+    /// <summary>
+    /// Used to authenticate with a cluster.
+    /// </summary>
     ClusterLogin = 249,
+    /// <summary>
+    /// Sends an election message in a cluster.
+    /// </summary>
     ElectionMessage = 250,
+    /// <summary>
+    /// Sends an alive message in a cluster.
+    /// </summary>
     AliveMessage = 251,
+    /// <summary>
+    /// Sends a victory message in a cluster.
+    /// </summary>
     VictoryMessage = 252,
+    /// <summary>
+    /// Sends a heartbeat message in a cluster.
+    /// </summary>
     HeartbeatMessage = 253,
+    /// <summary>
+    /// Sends a batch of operations which is used for replication.
+    /// </summary>
     Batch = 254,
+    /// <summary>
+    /// Synchronizes data in a cluster (for example secondary requests sync from primary).
+    /// </summary>
     Sync = 255
 }

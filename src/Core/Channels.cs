@@ -6,6 +6,9 @@ using System.Runtime.CompilerServices;
 
 namespace Varelen.Mimoria.Core;
 
+/// <summary>
+/// Contains the well-known channels used for pub/sub.
+/// </summary>
 public static class Channels
 {
     /// <summary>
@@ -28,7 +31,12 @@ public static class Channels
     /// </summary>
     public const string ListAddedTemplate = "__key:{0}:list:added";
 
-    // TODO: Cache results, it could be used quite often on the server?
+    // TODO: Cache results, it could be used quite often on the server?#
+    /// <summary>
+    /// Returns the channel for when a list item was added to the list at the specified key.
+    /// </summary>
+    /// <param name="key">The key of the list.</param>
+    /// <returns>The channel for when a list item was added to the list at the specified key.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ForListAdded(string key)
         => string.Format(ListAddedTemplate, key);

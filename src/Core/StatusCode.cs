@@ -4,6 +4,9 @@
 
 namespace Varelen.Mimoria.Core;
 
+/// <summary>
+/// The status code of a response.
+/// </summary>
 public enum StatusCode : byte
 {
     /// <summary>
