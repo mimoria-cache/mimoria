@@ -1,10 +1,9 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
 using Microsoft.Extensions.Logging;
 
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
@@ -13,6 +12,7 @@ using System.Runtime.CompilerServices;
 
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Core.Network;
 using Varelen.Mimoria.Server.Cache;
 
 namespace Varelen.Mimoria.Server.Cluster;
@@ -29,12 +29,10 @@ public sealed class ClusterConnection
     private readonly Socket socket;
     private readonly ICache cache;
     private readonly ConcurrentDictionary<uint, TaskCompletionSource> waitingResponses;
-    private readonly PooledByteBuffer buffer;
+    private readonly LengthPrefixedPacketReader lengthPrefixedPacketReader;
 
     private bool connected;
     private uint requestIdCounter;
-    private int expectedPacketLength;
-    private int receivedBytes;
 
     public int Id { get; private set; }
 
@@ -55,7 +53,7 @@ public sealed class ClusterConnection
         this.connected = true;
         this.waitingResponses = [];
         this.requestIdCounter = 0;
-        this.buffer = new PooledByteBuffer(DefaultBufferSize);
+        this.lengthPrefixedPacketReader = new LengthPrefixedPacketReader(ProtocolDefaults.LengthPrefixLength);
     }
 
     public async Task ReceiveAsync()
@@ -72,74 +70,17 @@ public sealed class ClusterConnection
                     return;
                 }
 
-                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(receiveBuffer);
-                this.receivedBytes = received - 4;
-                this.buffer.WriteBytes(receiveBuffer.AsSpan(4, received - 4));
-
-                while (this.receivedBytes < this.expectedPacketLength)
+                foreach (IByteBuffer byteBuffer in this.lengthPrefixedPacketReader.TryRead(receiveBuffer, received))
                 {
-                    int bytesToReceive = Math.Min(this.expectedPacketLength - this.receivedBytes, receiveBuffer.Length);
-                    received = await this.socket.ReceiveAsync(receiveBuffer.AsMemory(0, bytesToReceive), SocketFlags.None);
-                    if (received == 0)
+                    try
                     {
-                        this.Disconnect();
-                        return;
+                        await this.HandlePacketReceivedAsync(byteBuffer);
                     }
-
-                    this.receivedBytes += received;
-                    this.buffer.WriteBytes(receiveBuffer.AsSpan(0, received));
+                    finally
+                    {
+                        byteBuffer.Dispose();
+                    }
                 }
-
-                using IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
-                byteBuffer.WriteBytes(this.buffer.Bytes.AsSpan(0, this.expectedPacketLength));
-
-                var operation = (Operation)byteBuffer.ReadByte();
-                var requestId = byteBuffer.ReadUInt();
-
-                switch (operation)
-                {
-                    case Operation.ClusterLogin:
-                        string receivedPassword = byteBuffer.ReadString()!;
-                        if (!receivedPassword.Equals(this.clusterServer.password, StringComparison.Ordinal))
-                        {
-                            this.Disconnect();
-                            return;
-                        }
-
-                        this.Id = byteBuffer.ReadInt();
-
-                        this.Authenticated?.Invoke(this);
-                        break;
-                    case Operation.AliveMessage:
-                        {
-                            int leader = byteBuffer.ReadInt();
-                            this.AliveReceived?.Invoke(leader);
-                            break;
-                        }
-                    case Operation.Batch:
-                        {
-                            if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource? taskComplectionSource))
-                            {
-                                taskComplectionSource.SetResult();
-                            }
-                            break;
-                        }
-                    case Operation.Sync:
-                        {
-                            this.logger.LogDebug("Primary sync request from '{RemoteEndPoint}' with request id '{RequestId}'", this.RemoteEndPoint, requestId);
-                            
-                            var syncBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);
-
-                            this.cache.Serialize(syncBuffer);
-
-                            syncBuffer.EndPacket();
-
-                            await this.SendAsync(syncBuffer);
-                            break;
-                        }
-                }
-
-                this.buffer.Clear();
             }
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
@@ -149,6 +90,56 @@ public sealed class ClusterConnection
         finally
         {
             this.Disconnect();
+        }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async Task HandlePacketReceivedAsync(IByteBuffer byteBuffer)
+    {
+        var operation = (Operation)byteBuffer.ReadByte();
+        var requestId = byteBuffer.ReadUInt();
+
+        switch (operation)
+        {
+            case Operation.ClusterLogin:
+                string receivedPassword = byteBuffer.ReadString()!;
+                if (!receivedPassword.Equals(this.clusterServer.password, StringComparison.Ordinal))
+                {
+                    this.Disconnect();
+                    return;
+                }
+
+                this.Id = byteBuffer.ReadInt();
+
+                this.Authenticated?.Invoke(this);
+                break;
+            case Operation.AliveMessage:
+                {
+                    int leader = byteBuffer.ReadInt();
+                    this.AliveReceived?.Invoke(leader);
+                    break;
+                }
+            case Operation.Batch:
+                {
+                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource? taskComplectionSource))
+                    {
+                        taskComplectionSource.SetResult();
+                    }
+                    break;
+                }
+            case Operation.Sync:
+                {
+                    this.logger.LogDebug("Primary sync request from '{RemoteEndPoint}' with request id '{RequestId}'", this.RemoteEndPoint, requestId);
+
+                    var syncBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);
+
+                    this.cache.Serialize(syncBuffer);
+
+                    syncBuffer.EndPacket();
+
+                    await this.SendAsync(syncBuffer);
+                    break;
+                }
         }
     }
 
@@ -204,7 +195,7 @@ public sealed class ClusterConnection
         finally
         {
             this.socket.Close();
-            this.buffer.Dispose();
+            this.lengthPrefixedPacketReader.Dispose();
 
             this.clusterServer.HandleConnectionDisconnect(this);
         }

@@ -7,6 +7,7 @@ using System.Net.Sockets;
 
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Core.Network;
 
 namespace Varelen.Mimoria.Server.Network;
 
@@ -17,9 +18,7 @@ public sealed class TcpConnection : ITcpConnection
     public ulong Id { get; private set; }
     public Socket Socket { get; set; }
     public byte[] ReceiveBuffer { get; } = GC.AllocateArray<byte>(length: DefaultBufferSize, pinned: true);
-    public IByteBuffer ByteBuffer { get; } = new PooledByteBuffer();
-    public int ExpectedPacketLength { get; set; }
-    public int ReceivedBytes { get; set; }
+    public LengthPrefixedPacketReader LengthPrefixedPacketReader { get; } = new(ProtocolDefaults.LengthPrefixLength);
     public bool Authenticated { get; set; }
     public EndPoint RemoteEndPoint { get; }
     public bool Connected => Volatile.Read(ref this.connected);
@@ -65,7 +64,7 @@ public sealed class TcpConnection : ITcpConnection
         finally
         {
             this.Socket.Close();
-            this.ByteBuffer.Dispose();
+            this.LengthPrefixedPacketReader.Dispose();
 
             this.tcpSocketServer.HandleCloseConnectionInternal(this);
         }

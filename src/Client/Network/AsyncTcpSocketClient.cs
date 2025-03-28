@@ -1,13 +1,13 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
-using System.Buffers.Binary;
 using System.Net;
 using System.Net.Sockets;
 
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Core.Network;
 
 namespace Varelen.Mimoria.Client.Network;
 
@@ -23,15 +23,15 @@ public abstract class AsyncTcpSocketClient : ISocketClient
 
     private Socket? socket;
     private readonly byte[] receiveBuffer = GC.AllocateArray<byte>(length: 65527, pinned: true);
-    private readonly PooledByteBuffer buffer = new();
-
-    private int expectedPacketLength;
-    private int receivedBytes;
+    
+    private readonly LengthPrefixedPacketReader lengthPrefixedPacketReader = new(ProtocolDefaults.LengthPrefixLength);
 
     private volatile bool connected;
 
+    /// <inheritdoc />
     public bool IsConnected => this.connected;
 
+    /// <inheritdoc />
     public async ValueTask ConnectAsync(string hostnameOrIp, int port, CancellationToken cancellationToken = default)
     {
         if (this.connected)
@@ -63,7 +63,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
             throw;
         }
 
-        this.buffer.Clear();
+        this.lengthPrefixedPacketReader.Reset();
 
         this.connected = true;
 
@@ -72,6 +72,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         _ = this.ReceiveAsync();
     }
 
+    /// <inheritdoc />
     public async ValueTask SendAsync(IByteBuffer byteBuffer, CancellationToken cancellationToken = default)
     {
         try
@@ -104,30 +105,18 @@ public abstract class AsyncTcpSocketClient : ISocketClient
                     return;
                 }
 
-                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(this.receiveBuffer);
-                this.receivedBytes = received - 4;
-                this.buffer.WriteBytes(this.receiveBuffer.AsSpan(4, received - 4));
-
-                while (this.receivedBytes < this.expectedPacketLength)
+                foreach (var byteBuffer in this.lengthPrefixedPacketReader.TryRead(this.receiveBuffer, received))
                 {
-                    int bytesToReceive = Math.Min(this.expectedPacketLength - this.receivedBytes, this.receiveBuffer.Length);
-                    received = await this.socket.ReceiveAsync(this.receiveBuffer.AsMemory(0, bytesToReceive), SocketFlags.None);
-                    if (received == 0)
+                    try
                     {
-                        await this.DisconnectAsync();
-                        return;
+                        this.OnPacketReceived(byteBuffer);
                     }
-
-                    this.receivedBytes += received;
-                    this.buffer.WriteBytes(this.receiveBuffer.AsSpan(0, received));
+                    catch
+                    {
+                        byteBuffer.Dispose();
+                        throw;
+                    }
                 }
-
-                IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
-                byteBuffer.WriteBytes(this.buffer.Bytes.AsSpan(0, this.expectedPacketLength));
-
-                this.OnPacketReceived(byteBuffer);
-
-                this.buffer.Clear();
             }
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
@@ -136,6 +125,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         }
     }
 
+    /// <inheritdoc />
     public ValueTask DisconnectAsync(bool force = false, CancellationToken cancellationToken = default)
     {
         if (!this.connected)
@@ -167,12 +157,13 @@ public abstract class AsyncTcpSocketClient : ISocketClient
         else
         {
             this.socket?.Dispose();
-            this.buffer.Dispose();
+            this.lengthPrefixedPacketReader.Dispose();
         }
 
         return ValueTask.CompletedTask;
     }
 
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
     {
         await this.DisconnectAsync(force: true);

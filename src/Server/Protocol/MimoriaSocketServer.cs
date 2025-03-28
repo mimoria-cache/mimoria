@@ -25,7 +25,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         this.logger = logger;
     }
 
-    protected override async ValueTask HandlePacketReceived(TcpConnection tcpConnection, IByteBuffer byteBuffer)
+    protected override async ValueTask HandlePacketReceivedAsync(TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
         var operation = (Operation)byteBuffer.ReadByte();
         uint requestId = byteBuffer.ReadUInt();

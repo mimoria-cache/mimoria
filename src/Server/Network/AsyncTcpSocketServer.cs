@@ -95,38 +95,17 @@ public abstract class AsyncTcpSocketServer : ISocketServer
                     return;
                 }
 
-                if (received < ProtocolDefaults.MinPacketLength)
+                foreach (var byteBuffer in tcpConnection.LengthPrefixedPacketReader.TryRead(tcpConnection.ReceiveBuffer, received))
                 {
-                    tcpConnection.Disconnect();
-                    this.logger.LogWarning("Received smaller packet length '{PacketLength}' than allowed min packet length '{MinPacketLength}' from '{RemoteAddress}'", received, ProtocolDefaults.MinPacketLength, tcpConnection.RemoteEndPoint);
-                    return;
-                }
-
-                tcpConnection.ExpectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(tcpConnection.ReceiveBuffer);
-                tcpConnection.ReceivedBytes = received - 4;
-                tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(4, received - 4));
-
-                while (tcpConnection.ReceivedBytes < tcpConnection.ExpectedPacketLength)
-                {
-                    int bytesToReceive = Math.Min(tcpConnection.ExpectedPacketLength - tcpConnection.ReceivedBytes, tcpConnection.ReceiveBuffer.Length);
-                    
-                    received = await tcpConnection.Socket.ReceiveAsync(tcpConnection.ReceiveBuffer.AsMemory(0, bytesToReceive), SocketFlags.None);
-                    if (received == 0)
+                    try
                     {
-                        tcpConnection.Disconnect();
-                        return;
+                        await this.HandlePacketReceivedAsync(tcpConnection, byteBuffer);
                     }
-
-                    tcpConnection.ReceivedBytes += received;
-                    tcpConnection.ByteBuffer.WriteBytes(tcpConnection.ReceiveBuffer.AsSpan(0, received));
+                    finally
+                    {
+                        byteBuffer.Dispose();
+                    }
                 }
-
-                using IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
-                byteBuffer.WriteBytes(tcpConnection.ByteBuffer.Bytes.AsSpan(0, tcpConnection.ExpectedPacketLength));
-
-                await this.HandlePacketReceived(tcpConnection, byteBuffer);
-
-                tcpConnection.ByteBuffer.Clear();
             }
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
@@ -141,7 +120,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         }
     }
 
-    protected abstract ValueTask HandlePacketReceived(TcpConnection tcpConnection, IByteBuffer byteBuffer);
+    protected abstract ValueTask HandlePacketReceivedAsync(TcpConnection tcpConnection, IByteBuffer byteBuffer);
 
     protected abstract void HandleOpenConnection(TcpConnection tcpConnection);
     protected abstract void HandleCloseConnection(TcpConnection tcpConnection);
