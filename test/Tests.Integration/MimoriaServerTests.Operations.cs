@@ -27,6 +27,22 @@ public partial class MimoriaServerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Operations_Given_MimoriaClient_When_ServerStopped_SetStringGetString_Then_TimeoutExceptionIsThrown()
+    {
+        // Arrange
+        const string key = "string:key";
+        const string value = "value";
+
+        await using var mimoriaClient = await this.ConnectToServerAsync();
+
+        this.mimoriaServerOne.Stop();
+
+        // Act & Assert
+        var timeoutException = await Assert.ThrowsAsync<TimeoutException>(() => mimoriaClient.SetStringAsync(key, value));
+        Assert.Equal("The operation has timed out.", timeoutException.Message);
+    }
+
+    [Fact]
     public async Task Operations_Given_MimoriaClient_When_SetBytesGetBytes_Then_CorrectValueIsReturned()
     {
         // Arrange
