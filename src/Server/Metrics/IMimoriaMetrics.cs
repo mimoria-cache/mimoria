@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using Varelen.Mimoria.Core;
+
 namespace Varelen.Mimoria.Server.Metrics;
 
 public interface IMimoriaMetrics
@@ -12,7 +14,7 @@ public interface IMimoriaMetrics
     void IncrementBytesSent(long bytes);
     void IncrementPacketsReceived();
     void IncrementPacketsSent();
-    void RecordOperationProcessingTime(double milliseconds);
+    void RecordOperationProcessingTime(double milliseconds, Operation operation);
     void IncrementCacheHits();
     void IncrementCacheMisses();
     void IncrementCacheExpiredKeys();

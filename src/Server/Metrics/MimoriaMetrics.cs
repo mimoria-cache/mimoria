@@ -2,8 +2,11 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Runtime.CompilerServices;
+
+using Varelen.Mimoria.Core;
 
 namespace Varelen.Mimoria.Server.Metrics;
 
@@ -72,8 +75,14 @@ public sealed class MimoriaMetrics : IMimoriaMetrics
         => this.packetsSentCounter.Add(delta: 1);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public void RecordOperationProcessingTime(double milliseconds)
-        => this.operationProcessingTime.Record(milliseconds);
+    public void RecordOperationProcessingTime(double milliseconds, Operation operation)
+    {
+        var tagList = new TagList
+        {
+            { "operation", operation.ToString() }
+        };
+        this.operationProcessingTime.Record(milliseconds, tagList);
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void IncrementCacheHits()

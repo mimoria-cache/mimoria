@@ -9,6 +9,7 @@ using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
+using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Metrics;
 
@@ -112,11 +113,11 @@ public abstract class AsyncTcpSocketServer : ISocketServer
                     }
                     finally
                     {
+                        this.metrics.RecordOperationProcessingTime(stopwatch.Elapsed.TotalMilliseconds, (Operation)byteBuffer.Bytes[0]);
+
                         byteBuffer.Dispose();
 
                         stopwatch.Stop();
-
-                        this.metrics.RecordOperationProcessingTime(stopwatch.Elapsed.TotalMilliseconds);
                     }
 
                     this.metrics.IncrementPacketsReceived();
