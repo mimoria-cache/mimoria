@@ -1,10 +1,9 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
 using Microsoft.Extensions.Logging;
 
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
@@ -13,6 +12,7 @@ using System.Runtime.CompilerServices;
 
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Core.Network;
 using Varelen.Mimoria.Server.Bully;
 using Varelen.Mimoria.Server.Cache;
 
@@ -30,11 +30,8 @@ public sealed class ClusterClient
     private readonly string password;
     private readonly IPEndPoint remoteEndPoint;
     private readonly ConcurrentDictionary<uint, TaskCompletionSource> waitingResponses;
+    private readonly LengthPrefixedPacketReader lengthPrefixedPacketReader;
 
-    private readonly PooledByteBuffer buffer = new(DefaultBufferSize);
-
-    private int expectedPacketLength;
-    private int receivedBytes;
     private bool connected;
     private uint requestIdCounter;
 
@@ -49,6 +46,7 @@ public sealed class ClusterClient
         this.password = password;
         this.remoteEndPoint = new IPEndPoint(IPAddress.Parse(ip), port);
         this.waitingResponses = [];
+        this.lengthPrefixedPacketReader = new LengthPrefixedPacketReader(ProtocolDefaults.LengthPrefixLength);
         this.requestIdCounter = 0;
     }
 
@@ -98,119 +96,17 @@ public sealed class ClusterClient
                     return;
                 }
 
-                this.expectedPacketLength = BinaryPrimitives.ReadInt32BigEndian(buffer.AsSpan());
-                this.receivedBytes = received - 4;
-                this.buffer.WriteBytes(buffer.AsSpan(4, received - 4));
-
-                while (this.receivedBytes < this.expectedPacketLength)
+                foreach (IByteBuffer byteBuffer in this.lengthPrefixedPacketReader.TryRead(buffer, received))
                 {
-                    int bytesToReceive = Math.Min(this.expectedPacketLength - this.receivedBytes, buffer.Length);
-                    received = await this.socket.ReceiveAsync(buffer.AsMemory(0, bytesToReceive), SocketFlags.None);
-                    if (received == 0)
+                    try
                     {
-                        this.Disconnect();
-                        return;
+                        await this.HandlePacketReceivedAsync(byteBuffer);
                     }
-
-                    this.receivedBytes += received;
-                    this.buffer.WriteBytes(buffer.AsSpan(0, received));
+                    finally
+                    {
+                        byteBuffer.Dispose();
+                    }
                 }
-
-                using IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
-                byteBuffer.WriteBytes(this.buffer.Bytes.AsSpan(0, this.expectedPacketLength));
-
-                var operation = (Operation)byteBuffer.ReadByte();
-                uint requestId = byteBuffer.ReadUInt();
-
-                switch (operation)
-                {
-                    case Operation.ElectionMessage:
-                        {
-                            this.logger.LogTrace("Received election message, sending alive message back with current leader '{LeaderId}'", this.bullyAlgorithm.Leader);
-
-                            using var aliveBuffer = PooledByteBuffer.FromPool(Operation.AliveMessage, requestId: 0);
-                            aliveBuffer.WriteInt(this.bullyAlgorithm.Leader);
-                            aliveBuffer.EndPacket();
-
-                            await this.SendAsync(aliveBuffer.Bytes.AsMemory(0, aliveBuffer.Size));
-                            break;
-                        }
-                    case Operation.VictoryMessage:
-                        {
-                            int leaderId = byteBuffer.ReadInt();
-
-                            await this.bullyAlgorithm.HandleVictoryAsync(leaderId);
-                            break;
-                        }
-                    case Operation.HeartbeatMessage:
-                        {
-                            int leaderId = byteBuffer.ReadInt();
-                            this.bullyAlgorithm.HandleHeartbeat(leaderId);
-                            break;
-                        }
-                    case Operation.Batch:
-                        {
-                            uint count = byteBuffer.ReadVarUInt();
-                            for (int i = 0; i < count; i++)
-                            {
-                                var batchOperation = (Operation)byteBuffer.ReadByte();
-                                switch (batchOperation)
-                                {
-                                    case Operation.SetString:
-                                        {
-                                            string key = byteBuffer.ReadString()!;
-                                            string? value = byteBuffer.ReadString();
-                                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-
-                                            await this.cache.SetStringAsync(key, value, ttlMilliseconds);
-                                            break;
-                                        }
-                                    case Operation.SetObjectBinary:
-                                        break;
-                                    case Operation.AddList:
-                                        break;
-                                    case Operation.RemoveList:
-                                        break;
-                                    case Operation.Delete:
-                                        break;
-                                    case Operation.SetBytes:
-                                        break;
-                                    case Operation.SetCounter:
-                                        break;
-                                    case Operation.IncrementCounter:
-                                        break;
-                                    case Operation.Bulk:
-                                        break;
-                                    case Operation.SetMapValue:
-                                        break;
-                                    case Operation.SetMap:
-                                        break;
-                                    default:
-                                        break;
-                                }
-                            }
-
-                            using var batchBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
-                            batchBuffer.EndPacket();
-
-                            await this.SendAsync(batchBuffer.Bytes.AsMemory(0, batchBuffer.Size));
-                            break;
-                        }
-                    case Operation.Sync:
-                        {
-                            this.logger.LogDebug("Received sync with '{ByteCount}' bytes", byteBuffer.Size);
-
-                            this.cache.Deserialize(byteBuffer);
-
-                            if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource? taskComplectionSource))
-                            {
-                                taskComplectionSource.SetResult();
-                            }
-                            break;
-                        }
-                }
-
-                this.buffer.Clear();
             }
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
@@ -222,6 +118,100 @@ public sealed class ClusterClient
             this.Disconnect();
 
             this.logger.LogError(exception, "Unexpected error while receiving");
+        }
+    }
+
+    private async Task HandlePacketReceivedAsync(IByteBuffer byteBuffer)
+    {
+        var operation = (Operation)byteBuffer.ReadByte();
+        uint requestId = byteBuffer.ReadUInt();
+
+        switch (operation)
+        {
+            case Operation.ElectionMessage:
+                {
+                    this.logger.LogTrace("Received election message, sending alive message back with current leader '{LeaderId}'", this.bullyAlgorithm.Leader);
+
+                    using var aliveBuffer = PooledByteBuffer.FromPool(Operation.AliveMessage, requestId: 0);
+                    aliveBuffer.WriteInt(this.bullyAlgorithm.Leader);
+                    aliveBuffer.EndPacket();
+
+                    await this.SendAsync(aliveBuffer.Bytes.AsMemory(0, aliveBuffer.Size));
+                    break;
+                }
+            case Operation.VictoryMessage:
+                {
+                    int leaderId = byteBuffer.ReadInt();
+
+                    await this.bullyAlgorithm.HandleVictoryAsync(leaderId);
+                    break;
+                }
+            case Operation.HeartbeatMessage:
+                {
+                    int leaderId = byteBuffer.ReadInt();
+                    this.bullyAlgorithm.HandleHeartbeat(leaderId);
+                    break;
+                }
+            case Operation.Batch:
+                {
+                    uint count = byteBuffer.ReadVarUInt();
+                    for (int i = 0; i < count; i++)
+                    {
+                        var batchOperation = (Operation)byteBuffer.ReadByte();
+                        switch (batchOperation)
+                        {
+                            case Operation.SetString:
+                                {
+                                    string key = byteBuffer.ReadString()!;
+                                    string? value = byteBuffer.ReadString();
+                                    uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+
+                                    await this.cache.SetStringAsync(key, value, ttlMilliseconds);
+                                    break;
+                                }
+                            case Operation.SetObjectBinary:
+                                break;
+                            case Operation.AddList:
+                                break;
+                            case Operation.RemoveList:
+                                break;
+                            case Operation.Delete:
+                                break;
+                            case Operation.SetBytes:
+                                break;
+                            case Operation.SetCounter:
+                                break;
+                            case Operation.IncrementCounter:
+                                break;
+                            case Operation.Bulk:
+                                break;
+                            case Operation.SetMapValue:
+                                break;
+                            case Operation.SetMap:
+                                break;
+                            default:
+                                break;
+                        }
+                    }
+
+                    using var batchBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
+                    batchBuffer.EndPacket();
+
+                    await this.SendAsync(batchBuffer.Bytes.AsMemory(0, batchBuffer.Size));
+                    break;
+                }
+            case Operation.Sync:
+                {
+                    this.logger.LogDebug("Received sync with '{ByteCount}' bytes", byteBuffer.Size);
+
+                    this.cache.Deserialize(byteBuffer);
+
+                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource? taskComplectionSource))
+                    {
+                        taskComplectionSource.SetResult();
+                    }
+                    break;
+                }
         }
     }
 
@@ -275,12 +265,12 @@ public sealed class ClusterClient
 
         if (reconnect)
         {
-            this.buffer.Clear();
+            this.lengthPrefixedPacketReader.Reset();
             _ = this.ConnectAsync();
         }
         else
         {
-            this.buffer.Dispose();
+            this.lengthPrefixedPacketReader.Dispose();
         }
     }
 
