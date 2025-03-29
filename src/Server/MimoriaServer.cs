@@ -798,7 +798,7 @@ public sealed class MimoriaServer : IMimoriaServer
                             break;
                         }
                     default:
-                        throw new ArgumentException($"Operation '{nameof(Operation.Login)}' cannot be in a bulk operation");
+                        throw new ArgumentException($"Operation '{operation}' cannot be in a bulk operation");
                 }
             }
         }
