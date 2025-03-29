@@ -38,7 +38,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
     public void Start(string ip, ushort port, ushort backlog = 50)
     {
-        if (this.running)
+        if (Interlocked.Exchange(ref this.running, true))
         {
             return;
         }
@@ -52,8 +52,6 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         this.socket.Listen(backlog);
 
         _ = this.AcceptAsync();
-
-        this.running = true;
     }
 
     private async Task AcceptAsync()
@@ -153,12 +151,10 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
     public void Stop()
     {
-        if (!this.running)
+        if (!Interlocked.Exchange(ref this.running, false))
         {
             return;
         }
-
-        this.running = false;
 
         try
         {
