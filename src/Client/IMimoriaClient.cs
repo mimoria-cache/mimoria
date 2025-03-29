@@ -34,8 +34,8 @@ public interface IMimoriaClient : IAsyncDisposable
     /// Connects to the remote Mimoria instance.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token to cancel the connect attempt.</param>
-    /// <exception cref="ArgumentException">Thrown if the password provided is longer than 4096 characters.</exception>
     /// <returns>A task that completes when the connection to the Mimoria instance is established.</returns>
+    /// <exception cref="ArgumentException">Thrown if the password provided is longer than 4096 characters.</exception>
     Task ConnectAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -51,6 +51,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the string value to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the string value.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -61,6 +62,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task SetStringAsync(string key, string? value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -69,6 +71,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the list to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>An asynchronous enumerable of string values in the list.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     IAsyncEnumerable<string> GetListEnumerableAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -77,6 +80,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the list to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the list of string values.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -88,6 +92,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="valueTtl">The time-to-live for the value.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -97,6 +102,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="value">The value to remove from the list.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -106,6 +112,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="value">The value to check for existence.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating whether the value exists in the list.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -115,6 +122,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the object to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the object of type <typeparamref name="T"/>.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<T?> GetObjectBinaryAsync<T>(string key, CancellationToken cancellationToken = default) where T : IBinarySerializable, new();
 
     /// <summary>
@@ -125,6 +133,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -135,6 +144,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the object of type <typeparamref name="T"/>.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -147,6 +157,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -155,6 +166,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the byte array to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the byte array.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -165,6 +177,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -175,6 +188,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="value">The value to set the counter to.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -184,6 +198,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="increment">The increment amount.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the new counter value.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -193,6 +208,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="decrement">The decrement amount.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the new counter value.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -202,6 +218,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the counter to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the counter value.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -211,6 +228,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="subKey">The sub-key of the value to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the map value.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -222,6 +240,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -230,6 +249,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the map to retrieve.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the map.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -240,6 +260,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -248,6 +269,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key to check for existence.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A value task that represents the asynchronous operation. The task result contains a boolean indicating whether the key exists.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -256,6 +278,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key to delete.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task DeleteAsync(string key, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -263,6 +286,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// </summary>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the server statistics.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -271,6 +295,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="channel">The name of the channel to subscribe to.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the subscription object.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -279,6 +304,7 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="channel">The name of the channel to unsubscribe from.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default);
 
     /// <summary>
