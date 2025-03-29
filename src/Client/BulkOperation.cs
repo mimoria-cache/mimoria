@@ -98,6 +98,16 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
     }
 
     /// <inheritdoc />
+    public void SetCounter(string key, long value)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.SetCounter);
+        this.byteBuffer.WriteString(key);
+        this.byteBuffer.WriteLong(value);
+
+        this.operationCount++;
+    }
+
+    /// <inheritdoc />
     public void Exists(string key)
     {
         this.byteBuffer.WriteByte((byte)Operation.Exists);

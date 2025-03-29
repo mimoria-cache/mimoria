@@ -60,6 +60,13 @@ public interface IBulkOperation
     void IncrementCounter(string key, long increment = 1);
 
     /// <summary>
+    /// Adds a set counter operation to the bulk operation.
+    /// </summary>
+    /// <param name="key">The key of the counter to set.</param>
+    /// <param name="value">The value to set the counter to.</param>
+    void SetCounter(string key, long value);
+
+    /// <summary>
     /// Adds an exists operation to the bulk operation.
     /// </summary>
     /// <param name="key">The key to check for existence.</param>

@@ -83,15 +83,20 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
     public void IncrementCounter(string key, long increment = 1)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
-
         bulkOperation.IncrementCounter(key, increment);
+    }
+
+    /// <inheritdoc />
+    public void SetCounter(string key, long value)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+        bulkOperation.SetCounter(key, value);
     }
 
     /// <inheritdoc />
     public void Exists(string key)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
-
         bulkOperation.Exists(key);
     }
 
@@ -99,7 +104,6 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
     public void Delete(string key)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
-
         bulkOperation.Delete(key);
     }
 

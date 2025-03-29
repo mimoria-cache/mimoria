@@ -640,7 +640,11 @@ public sealed class MimoriaClient : IMimoriaClient
                 case Operation.SetBytes:
                     break;
                 case Operation.SetCounter:
-                    break;
+                    {
+                        // Nothing to do
+                        list.Add(true);
+                        break;
+                    }
                 case Operation.IncrementCounter:
                     {
                         long value = response.ReadLong();
