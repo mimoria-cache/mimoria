@@ -15,6 +15,7 @@ using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Core.Network;
 using Varelen.Mimoria.Server.Bully;
 using Varelen.Mimoria.Server.Cache;
+using Varelen.Mimoria.Server.Cache.Locking;
 
 namespace Varelen.Mimoria.Server.Cluster;
 
@@ -154,86 +155,7 @@ public sealed class ClusterClient
                 }
             case Operation.Batch:
                 {
-                    uint count = byteBuffer.ReadVarUInt();
-                    for (int i = 0; i < count; i++)
-                    {
-                        var batchOperation = (Operation)byteBuffer.ReadByte();
-                        switch (batchOperation)
-                        {
-                            case Operation.SetString:
-                                {
-                                    string key = byteBuffer.ReadString()!;
-                                    string? value = byteBuffer.ReadString();
-                                    uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-
-                                    await this.cache.SetStringAsync(key, value, ttlMilliseconds);
-                                    break;
-                                }
-                            case Operation.SetObjectBinary:
-                                break;
-                            case Operation.AddList:
-                                {
-                                    string key = byteBuffer.ReadString()!;
-                                    string value = byteBuffer.ReadString()!;
-                                    uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-                                    uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
-                                    
-                                    await this.cache.AddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds, ProtocolDefaults.MaxListCount);
-                                    break;
-                                }
-                            case Operation.RemoveList:
-                                {
-                                    string key = byteBuffer.ReadString()!;
-                                    string value = byteBuffer.ReadString()!;
-
-                                    await this.cache.RemoveListAsync(key, value);
-                                    break;
-                                }
-                            case Operation.Delete:
-                                {
-                                    string key = byteBuffer.ReadString()!;
-                                    await this.cache.DeleteAsync(key);
-                                    break;
-                                }
-                            case Operation.SetBytes:
-                                {
-                                    string key = byteBuffer.ReadString()!;
-                                    uint valueLength = byteBuffer.ReadVarUInt();
-
-                                    if (valueLength > ProtocolDefaults.MaxByteArrayLength)
-                                    {
-                                        throw new ArgumentException($"Read bytes length '{valueLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
-                                    }
-
-                                    if (valueLength > 0)
-                                    {
-                                        byte[] value = new byte[valueLength];
-                                        byteBuffer.ReadBytes(value.AsSpan());
-
-                                        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-                                        await this.cache.SetBytesAsync(key, value, ttlMilliseconds);
-                                    }
-                                    else
-                                    {
-                                        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-                                        await this.cache.SetBytesAsync(key, null, ttlMilliseconds);
-                                    }
-                                    break;
-                                }
-                            case Operation.SetCounter:
-                                break;
-                            case Operation.IncrementCounter:
-                                break;
-                            case Operation.Bulk:
-                                break;
-                            case Operation.SetMapValue:
-                                break;
-                            case Operation.SetMap:
-                                break;
-                            default:
-                                break;
-                        }
-                    }
+                    await  this.HandleBatchAsync(byteBuffer);
 
                     using var batchBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
                     batchBuffer.EndPacket();
@@ -253,6 +175,124 @@ public sealed class ClusterClient
                     }
                     break;
                 }
+        }
+    }
+
+    private async Task HandleBatchAsync(IByteBuffer byteBuffer)
+    {
+        // TODO: Prime for dictionary, but better default?
+        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        async ValueTask LockIfNeededAsync(string key)
+        {
+            if (!keyReleasers.ContainsKey(key))
+            {
+                keyReleasers[key] = await this.cache.AutoRemovingAsyncKeyedLocking.LockAsync(key);
+            }
+        }
+
+        uint count = byteBuffer.ReadVarUInt();
+
+        try
+        {
+            for (int i = 0; i < count; i++)
+            {
+                var batchOperation = (Operation)byteBuffer.ReadByte();
+                switch (batchOperation)
+                {
+                    case Operation.SetString:
+                        {
+                            string key = byteBuffer.ReadString()!;
+                            string? value = byteBuffer.ReadString();
+                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.SetStringAsync(key, value, ttlMilliseconds, takeLock: false);
+                            break;
+                        }
+                    case Operation.SetObjectBinary:
+                        break;
+                    case Operation.AddList:
+                        {
+                            string key = byteBuffer.ReadString()!;
+                            string value = byteBuffer.ReadString()!;
+                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                            uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.AddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds, ProtocolDefaults.MaxListCount, takeLock: false);
+                            break;
+                        }
+                    case Operation.RemoveList:
+                        {
+                            string key = byteBuffer.ReadString()!;
+                            string value = byteBuffer.ReadString()!;
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.RemoveListAsync(key, value, takeLock: false);
+                            break;
+                        }
+                    case Operation.Delete:
+                        {
+                            string key = byteBuffer.ReadString()!;
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.DeleteAsync(key, takeLock: false);
+                            break;
+                        }
+                    case Operation.SetBytes:
+                        {
+                            string key = byteBuffer.ReadString()!;
+                            uint valueLength = byteBuffer.ReadVarUInt();
+
+                            if (valueLength > ProtocolDefaults.MaxByteArrayLength)
+                            {
+                                throw new ArgumentException($"Read bytes length '{valueLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
+                            }
+
+                            await LockIfNeededAsync(key);
+
+                            if (valueLength > 0)
+                            {
+                                byte[] value = new byte[valueLength];
+                                byteBuffer.ReadBytes(value.AsSpan());
+
+                                uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                                await this.cache.SetBytesAsync(key, value, ttlMilliseconds, takeLock: false);
+                            }
+                            else
+                            {
+                                uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                                await this.cache.SetBytesAsync(key, null, ttlMilliseconds, takeLock: false);
+                            }
+                            break;
+                        }
+                    case Operation.SetCounter:
+                        break;
+                    case Operation.IncrementCounter:
+                        break;
+                    case Operation.Bulk:
+                        break;
+                    case Operation.SetMapValue:
+                        break;
+                    case Operation.SetMap:
+                        break;
+                    default:
+                        break;
+                }
+            }
+        }
+        finally
+        {
+            foreach (var (_, releaser) in keyReleasers)
+            {
+                releaser?.Dispose();
+            }
         }
     }
 
