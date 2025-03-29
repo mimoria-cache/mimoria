@@ -9,66 +9,131 @@ using System.Text;
 
 namespace Varelen.Mimoria.Core;
 
+/// <summary>
+/// Represents a value that can be stored in a Mimoria map.
+/// </summary>
 public readonly struct MimoriaValue
 {
+    /// <summary>
+    /// A null value.
+    /// </summary>
     public static readonly MimoriaValue Null = new();
 
+    /// <summary>
+    /// Represents the type of the value stored in <see cref="MimoriaValue"/>.
+    /// </summary>
     internal enum ValueType : byte
     {
+        /// <summary>
+        /// Represents a null value.
+        /// </summary>
         Null = 0,
+        /// <summary>
+        /// Represents a byte array value.
+        /// </summary>
         Bytes = 1,
+        /// <summary>
+        /// Represents a string value.
+        /// </summary>
         String = 2,
+        /// <summary>
+        /// Represents an integer value.
+        /// </summary>
         Int = 3,
+        /// <summary>
+        /// Represents a long value.
+        /// </summary>
         Long = 4,
+        /// <summary>
+        /// Represents a double value.
+        /// </summary>
         Double = 5,
+        /// <summary>
+        /// Represents a boolean value.
+        /// </summary>
         Bool = 6
     }
 
+    /// <summary>
+    /// Gets the value stored in this <see cref="MimoriaValue"/>.
+    /// </summary>
     public object? Value { get; }
+
+    /// <summary>
+    /// Gets the type of the value stored in this <see cref="MimoriaValue"/>.
+    /// </summary>
     internal ValueType Type { get; }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with a null value.
+    /// </summary>
     public MimoriaValue()
     {
         this.Value = null;
         this.Type = ValueType.Null;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with a byte array value.
+    /// </summary>
+    /// <param name="bytes">The byte array value.</param>
     public MimoriaValue(byte[]? bytes)
     {
         this.Value = bytes;
         this.Type = bytes != null ? ValueType.Bytes : ValueType.Null;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with a string value.
+    /// </summary>
+    /// <param name="s">The string value.</param>
     public MimoriaValue(string? s)
     {
         this.Value = s;
         this.Type = s != null ? ValueType.String : ValueType.Null;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with an integer value.
+    /// </summary>
+    /// <param name="i">The integer value.</param>
     public MimoriaValue(int i)
     {
         this.Value = i;
         this.Type = ValueType.Int;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with a long value.
+    /// </summary>
+    /// <param name="l">The long value.</param>
     public MimoriaValue(long l)
     {
         this.Value = l;
         this.Type = ValueType.Long;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with a double value.
+    /// </summary>
+    /// <param name="d">The double value.</param>
     public MimoriaValue(double d)
     {
         this.Value = d;
         this.Type = ValueType.Double;
     }
 
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with a boolean value.
+    /// </summary>
+    /// <param name="b">The boolean value.</param>
     public MimoriaValue(bool b)
     {
         this.Value = b;
         this.Type = ValueType.Bool;
     }
 
+    /// <inheritdoc/>
     public override bool Equals(object? obj)
     {
         if (obj is not MimoriaValue other || this.Type != other.Type)
@@ -89,6 +154,7 @@ public readonly struct MimoriaValue
         };
     }
 
+    /// <inheritdoc/>
     public override int GetHashCode()
     {
         var hashCode = new HashCode();
@@ -123,6 +189,7 @@ public readonly struct MimoriaValue
         return hashCode.ToHashCode();
     }
 
+    /// <inheritdoc/>
     public override string? ToString()
     {
         return this.Type switch
@@ -131,43 +198,91 @@ public readonly struct MimoriaValue
             ValueType.Bytes => Convert.ToHexString((byte[])this.Value!),
             ValueType.String => (string?)this.Value,
             ValueType.Int or ValueType.Long or ValueType.Double or ValueType.Bool => this.Value!.ToString(),
-            _ => throw new InvalidOperationException($"Unkown type {this.Type}"),
+            _ => throw new InvalidOperationException($"Unknown type {this.Type}"),
         };
     }
 
+    /// <summary>
+    /// Implicitly converts a byte array to a <see cref="MimoriaValue"/>.
+    /// </summary>
+    /// <param name="value">The byte array value.</param>
     public static implicit operator MimoriaValue(byte[]? value)
         => new(value);
 
+    /// <summary>
+    /// Implicitly converts a string to a <see cref="MimoriaValue"/>.
+    /// </summary>
+    /// <param name="value">The string value.</param>
     public static implicit operator MimoriaValue(string? value)
         => new(value);
 
+    /// <summary>
+    /// Implicitly converts an integer to a <see cref="MimoriaValue"/>.
+    /// </summary>
+    /// <param name="value">The integer value.</param>
     public static implicit operator MimoriaValue(int value)
         => new(value);
 
+    /// <summary>
+    /// Implicitly converts a long to a <see cref="MimoriaValue"/>.
+    /// </summary>
+    /// <param name="value">The long value.</param>
     public static implicit operator MimoriaValue(long value)
         => new(value);
 
+    /// <summary>
+    /// Implicitly converts a double to a <see cref="MimoriaValue"/>.
+    /// </summary>
+    /// <param name="value">The double value.</param>
     public static implicit operator MimoriaValue(double value)
         => new(value);
 
+    /// <summary>
+    /// Implicitly converts a boolean to a <see cref="MimoriaValue"/>.
+    /// </summary>
+    /// <param name="value">The boolean value.</param>
     public static implicit operator MimoriaValue(bool value)
         => new(value);
 
+    /// <summary>
+    /// Implicitly converts a <see cref="MimoriaValue"/> to a byte array.
+    /// </summary>
+    /// <param name="value">The <see cref="MimoriaValue"/>.</param>
     public static implicit operator byte[](MimoriaValue value)
         => (byte[])value.Value!;
 
+    /// <summary>
+    /// Implicitly converts a <see cref="MimoriaValue"/> to an integer.
+    /// </summary>
+    /// <param name="value">The <see cref="MimoriaValue"/>.</param>
     public static implicit operator int(MimoriaValue value)
         => (int)value.Value!;
 
+    /// <summary>
+    /// Implicitly converts a <see cref="MimoriaValue"/> to a long.
+    /// </summary>
+    /// <param name="value">The <see cref="MimoriaValue"/>.</param>
     public static implicit operator long(MimoriaValue value)
         => (long)value.Value!;
 
+    /// <summary>
+    /// Implicitly converts a <see cref="MimoriaValue"/> to a double.
+    /// </summary>
+    /// <param name="value">The <see cref="MimoriaValue"/>.</param>
     public static implicit operator double(MimoriaValue value)
         => (double)value.Value!;
 
+    /// <summary>
+    /// Implicitly converts a <see cref="MimoriaValue"/> to a boolean.
+    /// </summary>
+    /// <param name="value">The <see cref="MimoriaValue"/>.</param>
     public static implicit operator bool(MimoriaValue value)
         => (bool)value.Value!;
 
+    /// <summary>
+    /// Implicitly converts a <see cref="MimoriaValue"/> to a string.
+    /// </summary>
+    /// <param name="value">The <see cref="MimoriaValue"/>.</param>
     public static implicit operator string?(MimoriaValue value)
     {
         return value.Type switch
@@ -179,9 +294,22 @@ public readonly struct MimoriaValue
             _ => throw new InvalidOperationException(),
         };
     }
+
+    /// <summary>
+    /// Determines whether two specified <see cref="MimoriaValue"/> instances are equal.
+    /// </summary>
+    /// <param name="left">The first <see cref="MimoriaValue"/> to compare.</param>
+    /// <param name="right">The second <see cref="MimoriaValue"/> to compare.</param>
+    /// <returns><c>true</c> if the two <see cref="MimoriaValue"/> instances are equal; otherwise, <c>false</c>.</returns>
     public static bool operator ==(MimoriaValue left, MimoriaValue right)
         => left.Equals(right);
 
+    /// <summary>
+    /// Determines whether two specified <see cref="MimoriaValue"/> instances are not equal.
+    /// </summary>
+    /// <param name="left">The first <see cref="MimoriaValue"/> to compare.</param>
+    /// <param name="right">The second <see cref="MimoriaValue"/> to compare.</param>
+    /// <returns><c>true</c> if the two <see cref="MimoriaValue"/> instances are not equal; otherwise, <c>false</c>.</returns>
     public static bool operator !=(MimoriaValue left, MimoriaValue right)
         => !(left == right);
 }
