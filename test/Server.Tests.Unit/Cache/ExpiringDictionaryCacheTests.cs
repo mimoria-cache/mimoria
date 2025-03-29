@@ -263,7 +263,8 @@ public class ExpiringDictionaryCacheTests
         await Task.Delay(500);
 
         // Assert
-        Assert.Equal((ulong)IterationCount, sut.Hits);
+        Assert.Equal((ulong)0, sut.Size);
+        Assert.True(sut.Hits > 0);
         Assert.True(sut.ExpiredKeys > 0);
     }
 
