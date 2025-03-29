@@ -4,6 +4,7 @@
 
 using Varelen.Mimoria.Client;
 using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Core.Buffer;
 
 namespace Varelen.Mimoria.Tests.Integration;
 
@@ -71,6 +72,23 @@ public partial class MimoriaServerTests : IAsyncLifetime
         // Act
         await mimoriaClient.SetObjectJsonAsync(key, value);
         User? actualValue = await mimoriaClient.GetObjectJsonAsync<User>(key);
+
+        // Assert
+        Assert.Equal(value, actualValue);
+    }
+
+    [Fact]
+    public async Task Operations_Given_MimoriaClient_When_SetObjectBinaryGetObjectBinary_Then_CorrectValueIsReturned()
+    {
+        // Arrange
+        const string key = "binary:key";
+        var value = new User(4, "Mimoria");
+
+        await using var mimoriaClient = await this.ConnectToServerAsync();
+
+        // Act
+        await mimoriaClient.SetObjectBinaryAsync(key, value);
+        User? actualValue = await mimoriaClient.GetObjectBinaryAsync<User>(key);
 
         // Assert
         Assert.Equal(value, actualValue);
@@ -184,7 +202,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Operations_Given_MimoriaClient_When_AddListGetList_Then_CorrectValueIsReturned()
+    public async Task Operations_Given_MimoriaClient_When_AddListContainsListGetList_Then_CorrectValueIsReturned()
     {
         // Arrange
         const string key = "list:key";
@@ -195,11 +213,52 @@ public partial class MimoriaServerTests : IAsyncLifetime
         // Act
         await mimoriaClient.AddListAsync(key, value);
         await mimoriaClient.AddListAsync(key, value);
+
+        bool contains = await mimoriaClient.ContainsListAsync(key, value);
+        bool containsNot = await mimoriaClient.ContainsListAsync(key, $"{value}random");
+
         List<string> actualValue = await mimoriaClient.GetListAsync(key);
 
         // Assert
+        Assert.True(contains);
+        Assert.False(containsNot);
         Assert.Equal([value, value], actualValue);
     }
 
-    private record User(int Id, string Name);
+    private class User : IBinarySerializable
+    {
+        public int Id { get; set; }
+        public string? Name { get; set; }
+
+        public User()
+        {
+            
+        }
+
+        public User(int id, string name)
+        {
+            this.Id = id;
+            this.Name = name;
+        }
+
+        public void Deserialize(IByteBuffer byteBuffer)
+        {
+            this.Id = byteBuffer.ReadInt();
+            this.Name = byteBuffer.ReadString();
+        }
+
+        public void Serialize(IByteBuffer byteBuffer)
+        {
+            byteBuffer.WriteInt(this.Id);
+            byteBuffer.WriteString(this.Name);
+        }
+
+        public override bool Equals(object? obj)
+            => obj is User user &&
+                   this.Id == user.Id &&
+                   this.Name == user.Name;
+
+        public override int GetHashCode()
+            => HashCode.Combine(this.Id, this.Name);
+    }
 }
