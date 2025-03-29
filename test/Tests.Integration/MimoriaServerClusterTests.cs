@@ -15,6 +15,7 @@ using System.Net.Sockets;
 using Varelen.Mimoria.Client;
 using Varelen.Mimoria.Server;
 using Varelen.Mimoria.Server.Cache;
+using Varelen.Mimoria.Server.Metrics;
 using Varelen.Mimoria.Server.Options;
 using Varelen.Mimoria.Server.Protocol;
 using Varelen.Mimoria.Server.PubSub;
@@ -27,6 +28,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
     private const string ClusterPassword = "clusterpassword";
 
     private readonly ILoggerFactory loggerFactory;
+    private readonly IMimoriaMetrics metrics;
     private readonly ExpiringDictionaryCache cacheTwo;
     private readonly IPubSubService pubSubServiceOne;
     private readonly IPubSubService pubSubServiceTwo;
@@ -45,10 +47,11 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         optionsMock.CurrentValue.Returns(new ConsoleLoggerOptions());
 
         this.loggerFactory = Substitute.For<ILoggerFactory>();
-        this.cacheOne = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
-        this.cacheTwo = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
-        this.pubSubServiceOne = new PubSubService(NullLogger<PubSubService>.Instance);
-        this.pubSubServiceTwo = new PubSubService(NullLogger<PubSubService>.Instance);
+        this.metrics = Substitute.For<IMimoriaMetrics>();
+        this.cacheOne = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, this.metrics, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
+        this.cacheTwo = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, this.metrics, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
+        this.pubSubServiceOne = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
+        this.pubSubServiceTwo = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
     }
 
     public async Task InitializeAsync()
@@ -60,6 +63,8 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
     {
         this.mimoriaServerOne.Stop();
         this.mimoriaServerTwo.Stop();
+        this.pubSubServiceOne.Dispose();
+        this.pubSubServiceTwo.Dispose();
         this.cacheOne.Dispose();
         this.cacheTwo.Dispose();
         return Task.CompletedTask;
@@ -93,12 +98,12 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Password = Password, Port = portOne, Cluster = new MimoriaOptions.ClusterOptions() { Id = 1, Port = clusterPortOne, Password = ClusterPassword, Nodes = [new() { Id = 2, Host = "127.0.0.1", Port = clusterPortTwo }] } });
 
-        var mimoriaServerOne = new MimoriaServer(NullLogger<MimoriaServer>.Instance, this.loggerFactory, optionsMock, this.pubSubServiceOne, new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance), this.cacheOne);
+        var mimoriaServerOne = new MimoriaServer(NullLogger<MimoriaServer>.Instance, this.loggerFactory, optionsMock, this.pubSubServiceOne, new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cacheOne, this.metrics);
 
         var optionsMock2 = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock2.CurrentValue.Returns(new MimoriaOptions() { Password = Password, Port = portTwo, Cluster = new MimoriaOptions.ClusterOptions() { Id = 2, Port = clusterPortTwo, Password = ClusterPassword, Nodes = [new() { Id = 1, Host = "127.0.0.1", Port = clusterPortOne }] } });
 
-        var mimoriaServerTwo = new MimoriaServer(NullLogger<MimoriaServer>.Instance, this.loggerFactory, optionsMock2, this.pubSubServiceTwo, new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance), this.cacheTwo);
+        var mimoriaServerTwo = new MimoriaServer(NullLogger<MimoriaServer>.Instance, this.loggerFactory, optionsMock2, this.pubSubServiceTwo, new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cacheTwo, this.metrics);
 
         await Task.WhenAll(mimoriaServerOne.StartAsync(), mimoriaServerTwo.StartAsync());
 

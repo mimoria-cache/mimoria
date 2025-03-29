@@ -9,6 +9,7 @@ using System.Collections.Concurrent;
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cache.Locking;
+using Varelen.Mimoria.Server.Metrics;
 using Varelen.Mimoria.Server.Network;
 
 namespace Varelen.Mimoria.Server.PubSub;
@@ -19,12 +20,14 @@ public sealed class PubSubService : IPubSubService
     private const int InitialCacheSize = 503;
 
     private readonly ILogger<PubSubService> logger;
+    private readonly IMimoriaMetrics metrics;
     private readonly ConcurrentDictionary<string, List<ITcpConnection>> subscriptions;
     private readonly AutoRemovingAsyncKeyedLocking autoRemovingAsyncKeyedLocking;
 
-    public PubSubService(ILogger<PubSubService> logger)
+    public PubSubService(ILogger<PubSubService> logger, IMimoriaMetrics metrics)
     {
         this.logger = logger;
+        this.metrics = metrics;
         this.subscriptions = [];
         this.autoRemovingAsyncKeyedLocking = new AutoRemovingAsyncKeyedLocking(InitialCacheSize);
     }
@@ -44,10 +47,14 @@ public sealed class PubSubService : IPubSubService
             }
 
             tcpConnections.Add(tcpConnection);
+            
+            this.metrics.IncrementPubSubChannelsSubscribed(delta: 1);
             return;
         }
 
         this.subscriptions.TryAdd(channel, [tcpConnection]);
+
+        this.metrics.IncrementPubSubChannelsSubscribed(delta: 1);
     }
 
     public async Task UnsubscribeAsync(ITcpConnection tcpConnection)
@@ -63,6 +70,8 @@ public sealed class PubSubService : IPubSubService
                 unsubscribedChannels++;
             }
         }
+
+        this.metrics.IncrementPubSubChannelsSubscribed(delta: -unsubscribedChannels);
 
         this.logger.LogInformation("Connection '{RemoteEndPoint}' unsubscribed from '{ChannelCount}' channels", tcpConnection.RemoteEndPoint, unsubscribedChannels);
     }
@@ -87,6 +96,9 @@ public sealed class PubSubService : IPubSubService
         {
             return;
         }
+
+        // TODO: Should this increment per connection or per message?
+        this.metrics.IncrementPubSubMessagesSent();
 
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 

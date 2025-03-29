@@ -16,6 +16,7 @@ using Varelen.Mimoria.Server.Cache;
 using Varelen.Mimoria.Server.Cache.Locking;
 using Varelen.Mimoria.Server.Cluster;
 using Varelen.Mimoria.Server.Extensions;
+using Varelen.Mimoria.Server.Metrics;
 using Varelen.Mimoria.Server.Network;
 using Varelen.Mimoria.Server.Options;
 using Varelen.Mimoria.Server.Protocol;
@@ -34,6 +35,7 @@ public sealed class MimoriaServer : IMimoriaServer
     private readonly IPubSubService pubSubService;
     private readonly IMimoriaSocketServer mimoriaSocketServer;
     private readonly ICache cache;
+    private readonly IMimoriaMetrics metrics;
     private readonly IReplicator? replicator;
 
     private readonly ClusterServer? clusterServer;
@@ -53,7 +55,8 @@ public sealed class MimoriaServer : IMimoriaServer
         IOptionsMonitor<MimoriaOptions> monitor,
         IPubSubService pubSubService,
         IMimoriaSocketServer mimoriaSocketServer,
-        ICache cache)
+        ICache cache,
+        IMimoriaMetrics metrics)
     {
         this.logger = logger;
         this.loggerFactory = loggerFactory;
@@ -61,6 +64,7 @@ public sealed class MimoriaServer : IMimoriaServer
         this.pubSubService = pubSubService;
         this.mimoriaSocketServer = mimoriaSocketServer;
         this.cache = cache;
+        this.metrics = metrics;
         this.clusterClients = [];
         this.nodeReadyTaskCompletionSource = new TaskCompletionSource();
         this.clusterReadyTaskCompletionSource = new TaskCompletionSource();
@@ -157,7 +161,7 @@ public sealed class MimoriaServer : IMimoriaServer
             {
                 uint requestId = leaderClusterClient.IncrementRequestId();
 
-                var syncRequestBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);   
+                var syncRequestBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);
                 syncRequestBuffer.EndPacket();
 
                 // TODO: Awaiting this ends in a deadlock because it sends an operation and waits for it to be received
@@ -234,7 +238,6 @@ public sealed class MimoriaServer : IMimoriaServer
             { Operation.Delete, this.HandleDeleteAsync },
             { Operation.GetObjectBinary, this.HandleGetObjectBinaryAsync },
             { Operation.SetObjectBinary, this.HandleSetObjectBinaryAsync },
-            { Operation.GetStats, this.HandleGetStatsAsync },
             { Operation.GetBytes, this.HandleGetBytesAsync },
             { Operation.SetBytes, this.HandleSetBytesAsync },
             { Operation.SetCounter, this.HandleSetCounterAsync },
@@ -246,7 +249,8 @@ public sealed class MimoriaServer : IMimoriaServer
             { Operation.SetMap, this.HandleSetMapAsync },
             { Operation.Subscribe, this.HandleSubscribeAsync },
             { Operation.Unsubscribe, this.HandleUnsubscribeAsync },
-            { Operation.Publish, this.HandlePublishAsync }
+            { Operation.Publish, this.HandlePublishAsync },
+            { Operation.GetStats, this.HandleGetStatsAsync }
         };
 
         this.mimoriaSocketServer.SetOperationHandlers(operationHandlers);
@@ -917,6 +921,8 @@ public sealed class MimoriaServer : IMimoriaServer
 
     private async ValueTask HandlePublishAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer)
     {
+        this.metrics.IncrementPubSubMessagesReceived();
+
         string channel = byteBuffer.ReadRequiredKey();
         MimoriaValue payload = byteBuffer.ReadValue();
 

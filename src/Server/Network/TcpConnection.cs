@@ -35,6 +35,9 @@ public sealed class TcpConnection : ITcpConnection
         try
         {
             await this.Socket.SendAllAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
+
+            this.tcpSocketServer.Metrics.IncrementBytesSent(byteBuffer.Size);
+            this.tcpSocketServer.Metrics.IncrementPacketsSent();
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {

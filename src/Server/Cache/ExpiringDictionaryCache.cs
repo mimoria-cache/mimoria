@@ -11,6 +11,7 @@ using System.Runtime.CompilerServices;
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cache.Locking;
+using Varelen.Mimoria.Server.Metrics;
 using Varelen.Mimoria.Server.PubSub;
 
 namespace Varelen.Mimoria.Server.Cache;
@@ -27,6 +28,7 @@ public sealed class ExpiringDictionaryCache : ICache
     public const int InfiniteTimeToLive = 0;
 
     private readonly ILogger<ExpiringDictionaryCache> logger;
+    private readonly IMimoriaMetrics metrics;
     private readonly IPubSubService pubSubService;
     private readonly ConcurrentDictionary<string, Entry<object?>> cache;
     private readonly AutoRemovingAsyncKeyedLocking autoRemovingAsyncKeyedLocking;
@@ -54,10 +56,11 @@ public sealed class ExpiringDictionaryCache : ICache
         get => this.autoRemovingAsyncKeyedLocking;
     }
 
-    public ExpiringDictionaryCache(ILogger<ExpiringDictionaryCache> logger, IPubSubService pubSubService, TimeSpan expireCheckInterval)
+    public ExpiringDictionaryCache(ILogger<ExpiringDictionaryCache> logger, IMimoriaMetrics metrics, IPubSubService pubSubService, TimeSpan expireCheckInterval)
     {
-        this.pubSubService = pubSubService;
         this.logger = logger;
+        this.metrics = metrics;
+        this.pubSubService = pubSubService;
         this.expireCheckInterval = expireCheckInterval;
         this.cache = new ConcurrentDictionary<string, Entry<object?>>(concurrencyLevel: Environment.ProcessorCount, capacity: InitialCacheSize);
         this.autoRemovingAsyncKeyedLocking = new AutoRemovingAsyncKeyedLocking(InitialLocksCacheSize);
@@ -181,9 +184,9 @@ public sealed class ExpiringDictionaryCache : ICache
         if (!this.cache.TryGetValue(key, out Entry<object?>? entry))
         {
             this.cache[key] = new Entry<object?>(new ExpiringList<string>(value, valueTtlMilliseconds), ttlMilliseconds);
-
+            
             await this.pubSubService.PublishAsync(Channels.ForListAdded(key), value);
-
+            
             return;
         }
 
@@ -377,15 +380,24 @@ public sealed class ExpiringDictionaryCache : ICache
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void IncrementHits()
-        => Interlocked.Increment(ref this.hits);
+    {
+        Interlocked.Increment(ref this.hits);
+        this.metrics.IncrementCacheHits();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void IncrementMisses()
-        => Interlocked.Increment(ref this.misses);
+    {
+        Interlocked.Increment(ref this.misses);
+        this.metrics.IncrementCacheMisses();
+    }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private void IncrementExpiredKeys()
-        => Interlocked.Increment(ref this.expiredKeys);
+    {
+        Interlocked.Increment(ref this.expiredKeys);
+        this.metrics.IncrementCacheExpiredKeys();
+    }
 
     private async Task PeriodicallyClearExpiredKeysAsync()
     {

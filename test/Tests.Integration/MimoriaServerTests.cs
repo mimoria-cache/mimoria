@@ -16,6 +16,7 @@ using Varelen.Mimoria.Server.Protocol;
 using Varelen.Mimoria.Server.PubSub;
 using Varelen.Mimoria.Server;
 using Varelen.Mimoria.Client;
+using Varelen.Mimoria.Server.Metrics;
 
 namespace Varelen.Mimoria.Tests.Integration;
 
@@ -25,14 +26,16 @@ public partial class MimoriaServerTests : IAsyncLifetime
     private const string Password = "password";
 
     private readonly ExpiringDictionaryCache cache;
+    private readonly IMimoriaMetrics metrics;
     private readonly IPubSubService pubSubService;
     private MimoriaServer mimoriaServerOne = null!;
     private ushort port;
 
     public MimoriaServerTests()
     {
-        this.cache = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
-        this.pubSubService = new PubSubService(NullLogger<PubSubService>.Instance);
+        this.metrics = Substitute.For<IMimoriaMetrics>();
+        this.pubSubService = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
+        this.cache = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, this.metrics, this.pubSubService, TimeSpan.FromMinutes(5));
     }
 
     public async Task InitializeAsync()
@@ -68,7 +71,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Ip = Ip, Password = Password, Port = port });
 
-        var mimoriaServerOne = new MimoriaServer(NullLogger<MimoriaServer>.Instance, new NullLoggerFactory(), optionsMock, this.pubSubService, new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance), this.cache);
+        var mimoriaServerOne = new MimoriaServer(NullLogger<MimoriaServer>.Instance, new NullLoggerFactory(), optionsMock, this.pubSubService, new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cache, this.metrics);
 
         await mimoriaServerOne.StartAsync();
 

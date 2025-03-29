@@ -4,20 +4,20 @@
 
 using Microsoft.Extensions.Logging;
 
-using System.Buffers.Binary;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 
-using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Server.Metrics;
 
 namespace Varelen.Mimoria.Server.Network;
 
 public abstract class AsyncTcpSocketServer : ISocketServer
 {
     private readonly ILogger<AsyncTcpSocketServer> logger;
+    private readonly IMimoriaMetrics metrics;
     private readonly ConcurrentDictionary<ulong, TcpConnection> connections;
     
     private Socket? socket;
@@ -26,9 +26,12 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
     public ulong Connections => (ulong)this.connections.Count;
 
-    protected AsyncTcpSocketServer(ILogger<AsyncTcpSocketServer> logger)
+    internal IMimoriaMetrics Metrics => this.metrics;
+
+    protected AsyncTcpSocketServer(ILogger<AsyncTcpSocketServer> logger, IMimoriaMetrics metrics)
     {
         this.logger = logger;
+        this.metrics = metrics; 
         this.connections = [];
     }
 
@@ -69,6 +72,8 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
                 this.HandleOpenConnection(tcpConnection);
 
+                this.metrics.IncrementConnections();
+
                 _ = this.ReceiveAsync(tcpConnection);
             }
         }
@@ -95,8 +100,12 @@ public abstract class AsyncTcpSocketServer : ISocketServer
                     return;
                 }
 
+                this.metrics.IncrementBytesReceived(received);
+
                 foreach (var byteBuffer in tcpConnection.LengthPrefixedPacketReader.TryRead(tcpConnection.ReceiveBuffer, received))
                 {
+                    var stopwatch = Stopwatch.StartNew();
+
                     try
                     {
                         await this.HandlePacketReceivedAsync(tcpConnection, byteBuffer);
@@ -104,7 +113,13 @@ public abstract class AsyncTcpSocketServer : ISocketServer
                     finally
                     {
                         byteBuffer.Dispose();
+
+                        stopwatch.Stop();
+
+                        this.metrics.RecordOperationProcessingTime(stopwatch.Elapsed.TotalMilliseconds);
                     }
+
+                    this.metrics.IncrementPacketsReceived();
                 }
             }
         }
@@ -131,6 +146,8 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         Debug.Assert(removed, $"Unable to remove connection with id '{tcpConnection.Id}'");
         
         this.HandleCloseConnection(tcpConnection);
+
+        this.metrics.DecrementConnections();
     }
 
     public void Stop()

@@ -4,8 +4,11 @@
 
 using Microsoft.Extensions.Logging.Abstractions;
 
+using NSubstitute;
+
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Server.Cache;
+using Varelen.Mimoria.Server.Metrics;
 using Varelen.Mimoria.Server.PubSub;
 
 namespace Varelen.Mimoria.Server.Tests.Unit.Cache;
@@ -15,11 +18,18 @@ public class ExpiringDictionaryCacheTests
     private const int MaxTestListCount = 10;
     private const int MaxTestMapCount = 10;
 
+    private readonly IMimoriaMetrics metrics;
+
+    public ExpiringDictionaryCacheTests()
+    {
+        this.metrics = Substitute.For<IMimoriaMetrics>();
+    }
+
     [Fact]
     public async Task GetString_When_SetString_And_GetString_Then_CorrectValueIsReturnedAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         // Act
         await sut.SetStringAsync("key", "Mimoria", 0);
@@ -34,7 +44,7 @@ public class ExpiringDictionaryCacheTests
     public async Task GetString_When_SetString_And_GetString_AfterExpireTime_Then_NullIsReturnedAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromMilliseconds(500));
+        using var sut = this.CreateCache(TimeSpan.FromMilliseconds(500));
 
         // Act
         await sut.SetStringAsync("key", "Mimoria", 100);
@@ -54,7 +64,7 @@ public class ExpiringDictionaryCacheTests
     public async Task GetBytes_When_SetBytes_And_GetBytes_Then_CorrectValueIsReturnedAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         const string key = "key";
         byte[] value = [1, 2, 3, 4];
@@ -72,7 +82,7 @@ public class ExpiringDictionaryCacheTests
     public async Task GetMap_When_SetMap_And_GetMap_Then_CorrectValueIsReturnedAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         const string key = "key";
         var value = new Dictionary<string, MimoriaValue>
@@ -97,7 +107,7 @@ public class ExpiringDictionaryCacheTests
     public async Task AddList_When_AddList_And_ReachingMaxCount_Then_ArgumentExceptionIsThrown()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         const string key = "key";
 
@@ -116,7 +126,7 @@ public class ExpiringDictionaryCacheTests
     public async Task AddList_When_AddListWithDuplicates_Then_BothValuesAreAdded()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         const string key = "key";
 
@@ -141,7 +151,7 @@ public class ExpiringDictionaryCacheTests
     public async Task AddList_When_AddListWithDuplicates_And_Remove_Then_OnlyFirstValueIsRemoved()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         const string key = "key";
 
@@ -167,7 +177,7 @@ public class ExpiringDictionaryCacheTests
     public async Task AddList_When_AddListWithValueExpire_Then_ExpiredAreRemoved()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromMilliseconds(500));
+        using var sut = this.CreateCache(TimeSpan.FromMilliseconds(500));
 
         const string key = "key";
 
@@ -194,7 +204,7 @@ public class ExpiringDictionaryCacheTests
     public async Task SetMapValue_When_SetMapValue_And_ReachingMaxCount_Then_ArgumentExceptionIsThrown()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         const string key = "key";
         const string subKey = "subkey";
@@ -217,7 +227,7 @@ public class ExpiringDictionaryCacheTests
     public async Task SetMapValue_When_SetMapValue_And_SettingSameKey_Then_NoExceptionIsThrown()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromSeconds(10));
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
         const string key = "key";
         const string subKey = "subkey";
@@ -239,7 +249,7 @@ public class ExpiringDictionaryCacheTests
     public async Task ConcurrentCleanupAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromMilliseconds(1));
+        using var sut = this.CreateCache(TimeSpan.FromMilliseconds(1));
 
         const int IterationCount = 1_000_000;
 
@@ -261,7 +271,7 @@ public class ExpiringDictionaryCacheTests
     public async Task Concurrent_SetDeleteAndGetStringAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromMilliseconds(1));
+        using var sut = this.CreateCache(TimeSpan.FromMilliseconds(1));
 
         const int TaskCount = 10;
         const int IterationCount = 10_000;
@@ -303,7 +313,7 @@ public class ExpiringDictionaryCacheTests
     public async Task Concurrent_CounterIncrementAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.FromMilliseconds(1));
+        using var sut = this.CreateCache(TimeSpan.FromMilliseconds(1));
 
         const string Key = "key";
         const int TaskCount = 10;
@@ -346,7 +356,7 @@ public class ExpiringDictionaryCacheTests
     public async Task Concurrent_AddRemoveGetListAsync()
     {
         // Arrange
-        using var sut = CreateCache(TimeSpan.Zero);
+        using var sut = this.CreateCache(TimeSpan.Zero);
 
         const int TaskCount = 10;
         const int IterationCount = 10_000;
@@ -387,6 +397,6 @@ public class ExpiringDictionaryCacheTests
         Assert.Equal((ulong)0, sut.Size);
     }
 
-    private static ExpiringDictionaryCache CreateCache(TimeSpan expireCheckInterval)
-        => new(NullLogger<ExpiringDictionaryCache>.Instance, new PubSubService(NullLogger<PubSubService>.Instance), expireCheckInterval);
+    private ExpiringDictionaryCache CreateCache(TimeSpan expireCheckInterval)
+        => new(NullLogger<ExpiringDictionaryCache>.Instance, this.metrics, new PubSubService(NullLogger<PubSubService>.Instance, this.metrics), expireCheckInterval);
 }

@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;
 
 using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Server.Metrics;
 using Varelen.Mimoria.Server.Network;
 using Varelen.Mimoria.Server.PubSub;
 
@@ -14,6 +15,13 @@ namespace Varelen.Mimoria.Server.Tests.Unit;
 
 public class PubSubServiceTests
 {
+    private readonly IMimoriaMetrics metrics;
+
+    public PubSubServiceTests()
+    {
+        this.metrics = Substitute.For<IMimoriaMetrics>();
+    }
+
     [Fact]
     public async Task PublishAsync_When_SubscribingAndPublishing_Then_SendAsyncOfTcpConnectionIsInvokedAsync()
     {
@@ -22,7 +30,7 @@ public class PubSubServiceTests
         const string payload = "payload";
         const int publishPacketSize = 19;
 
-        using var sut = new PubSubService(NullLogger<PubSubService>.Instance);
+        using var sut = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
 
         var tcpConnectionMock = Substitute.For<ITcpConnection>();
         tcpConnectionMock.Id.Returns<ulong>(5);
@@ -43,7 +51,7 @@ public class PubSubServiceTests
         const string channel = "test";
         const string payload = "payload";
 
-        using var sut = new PubSubService(NullLogger<PubSubService>.Instance);
+        using var sut = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
 
         var tcpConnectionMock = Substitute.For<ITcpConnection>();
         tcpConnectionMock.Id.Returns<ulong>(6);
@@ -65,7 +73,7 @@ public class PubSubServiceTests
         const string channel = "test";
         const string payload = "payload";
 
-        using var sut = new PubSubService(NullLogger<PubSubService>.Instance);
+        using var sut = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
 
         var tcpConnectionMock = Substitute.For<ITcpConnection>();
         tcpConnectionMock.Id.Returns<ulong>(6);
@@ -84,10 +92,10 @@ public class PubSubServiceTests
     public async Task Concurrent_SubscribePublishUnsubscribe_With_SubscribedAnUnsubscribedChannelAsync()
     {
         // Arrange
-        using var sut = new PubSubService(NullLogger<PubSubService>.Instance);
+        using var sut = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
 
-        var t = Substitute.For<ITcpConnection>();
-        t.Id.Returns<ulong>(7);
+        var tcpConnectionMock = Substitute.For<ITcpConnection>();
+        tcpConnectionMock.Id.Returns<ulong>(7);
 
         const string channel = "test";
         const string notSubscribedChannel = "test2";
@@ -107,11 +115,11 @@ public class PubSubServiceTests
             {
                 for (int i = 0; i < iterationCount; i++)
                 {
-                    await sut.SubscribeAsync(channel, t);
+                    await sut.SubscribeAsync(channel, tcpConnectionMock);
                     await sut.PublishAsync(channel, "payload");
                     await sut.PublishAsync(notSubscribedChannel, "payload");
-                    await sut.UnsubscribeAsync(channel, t);
-                    await sut.UnsubscribeAsync(notSubscribedChannel, t);
+                    await sut.UnsubscribeAsync(channel, tcpConnectionMock);
+                    await sut.UnsubscribeAsync(notSubscribedChannel, tcpConnectionMock);
 
                     Interlocked.Increment(ref operations);
                 }

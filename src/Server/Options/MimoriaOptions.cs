@@ -6,6 +6,8 @@ namespace Varelen.Mimoria.Server.Options;
 
 public class MimoriaOptions
 {
+    public const string SectionName = "Mimoria";
+
     public string Ip { get; set; } = "127.0.0.1";
     public int Port { get; set; } = 6565;
     public ushort Backlog { get; set; } = 50;

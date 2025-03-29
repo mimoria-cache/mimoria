@@ -4,11 +4,12 @@
 
 using Microsoft.Extensions.Logging;
 
-using Varelen.Mimoria.Core.Buffer;
-using Varelen.Mimoria.Core;
-using Varelen.Mimoria.Server.Network;
-
 using System.Collections.Frozen;
+
+using Varelen.Mimoria.Core;
+using Varelen.Mimoria.Core.Buffer;
+using Varelen.Mimoria.Server.Metrics;
+using Varelen.Mimoria.Server.Network;
 
 namespace Varelen.Mimoria.Server.Protocol;
 
@@ -19,8 +20,8 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
 
     public event IMimoriaSocketServer.TcpConnectionEvent? Disconnected;
 
-    public MimoriaSocketServer(ILogger<MimoriaSocketServer> logger)
-        : base(logger)
+    public MimoriaSocketServer(ILogger<MimoriaSocketServer> logger, IMimoriaMetrics mimoriaMetrics)
+        : base(logger, mimoriaMetrics)
     {
         this.logger = logger;
     }
