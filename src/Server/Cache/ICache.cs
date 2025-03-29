@@ -41,7 +41,7 @@ public interface ICache : IDisposable
 
     Task DeleteAsync(string key, bool takeLock = true);
 
-    void Serialize(IByteBuffer byteBuffer);
+    ValueTask SerializeAsync(IByteBuffer byteBuffer);
 
     void Deserialize(IByteBuffer byteBuffer);
 }

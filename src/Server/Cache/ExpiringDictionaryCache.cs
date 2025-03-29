@@ -445,11 +445,18 @@ public sealed class ExpiringDictionaryCache : ICache
         }
     }
 
-    public void Serialize(IByteBuffer byteBuffer)
+    public async ValueTask SerializeAsync(IByteBuffer byteBuffer)
     {
+        if (this.cache.IsEmpty)
+        {
+            return;
+        }
+
         byteBuffer.WriteVarUInt((uint)this.cache.Count);
         foreach (var (key, entry) in this.cache)
         {
+            using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key);
+
             byteBuffer.WriteString(key);
 
             switch (entry.Value)
@@ -534,6 +541,11 @@ public sealed class ExpiringDictionaryCache : ICache
 
     public void Deserialize(IByteBuffer byteBuffer)
     {
+        if (byteBuffer.Size == 0)
+        {
+            return;
+        }
+
         uint count = byteBuffer.ReadVarUInt();
 
         // TODO: Allocate the cache dictionary with the given capacity

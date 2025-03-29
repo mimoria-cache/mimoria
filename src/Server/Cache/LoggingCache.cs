@@ -129,15 +129,11 @@ public class LoggingCache : ICache
         await this.cache.DeleteAsync(key, takeLock);
     }
 
-    public void Serialize(IByteBuffer byteBuffer)
-    {
-        this.cache.Serialize(byteBuffer);
-    }
+    public ValueTask SerializeAsync(IByteBuffer byteBuffer)
+        => this.cache.SerializeAsync(byteBuffer);
 
     public void Deserialize(IByteBuffer byteBuffer)
-    {
-        this.cache.Deserialize(byteBuffer);
-    }
+        => this.cache.Deserialize(byteBuffer);
 
     public void Dispose()
     {

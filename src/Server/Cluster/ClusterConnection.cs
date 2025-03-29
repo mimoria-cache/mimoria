@@ -133,7 +133,7 @@ public sealed class ClusterConnection
 
                     var syncBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);
 
-                    this.cache.Serialize(syncBuffer);
+                    await this.cache.SerializeAsync(syncBuffer);
 
                     syncBuffer.EndPacket();
 
