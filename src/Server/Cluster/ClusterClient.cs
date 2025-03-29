@@ -172,13 +172,54 @@ public sealed class ClusterClient
                             case Operation.SetObjectBinary:
                                 break;
                             case Operation.AddList:
-                                break;
+                                {
+                                    string key = byteBuffer.ReadString()!;
+                                    string value = byteBuffer.ReadString()!;
+                                    uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                                    uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
+                                    
+                                    await this.cache.AddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds, ProtocolDefaults.MaxListCount);
+                                    break;
+                                }
                             case Operation.RemoveList:
-                                break;
+                                {
+                                    string key = byteBuffer.ReadString()!;
+                                    string value = byteBuffer.ReadString()!;
+
+                                    await this.cache.RemoveListAsync(key, value);
+                                    break;
+                                }
                             case Operation.Delete:
-                                break;
+                                {
+                                    string key = byteBuffer.ReadString()!;
+                                    await this.cache.DeleteAsync(key);
+                                    break;
+                                }
                             case Operation.SetBytes:
-                                break;
+                                {
+                                    string key = byteBuffer.ReadString()!;
+                                    uint valueLength = byteBuffer.ReadVarUInt();
+
+                                    if (valueLength > ProtocolDefaults.MaxByteArrayLength)
+                                    {
+                                        throw new ArgumentException($"Read bytes length '{valueLength}' exceeded max allowed length '{ProtocolDefaults.MaxByteArrayLength}'");
+                                    }
+
+                                    if (valueLength > 0)
+                                    {
+                                        byte[] value = new byte[valueLength];
+                                        byteBuffer.ReadBytes(value.AsSpan());
+
+                                        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                                        await this.cache.SetBytesAsync(key, value, ttlMilliseconds);
+                                    }
+                                    else
+                                    {
+                                        uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                                        await this.cache.SetBytesAsync(key, null, ttlMilliseconds);
+                                    }
+                                    break;
+                                }
                             case Operation.SetCounter:
                                 break;
                             case Operation.IncrementCounter:

@@ -373,6 +373,11 @@ public sealed class MimoriaServer : IMimoriaServer
 
         await this.cache.AddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds, ProtocolDefaults.MaxListCount);
 
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateAddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds);
+        }
+
         await tcpConnection.SendAsync(responseBuffer);
     }
 
@@ -388,6 +393,11 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         await this.cache.RemoveListAsync(key, value);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateRemoveListAsync(key, value);
+        }
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.RemoveList, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
@@ -432,6 +442,11 @@ public sealed class MimoriaServer : IMimoriaServer
         string key = byteBuffer.ReadRequiredKey();
 
         await this.cache.DeleteAsync(key);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateDeleteAsync(key);
+        }
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.Delete, requestId, StatusCode.Ok);
         responseBuffer.EndPacket();
@@ -529,11 +544,21 @@ public sealed class MimoriaServer : IMimoriaServer
 
             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
             await this.cache.SetBytesAsync(key, value, ttlMilliseconds);
+
+            if (this.replicator is not null)
+            {
+                await this.replicator.ReplicateSetBytesAsync(key, value, ttlMilliseconds);
+            }
         }
         else
         {
             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
             await this.cache.SetBytesAsync(key, null, ttlMilliseconds);
+
+            if (this.replicator is not null)
+            {
+                await this.replicator.ReplicateSetBytesAsync(key, null, ttlMilliseconds);
+            }
         }
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.SetBytes, requestId, StatusCode.Ok);

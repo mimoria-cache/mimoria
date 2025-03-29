@@ -1,8 +1,9 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 
 using Varelen.Mimoria.Core;
@@ -62,6 +63,8 @@ public sealed class AsyncReplicator : IReplicator
                 }));
 
                 this.ClearBuffers();
+
+                Debug.Assert(this.operationsBuffers.IsEmpty, "Operations buffers are not empty");
             }
             finally
             {
@@ -90,6 +93,90 @@ public sealed class AsyncReplicator : IReplicator
             byteBuffer.WriteString(key);
             byteBuffer.WriteString(value);
             byteBuffer.WriteVarUInt(ttlMilliseconds);
+
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
+    public async ValueTask ReplicateSetBytesAsync(string key, byte[]? value, uint ttlMilliseconds)
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+
+        uint valueLength = value is not null ? (uint)value.Length : 0;
+
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.SetBytes);
+            byteBuffer.WriteString(key);
+            byteBuffer.WriteVarUInt(valueLength);
+            if (valueLength > 0)
+            {
+                byteBuffer.WriteBytes(value.AsSpan());
+            }
+            byteBuffer.WriteVarUInt(ttlMilliseconds);
+
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
+    public async ValueTask ReplicateAddListAsync(string key, string? value, uint ttlMilliseconds, uint valueTtlMilliseconds)
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.AddList);
+            byteBuffer.WriteString(key);
+            byteBuffer.WriteString(value);
+            byteBuffer.WriteVarUInt(ttlMilliseconds);
+            byteBuffer.WriteVarUInt(valueTtlMilliseconds);
+            
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
+    public async ValueTask ReplicateRemoveListAsync(string key, string value)
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.RemoveList);
+            byteBuffer.WriteString(key);
+            byteBuffer.WriteString(value);
+
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
+    public async ValueTask ReplicateDeleteAsync(string key)
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+        
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.Delete);
+            byteBuffer.WriteString(key);
 
             this.operationsBuffers.Enqueue(byteBuffer);
         }
