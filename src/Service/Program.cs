@@ -46,6 +46,23 @@ try
     await Host.CreateDefaultBuilder(args)
         .ConfigureServices((hostContext, services) =>
         {
+            services.AddLogging(loggingBuilder =>
+            {
+                loggingBuilder.AddConfiguration(configuration.GetSection("Logging"));
+                loggingBuilder.AddConsole();
+
+                if (!string.IsNullOrEmpty(applicationInsightsConnectionString))
+                {
+                    loggingBuilder.AddOpenTelemetry(options =>
+                    {
+                        options.AddAzureMonitorLogExporter(options =>
+                        {
+                            options.ConnectionString = applicationInsightsConnectionString;
+                        });
+                    });
+                }
+            });
+
             services.AddOptions<MimoriaOptions>()
                 .Bind(configuration.GetSection(MimoriaOptions.SectionName))
                 .ValidateOnStart();
@@ -96,5 +113,5 @@ static void LogMetricsEnabled(IServiceProvider serviceProvider, bool enabled)
 {
     var logger = serviceProvider.GetRequiredService<ILogger<Program>>();
 
-    logger.LogInformation("Azure Application Insights metrics exporting {Enabled}", enabled ? "enabled" : "disabled");
+    logger.LogInformation("Azure Application Insights metrics and logs exporting {Enabled}", enabled ? "enabled" : "disabled");
 }
