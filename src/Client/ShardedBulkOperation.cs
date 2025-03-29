@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -6,6 +6,9 @@ using System.Runtime.CompilerServices;
 
 namespace Varelen.Mimoria.Client;
 
+/// <summary>
+/// An implementation of a sharded bulk operation that can be executed on a Mimoria server.
+/// </summary>
 public class ShardedBulkOperation : IBulkOperation, IDisposable
 {
     private readonly ShardedMimoriaClient shardedMimoriaClient;
@@ -34,20 +37,49 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
         return newBulkOperation;
     }
 
+    /// <inheritdoc />
     public void GetString(string key)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
-
         bulkOperation.GetString(key);
     }
 
+    /// <inheritdoc />
     public void SetString(string key, string value, TimeSpan ttl = default)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
-
         bulkOperation.SetString(key, value, ttl);
     }
 
+    /// <inheritdoc />
+    public void AddList(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+        bulkOperation.AddList(key, value, ttl, valueTtl);
+    }
+
+    /// <inheritdoc />
+    public void RemoveList(string key, string value)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+        bulkOperation.RemoveList(key, value);
+    }
+
+    /// <inheritdoc />
+    public void GetList(string key)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+        bulkOperation.GetList(key);
+    }
+
+    /// <inheritdoc />
+    public void ContainsList(string key, string value)
+    {
+        BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
+        bulkOperation.ContainsList(key, value);
+    }
+
+    /// <inheritdoc />
     public void IncrementCounter(string key, long increment = 1)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
@@ -55,6 +87,7 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
         bulkOperation.IncrementCounter(key, increment);
     }
 
+    /// <inheritdoc />
     public void Exists(string key)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
@@ -62,6 +95,7 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
         bulkOperation.Exists(key);
     }
 
+    /// <inheritdoc />
     public void Delete(string key)
     {
         BulkOperation bulkOperation = this.GetOrAddBulkOperation(key);
@@ -69,15 +103,18 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
         bulkOperation.Delete(key);
     }
 
+    /// <inheritdoc />
     public Task<List<object?>> ExecuteAsync(CancellationToken cancellationToken = default)
         => ShardedMimoriaClient.ExecuteBulkAsync(this, cancellationToken);
 
+    /// <inheritdoc />
     public void Dispose()
     {
         foreach (BulkOperation bulkOperation in bulkOperations.Values)
         {
             bulkOperation.Dispose();
         }
+
         this.bulkOperations.Clear();
 
         GC.SuppressFinalize(this);

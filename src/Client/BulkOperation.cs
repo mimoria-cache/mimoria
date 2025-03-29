@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -42,6 +42,47 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.byteBuffer.WriteString(key);
         this.byteBuffer.WriteString(value);
         this.byteBuffer.WriteUInt((uint)ttl.TotalMilliseconds);
+
+        this.operationCount++;
+    }
+
+    /// <inheritdoc />
+    public void AddList(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.AddList);
+        this.byteBuffer.WriteString(key);
+        this.byteBuffer.WriteString(value);
+        this.byteBuffer.WriteVarUInt((uint)ttl.TotalMilliseconds);
+        this.byteBuffer.WriteVarUInt((uint)valueTtl.TotalMilliseconds);
+
+        this.operationCount++;
+    }
+
+    /// <inheritdoc />
+    public void RemoveList(string key, string value)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.RemoveList);
+        this.byteBuffer.WriteString(key);
+        this.byteBuffer.WriteString(value);
+
+        this.operationCount++;
+    }
+
+    /// <inheritdoc />
+    public void GetList(string key)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.GetList);
+        this.byteBuffer.WriteString(key);
+
+        this.operationCount++;
+    }
+
+    /// <inheritdoc />
+    public void ContainsList(string key, string value)
+    {
+        this.byteBuffer.WriteByte((byte)Operation.ContainsList);
+        this.byteBuffer.WriteString(key);
+        this.byteBuffer.WriteString(value);
 
         this.operationCount++;
     }

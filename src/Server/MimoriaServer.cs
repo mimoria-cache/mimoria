@@ -607,7 +607,7 @@ public sealed class MimoriaServer : IMimoriaServer
                         {
                             string key = byteBuffer.ReadRequiredKey();
                             string? value = byteBuffer.ReadString();
-                            uint ttl = byteBuffer.ReadUInt();
+                            uint ttl = byteBuffer.ReadVarUInt();
 
                             await LockIfNeededAsync(key);
 
@@ -626,9 +626,9 @@ public sealed class MimoriaServer : IMimoriaServer
 
                             await LockIfNeededAsync(key);
 
-                            int writeIndexBefore = responseBuffer.WriteIndex;
-
                             responseBuffer.WriteByte((byte)Operation.GetList);
+
+                            int writeIndexBefore = responseBuffer.WriteIndex;
 
                             // TODO: This as a var uint would be cool, but we save a list copy using the enumerator
                             responseBuffer.WriteUInt(0);
@@ -650,8 +650,8 @@ public sealed class MimoriaServer : IMimoriaServer
                         {
                             string key = byteBuffer.ReadRequiredKey();
                             string? value = byteBuffer.ReadString();
-                            uint ttl = byteBuffer.ReadUInt();
-                            uint valueTtl = byteBuffer.ReadUInt();
+                            uint ttl = byteBuffer.ReadVarUInt();
+                            uint valueTtl = byteBuffer.ReadVarUInt();
 
                             // TODO: Should null values not be allowed in lists?
                             if (value is null)

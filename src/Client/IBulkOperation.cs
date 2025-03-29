@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -22,6 +22,35 @@ public interface IBulkOperation
     /// <param name="value">The string value to set.</param>
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
     void SetString(string key, string value, TimeSpan ttl = default);
+
+    /// <summary>
+    /// Adds a get list operation to the bulk operation.
+    /// </summary>
+    /// <param name="key">The key of the list to retrieve.</param>
+    /// <param name="value">The value to add to the list.</param>
+    /// <param name="ttl">The time-to-live for the key.</param>
+    /// <param name="valueTtl">The time-to-live for the value.</param>
+    void AddList(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default);
+
+    /// <summary>
+    /// Adds a remove list operation to the bulk operation.
+    /// </summary>
+    /// <param name="key">The key of the list to remove from.</param>
+    /// <param name="value">The value to remove from the list.</param>
+    void RemoveList(string key, string value);
+
+    /// <summary>
+    /// Adds a get list operation to the bulk operation.
+    /// </summary>
+    /// <param name="key">The key of the list to retrieve.</param>
+    void GetList(string key);
+
+    /// <summary>
+    /// Adds a contains list operation to the bulk operation.
+    /// </summary>
+    /// <param name="key">The key of the list to check.</param>
+    /// <param name="value">The value to check for in the list.</param>
+    void ContainsList(string key, string value);
 
     /// <summary>
     /// Adds an increment counter operation to the bulk operation.

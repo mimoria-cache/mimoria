@@ -588,13 +588,41 @@ public sealed class MimoriaClient : IMimoriaClient
                 case Operation.GetObjectBinary:
                     break;
                 case Operation.GetList:
-                    break;
+                    {
+                        uint count = response.ReadUInt();
+                        if (count == 0)
+                        {
+                            list.Add(new List<string>());
+                            break;
+                        }
+
+                        var listValues = new List<string>(capacity: (int)count);
+                        for (uint j = 0; j < count; j++)
+                        {
+                            listValues.Add(response.ReadString()!);
+                        }
+
+                        list.Add(listValues);
+                        break;
+                    }
                 case Operation.AddList:
-                    break;
+                    {
+                        // Nothing to do
+                        list.Add(true);
+                        break;
+                    }
                 case Operation.RemoveList:
-                    break;
+                    {
+                        // Nothing to do
+                        list.Add(true);
+                        break;
+                    }
                 case Operation.ContainsList:
-                    break;
+                    {
+                        bool exists = response.ReadBool();
+                        list.Add(exists);
+                        break;
+                    }
                 case Operation.Exists:
                     {
                         bool exists = response.ReadBool();
