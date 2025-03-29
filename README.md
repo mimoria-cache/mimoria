@@ -1,9 +1,12 @@
 # mimoria
 
-[![Build and Test](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml/badge.svg?branch=main)](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml)
-[![Publish Docker image](https://github.com/mimoria-cache/mimoria/actions/workflows/docker-image.yml/badge.svg?branch=main)](https://github.com/mimoria-cache/mimoria/actions/workflows/docker-image.yml)
+![Build and Test](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml/badge.svg?branch=main)
+![Publish Docker image](https://github.com/mimoria-cache/mimoria/actions/workflows/docker-image.yml/badge.svg?branch=main)
+![NuGet Version](https://img.shields.io/nuget/v/Varelen.Mimoria.Client)
+![Docker Image Version](https://img.shields.io/docker/v/varelen/mimoria?label=Docker)
+![GitHub License](https://img.shields.io/github/license/mimoria-cache/mimoria)
 
-Performant cross-platform distributed key-value cache server written in .NET 9.
+Modern and performant cross-platform distributed key-value cache server written in .NET 9.
 
 Currently under development.
 
@@ -22,8 +25,14 @@ Currently under development.
 
 ## Features
 
-- [X] publish and subscribe (built-in channels like key expiration or deletion)
-- [ ] cluster support for primary and secondary servers
+- [X] structured data (key-value, list, json, binary, map, counter)
+  - [X] list has optional per value expiration
+- [X] publish and subscribe (built-in channels like key expiration, deletion, list added)
+- [X] good test coverage (unit, integration and system)
+- [X] metrics built-in with support for Azure Application Insights
+- [ ] cluster support for primary and secondary servers (WIP)
+  - [ ] synchronous replication
+  - [ ] asynchronous replication
 - [X] client libraries
   - [X] C# (with micro caching and DI support)
   - [ ] TypeScript/Node
@@ -49,6 +58,8 @@ To change the port:
 ```bash
 docker run -p 50000:50000 --name mimoria -e MIMORIA__PORT=50000 -e MIMORIA__PASSWORD=PleaseChooseAVeryLongOne varelen/mimoria:main
 ```
+
+See the [config](#config) section for more options.
 
 ### Manual
 
@@ -207,6 +218,19 @@ _ = await mimoriaClient.GetObjectJsonAsync<User>($"user:{myUserId}", jsonSeriali
 
 ## Config
 
+Options can aslo be set via environment variables with two underscores as separators.
+List can be set with double underscores and the index.
+
+Some examples:
+
+```bash
+MIMORIA__PASSWORD=PleaseChooseAVeryLongOne
+
+MIMORIA__CLUSTER__ID=1
+
+MIMORIA__CLUSTER__NODES__0__ID=2
+```
+
 Example of all config options:
 
 ```json
@@ -238,9 +262,12 @@ Example of all config options:
             }
         }
     },
+    "ConnectionStrings": {
+        "ApplicationInsights": "OptionalApplicationInsightsConnectionString"
+    },
     "Logging": {
         "LogLevel": {
-            "Default": "Debug",
+            "Default": "Information",
             "System": "Information",
             "Microsoft": "Warning"
         }
