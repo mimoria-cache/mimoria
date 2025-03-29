@@ -454,6 +454,13 @@ public sealed class ExpiringDictionaryCache : ICache
 
             switch (entry.Value)
             {
+                case byte[] bytes:
+                    {
+                        byteBuffer.WriteByte((byte)CacheValueType.Bytes);
+                        byteBuffer.WriteVarUInt((uint)bytes.Length);
+                        byteBuffer.WriteBytes(bytes);
+                        break;
+                    }
                 case long l:
                     {
                         byteBuffer.WriteByte((byte)CacheValueType.Counter);
@@ -521,6 +528,8 @@ public sealed class ExpiringDictionaryCache : ICache
 
             byteBuffer.WriteVarUInt(entry.TtlMilliseconds);
         }
+
+        this.logger.LogInformation("Serialized '{Count}' keys", this.cache.Count);
     }
 
     public void Deserialize(IByteBuffer byteBuffer)
@@ -602,6 +611,12 @@ public sealed class ExpiringDictionaryCache : ICache
                 case CacheValueType.Counter:
                     obj = byteBuffer.ReadLong();
                     break;
+                case CacheValueType.Bytes:
+                    uint length = byteBuffer.ReadVarUInt();
+                    var bytes = new byte[length];
+                    byteBuffer.ReadBytes(bytes);
+                    obj = bytes;
+                    break;
                 default:
                     break;
             }
@@ -611,6 +626,8 @@ public sealed class ExpiringDictionaryCache : ICache
             bool added = this.cache.TryAdd(key, new Entry<object?>(obj, ttl));
             Debug.Assert(added, $"Resynced key '{key}' was not added to cache");
         }
+
+        this.logger.LogInformation("Deserialized '{Count}' keys", count);
     }
 
     public void Dispose()

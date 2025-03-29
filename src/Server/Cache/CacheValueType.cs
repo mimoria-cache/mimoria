@@ -10,5 +10,6 @@ public enum CacheValueType : byte
     String = 1,
     List = 2,
     Map = 3,
-    Counter = 4
+    Counter = 4,
+    Bytes = 5
 }
