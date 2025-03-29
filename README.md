@@ -1,6 +1,6 @@
 # mimoria
 
-![Build and Test](https://github.com/varelen/mimoria/actions/workflows/dotnet.yml/badge.svg?branch=main)
+![Build and Test](https://github.com/mimoria-cache/mimoria/actions/workflows/dotnet.yml/badge.svg?branch=main)
 ![Publish Docker image](https://github.com/mimoria-cache/mimoria/actions/workflows/docker-image.yml/badge.svg?branch=main)
 ![NuGet Version](https://img.shields.io/nuget/v/Varelen.Mimoria.Client)
 ![Docker Image Version](https://img.shields.io/docker/v/varelen/mimoria?label=Docker)
@@ -28,7 +28,7 @@ Currently under development.
 - [X] structured data (key-value, list, json, binary, map, counter)
   - [X] list has optional per value expiration
 - [X] publish and subscribe (built-in channels like key expiration, deletion, list added)
-- [X] good test coverage (unit, integration and system)
+- [X] good test coverage (unit, integration and system) and asserts
 - [X] metrics built-in with support for Azure Application Insights
 - [ ] cluster support for primary and secondary servers (WIP)
   - [ ] synchronous replication
