@@ -6,8 +6,17 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Varelen.Mimoria.Client.DependencyInjection;
 
+/// <summary>
+/// Provides extension methods for adding Mimoria services to the dependency injection container.
+/// </summary>
 public static class MimoriaServiceCollectionExtensions
 {
+    /// <summary>
+    /// Adds the Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configure">An action to configure the <see cref="MimoriaConfiguration"/>.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddMimoria(this IServiceCollection services, Action<MimoriaConfiguration> configure)
     {
         var mimoriaConfiguration = new MimoriaConfiguration();
@@ -17,6 +26,12 @@ public static class MimoriaServiceCollectionExtensions
         return services.AddMimoria(mimoriaConfiguration);
     }
 
+    /// <summary>
+    /// Adds the Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configuration">The <see cref="MimoriaConfiguration"/> to use for configuring the client.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddMimoria(this IServiceCollection services, MimoriaConfiguration configuration)
     {
         services.AddSingleton<IMimoriaClient>(_ =>
@@ -30,9 +45,22 @@ public static class MimoriaServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds the Mimoria client services to the specified <see cref="IServiceCollection"/> with the default configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+
     public static IServiceCollection AddMimoria(this IServiceCollection services)
         => services.AddMimoria(new MimoriaConfiguration());
 
+    /// <summary>
+    /// Adds the Mimoria client services with micro-cache to the specified <see cref="IServiceCollection"/> with the specified configuration and expiration time.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configure">An action to configure the <see cref="MimoriaConfiguration"/>.</param>
+    /// <param name="expiration">The expiration time for the micro-cache.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddMimoriaWithMicroCache(this IServiceCollection services, Action<MimoriaConfiguration> configure, TimeSpan expiration)
     {
         var mimoriaConfiguration = new MimoriaConfiguration();
@@ -42,6 +70,13 @@ public static class MimoriaServiceCollectionExtensions
         return services.AddMimoriaWithMicroCache(mimoriaConfiguration, expiration);
     }
 
+    /// <summary>
+    /// Adds the Mimoria client services with micro-cache to the specified <see cref="IServiceCollection"/> with the specified configuration and expiration time.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configuration">The <see cref="MimoriaConfiguration"/> to use for configuring the client.</param>
+    /// <param name="expiration">The expiration time for the micro-cache.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddMimoriaWithMicroCache(this IServiceCollection services, MimoriaConfiguration configuration, TimeSpan expiration)
     {
         services.AddSingleton<IMimoriaClient>(_ =>
@@ -56,6 +91,12 @@ public static class MimoriaServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds the sharded Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configure">An action to configure the <see cref="ShardedMimoriaConfiguration"/>.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddShardedMimoria(this IServiceCollection services, Action<ShardedMimoriaConfiguration> configure)
     {
         var shardedMimoriaConfiguration = new ShardedMimoriaConfiguration();
@@ -65,6 +106,12 @@ public static class MimoriaServiceCollectionExtensions
         return services.AddShardedMimoria(shardedMimoriaConfiguration);
     }
 
+    /// <summary>
+    /// Adds the sharded Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configuration">The <see cref="ShardedMimoriaConfiguration"/> to use for configuring the client.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddShardedMimoria(this IServiceCollection services, ShardedMimoriaConfiguration configuration)
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
@@ -78,6 +125,12 @@ public static class MimoriaServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Adds the sharded Mimoria client services with micro-cache to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configuration">The <see cref="ShardedMimoriaConfiguration"/> to use for configuring the client.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
     public static IServiceCollection AddShardedMimoriaWithMicroCache(this IServiceCollection services, ShardedMimoriaConfiguration configuration)
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
