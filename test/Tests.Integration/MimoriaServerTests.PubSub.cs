@@ -47,6 +47,36 @@ public partial class MimoriaServerTests : IAsyncLifetime
         Assert.Equal(payload, receivedPayload);
     }
 
+    [Fact]
+    public async Task PubSub_Given_MimoriaClient_When_SetStringAndDeleteAndDelete_Then_KeyDeletionPayloadEventIsCalledOnce()
+    {
+        // Arrange
+        const string key = "pubsub:delete";
+
+        await using var mimoriaClient = await this.ConnectToServerAsync();
+
+        int calledCount = 0;
+        string? receivedPayload = null;
+
+        Subscription subscription = await mimoriaClient.SubscribeAsync(Channels.KeyDeletion);
+        subscription.Payload += (deletedKey) =>
+        {
+            receivedPayload = deletedKey;
+            calledCount++;
+        };
+
+        // Act
+        await mimoriaClient.SetStringAsync(key, "value");
+        await mimoriaClient.DeleteAsync(key);
+        await mimoriaClient.DeleteAsync(key);
+
+        await Task.Delay(500);
+
+        // Assert
+        Assert.Equal(key, receivedPayload);
+        Assert.Equal(1, calledCount);
+    }
+
     [Theory]
     [InlineData(2, 2)]
     [InlineData(5, 5)]
