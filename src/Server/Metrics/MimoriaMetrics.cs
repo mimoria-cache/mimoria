@@ -33,18 +33,18 @@ public sealed class MimoriaMetrics : IMimoriaMetrics
     {
         var meter = meterFactory.Create(MeterName, "0.0.1");
 
-        this.connectionsCounter = meter.CreateUpDownCounter<long>("connections");
-        this.bytesReceivedCounter = meter.CreateCounter<long>("bytes.received");
-        this.bytesSentCounter = meter.CreateCounter<long>("bytes.sent");
-        this.packetsReceivedCounter = meter.CreateCounter<long>("packets.received");
-        this.packetsSentCounter = meter.CreateCounter<long>("packets.sent");
-        this.operationProcessingTime = meter.CreateHistogram<double>("operations.processing_time");
-        this.cacheHitsCounter = meter.CreateCounter<long>("cache.hits");
-        this.cacheMissesCounter = meter.CreateCounter<long>("cache.misses");
-        this.cacheExpiredKeysCounter = meter.CreateCounter<long>("cache.expired_keys");
-        this.pubSubChannelsSubscribedCounter = meter.CreateUpDownCounter<long>("pubsub.channels_subscribed");
-        this.pubSubMessagesReceivedCounter = meter.CreateCounter<long>("pubsub.messages_received");
-        this.pubSubMessagesSentCounter = meter.CreateCounter<long>("pubsub.messages_sent");
+        this.connectionsCounter = meter.CreateUpDownCounter<long>("mimoria.server.connections", unit: "{connections}", description: "The current connections connected to the Mimoria server.");
+        this.bytesReceivedCounter = meter.CreateCounter<long>("mimoria.server.bytes.received", unit: "byte", description: "The total bytes received");
+        this.bytesSentCounter = meter.CreateCounter<long>("mimoria.server.bytes.sent", unit: "byte", description: "The total bytes sent");
+        this.packetsReceivedCounter = meter.CreateCounter<long>("mimoria.server.packets.received", unit: "{packet}", description: "The total packets received");
+        this.packetsSentCounter = meter.CreateCounter<long>("mimoria.server.packets.sent", unit: "{packet}", description: "The total packets sent");
+        this.operationProcessingTime = meter.CreateHistogram<double>("mimoria.server.operations.processing_time", description: "The processing time of operations");
+        this.cacheHitsCounter = meter.CreateCounter<long>("mimoria.server.cache.hits", unit: "{packet}", description: "The total packets received");
+        this.cacheMissesCounter = meter.CreateCounter<long>("mimoria.server.cache.misses");
+        this.cacheExpiredKeysCounter = meter.CreateCounter<long>("mimoria.server.cache.expired_keys");
+        this.pubSubChannelsSubscribedCounter = meter.CreateUpDownCounter<long>("mimoria.server.pubsub.channels_subscribed");
+        this.pubSubMessagesReceivedCounter = meter.CreateCounter<long>("mimoria.server.pubsub.messages_received");
+        this.pubSubMessagesSentCounter = meter.CreateCounter<long>("mimoria.server.pubsub.messages_sent");
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
