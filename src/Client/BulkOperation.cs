@@ -41,7 +41,7 @@ public sealed class BulkOperation : IBulkOperation, IDisposable
         this.byteBuffer.WriteByte((byte)Operation.SetString);
         this.byteBuffer.WriteString(key);
         this.byteBuffer.WriteString(value);
-        this.byteBuffer.WriteUInt((uint)ttl.TotalMilliseconds);
+        this.byteBuffer.WriteVarUInt((uint)ttl.TotalMilliseconds);
 
         this.operationCount++;
     }
