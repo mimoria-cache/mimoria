@@ -15,9 +15,9 @@
 		<ProductVersion>0.0.1</ProductVersion>
 		<Authors>varelen</Authors>
 		<Title>.NET mimoria client</Title>
-		<Description>.NET client for the performant cross-platform distributed key-value cache server mimoria.</Description>
+		<Description>.NET client for the performant cross-platform distributed key-value cache server Mimoria.</Description>
 		<Copyright>Copyright © varelen 2025</Copyright>
-		<Summary>.NET client for the performant cross-platform distributed key-value cache server mimoria.</Summary>
+		<Summary>.NET client for the performant cross-platform distributed key-value cache server Mimoria.</Summary>
 		<PackageId>Varelen.Mimoria.Client</PackageId>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/mimoria-cache/mimoria</RepositoryUrl>

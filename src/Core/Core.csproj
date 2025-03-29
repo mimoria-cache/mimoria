@@ -16,9 +16,9 @@
 		<ProductVersion>0.0.1</ProductVersion>
 		<Authors>varelen</Authors>
 		<Title>.NET mimoria core</Title>
-		<Description>.NET package containing byte buffer and protocol related shared code for mimoria.</Description>
+		<Description>.NET package containing byte buffer and protocol related shared code for Mimoria.</Description>
 		<Copyright>Copyright © varelen 2025</Copyright>
-		<Summary>.NET package containing byte buffer and protocol related shared code for mimoria.</Summary>
+		<Summary>.NET package containing byte buffer and protocol related shared code for Mimoria.</Summary>
 		<PackageId>Varelen.Mimoria.Core</PackageId>
 		<PackageReadmeFile>README.md</PackageReadmeFile>
 		<RepositoryUrl>https://github.com/mimoria-cache/mimoria</RepositoryUrl>
