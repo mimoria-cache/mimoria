@@ -4,6 +4,8 @@
 
 using Microsoft.Extensions.DependencyInjection;
 
+using Varelen.Mimoria.Client.Protocol;
+
 namespace Varelen.Mimoria.Client.DependencyInjection;
 
 /// <summary>
@@ -36,7 +38,7 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IMimoriaClient>(_ =>
         {
-            var mimoriaClient = new MimoriaClient(configuration.Ip, configuration.Port, configuration.Password);
+            var mimoriaClient = new MimoriaClient(configuration.Host, configuration.Port, configuration.Password, new MimoriaSocketClient(configuration.OperationTimeout, configuration.OperationRetryPolicy), configuration.ConnectRetryPolicy);
             // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
             mimoriaClient.ConnectAsync().GetAwaiter().GetResult();
             return mimoriaClient;
@@ -81,7 +83,7 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IMimoriaClient>(_ =>
         {
-            var mimoriaClient = new MimoriaClient(configuration.Ip, configuration.Port, configuration.Password);
+            var mimoriaClient = new MimoriaClient(configuration.Host, configuration.Port, configuration.Password, new MimoriaSocketClient(configuration.OperationTimeout, configuration.OperationRetryPolicy), configuration.ConnectRetryPolicy);
             var microCacheMimoriaClient = new MicrocacheMimoriaClient(mimoriaClient, expiration);
             // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
             microCacheMimoriaClient.ConnectAsync().GetAwaiter().GetResult();
