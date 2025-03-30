@@ -47,7 +47,7 @@ public abstract class AsyncTcpSocketClient : ISocketClient
 
         IPAddress[] ipAddresses = await Dns.GetHostAddressesAsync(hostnameOrIp, cancellationToken);
         // TODO: Decide which to use. Prefer IPv4 or IPv6 addresses?
-        IPAddress? ipAddress = ipAddresses.FirstOrDefault()
+        IPAddress ipAddress = ipAddresses.FirstOrDefault(ip => ip.AddressFamily == AddressFamily.InterNetwork)
             ?? throw new ArgumentException("Only IPv4 addresses are currently supported");
 
         try
