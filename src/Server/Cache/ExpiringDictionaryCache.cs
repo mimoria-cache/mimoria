@@ -541,7 +541,7 @@ public sealed class ExpiringDictionaryCache : ICache
 
     public void Deserialize(IByteBuffer byteBuffer)
     {
-        if (byteBuffer.Size == 0)
+        if (byteBuffer.Size <= 5)
         {
             return;
         }
