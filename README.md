@@ -75,6 +75,23 @@ dotnet add package Varelen.Mimoria.Client
 
 ## C# client examples
 
+Using dotnet dependency injection (IServiceCollection):
+
+```c#
+// ...
+
+builder.Services.AddMimoria(options =>
+{
+    options.Host = "localhost";
+    options.Port = 6565;
+    options.OperationTimeout = TimeSpan.FromMilliseconds(250);
+    options.ConnectRetryPolicy = new ExponentialRetryPolicy(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException));
+    options.OperationRetryPolicy = new ExponentialRetryPolicy<IByteBuffer>(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException));
+});
+
+// The "IMimoriaClient" interface can then be injected and be used
+```
+
 Single instance:
 
 ```c#
