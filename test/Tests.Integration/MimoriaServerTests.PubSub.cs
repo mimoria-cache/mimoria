@@ -111,7 +111,10 @@ public partial class MimoriaServerTests : IAsyncLifetime
         {
             string item = payload!;
 
-            receivedPayloads.Add(item);
+            lock (receivedPayloads)
+            {
+                receivedPayloads.Add(item);
+            }
         };
 
         var tasks = new List<Task>(capacity: clients.Count);
