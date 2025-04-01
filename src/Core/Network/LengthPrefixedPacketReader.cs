@@ -26,7 +26,7 @@ public sealed class LengthPrefixedPacketReader : IDisposable
     public LengthPrefixedPacketReader(int prefixLength)
     {
         this.prefixLength = prefixLength;
-        this.buffer = new PooledByteBuffer(ProtocolDefaults.MaxByteArrayLength + 4);
+        this.buffer = new PooledByteBuffer();
     }
 
     /// <summary>
