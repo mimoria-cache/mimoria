@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -26,6 +26,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     private readonly ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer>> taskCompletionSources;
     private readonly ConcurrentDictionary<string, List<Subscription>> subscriptions;
     private readonly ReaderWriterLockSlim subscriptionsReadWriteLock;
+    private readonly Channel<(string channel, MimoriaValue payload)> publishChannel;
 
     ICollection<(string Channel, List<Subscription> Subscriptions)> IMimoriaSocketClient.Subscriptions => this.subscriptions.Select(keyValue => (keyValue.Key, keyValue.Value)).ToList();
 
@@ -57,6 +58,41 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         this.taskCompletionSources = new ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer>>();
         this.subscriptions = new ConcurrentDictionary<string, List<Subscription>>();
         this.subscriptionsReadWriteLock = new ReaderWriterLockSlim();
+        this.publishChannel = Channel.CreateUnbounded<(string channel, MimoriaValue payload)>();
+
+        _ = Task.Factory.StartNew(this.ProcessPublishesAsync, TaskCreationOptions.LongRunning);
+    }
+
+    private async Task ProcessPublishesAsync()
+    {
+        try
+        {
+            await foreach ((string channel, MimoriaValue payload) in this.publishChannel.Reader.ReadAllAsync())
+            {
+                if (!this.subscriptions.TryGetValue(channel, out List<Subscription>? foundSubscriptions))
+                {
+                    continue;
+                }
+
+                this.subscriptionsReadWriteLock.EnterReadLock();
+
+                try
+                {
+                    foreach (Subscription subscription in foundSubscriptions)
+                    {
+                        subscription.OnPayload(payload);
+                    }
+                }
+                finally
+                {
+                    this.subscriptionsReadWriteLock.ExitReadLock();
+                }
+            }
+        }
+        catch (Exception exception)
+        {
+            Debug.WriteLine($"An error occurred while reading from the publish channel: {exception}");
+        }
     }
 
     /// <inheritdoc />
@@ -67,28 +103,15 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         {
             string channel = byteBuffer.ReadString()!;
 
-            if (!this.subscriptions.TryGetValue(channel, out List<Subscription>? foundSubscriptions))
+            if (!this.subscriptions.TryGetValue(channel, out _))
             {
                 return;
             }
 
-            this.subscriptionsReadWriteLock.EnterReadLock();
+            bool written = this.publishChannel.Writer.TryWrite((channel, byteBuffer.ReadValue()));
+            Debug.Assert(written, "Publish was not written to the publish channel");
 
-            try
-            {
-                MimoriaValue payload = byteBuffer.ReadValue();
-
-                foreach (Subscription subscription in foundSubscriptions)
-                {
-                    subscription.OnPayload(payload);
-                }
-            }
-            finally
-            {
-                this.subscriptionsReadWriteLock.ExitReadLock();
-                byteBuffer.Dispose();
-            }
-
+            byteBuffer.Dispose();
             return;
         }
 
@@ -123,6 +146,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         }
 
         this.subscriptions.Clear();
+        this.publishChannel.Writer.Complete();
     }
 
     /// <inheritdoc />
