@@ -92,4 +92,31 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         Assert.Equal(1, clusterMimoriaClient.ServerId);
     }
+
+    [Fact]
+    public async Task PubSub_Given_TwoNodes_When_PrimaryGoesDownAndPublish_Then_PayloadEventIsStillCalled()
+    {
+        // Arrange
+        await using var clusterMimoriaClient = await this.ConnectToClusterAsync();
+
+        string? value = null;
+
+        // Act
+        Subscription subscription = await clusterMimoriaClient.SubscribeAsync("test");
+        subscription.Payload += (payload) =>
+        {
+            value = payload;
+        };
+
+        this.mimoriaServerTwo.Stop();
+
+        await Task.Delay(6_000);
+
+        await clusterMimoriaClient.PublishAsync("test", "value");
+
+        await Task.Delay(500);
+
+        // Assert
+        Assert.Equal("value", value);
+    }
 }
