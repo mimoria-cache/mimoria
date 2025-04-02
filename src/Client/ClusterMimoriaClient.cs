@@ -18,6 +18,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     private const int DefaultPrimaryRetryDelay = 1_000;
 
     private readonly List<IMimoriaClient> mimoriaClients;
+    private readonly Dictionary<string, List<Subscription>> subscriptions;
     private readonly string password;
     private readonly IPEndPoint[] ipEndPoints;
     private readonly int primaryRetryCount;
@@ -44,6 +45,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         this.primaryRetryDelay = primaryRetryDelay;
         this.ipEndPoints = ipEndPoints;
         this.mimoriaClients = new List<IMimoriaClient>();
+        this.subscriptions = new Dictionary<string, List<Subscription>>();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -94,7 +96,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         foreach (IPEndPoint remoteEndPoint in this.ipEndPoints)
         {
             var mimoriaClient = new MimoriaClient(remoteEndPoint, this.password);
- 
+
             await mimoriaClient.ConnectAsync(cancellationToken);
 
             var subscription = await mimoriaClient.SubscribeAsync(Channels.PrimaryChanged, cancellationToken);
@@ -126,6 +128,12 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         if (newPrimary is not null)
         {
             newPrimary.IsPrimary = true;
+
+            foreach (var (channel, subs) in this.subscriptions)
+            {
+                // TODO: Async events
+                newPrimary.SubscribeInternalAsync(channel, subs).GetAwaiter().GetResult();
+            }
         }
     }
 
@@ -328,15 +336,6 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
 
-    public Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
-    {
-        return RetryPrimaryOperationAsync(() =>
-        {
-            IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.PublishAsync(channel, payload, cancellationToken);
-        });
-    }
-
     public Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default)
     {
         return RetryPrimaryOperationAsync(() =>
@@ -400,17 +399,43 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         });
     }
 
-    public Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
+    public Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
     {
         return RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
+            return mimoriaClient.PublishAsync(channel, payload, cancellationToken);
+        });
+    }
+
+    public async Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
+    {
+        Subscription subscription = await RetryPrimaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetPrimary();
             return mimoriaClient.SubscribeAsync(channel, cancellationToken);
         });
+
+        if (!this.subscriptions.TryGetValue(channel, out List<Subscription>? subscriptions))
+        {
+            subscriptions = new List<Subscription>
+            {
+                subscription
+            };
+            this.subscriptions.Add(channel, subscriptions);
+        }
+        else
+        {
+            subscriptions.Add(subscription);
+        }
+
+        return subscription;
     }
 
     public Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
+        _ = this.subscriptions.Remove(channel);
+
         return RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();

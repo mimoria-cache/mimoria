@@ -298,6 +298,9 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default);
 
+    internal Task SubscribeInternalAsync(string channel, List<Subscription> subscriptions)
+        => Task.CompletedTask;
+
     /// <summary>
     /// Unsubscribes from a specified channel.
     /// </summary>

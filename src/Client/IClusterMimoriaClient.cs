@@ -8,8 +8,14 @@ using Varelen.Mimoria.Core;
 
 namespace Varelen.Mimoria.Client;
 
+/// <summary>
+/// The interface for a Mimoria client that can connect to a cluster of servers.
+/// </summary>
 public interface IClusterMimoriaClient : IMimoriaClient
 {
+    /// <summary>
+    /// Returns the list of Mimoria clients in the cluster.
+    /// </summary>
     public IReadOnlyList<IMimoriaClient> MimoriaClients { get; }
 
     /// <summary>

@@ -15,7 +15,7 @@ public interface IMimoriaSocketClient : ISocketClient
     /// <summary>
     /// Gets the collection of channels to which the client is currently subscribed.
     /// </summary>
-    ICollection<string> SubscribedChannels { get; }
+    ICollection<(string Channel, List<Subscription> Subscriptions)> Subscriptions { get; }
 
     /// <summary>
     /// Sends a request to the server and waits for a response.
@@ -39,7 +39,9 @@ public interface IMimoriaSocketClient : ISocketClient
     /// </summary>
     /// <param name="channel">The name of the channel to subscribe to.</param>
     /// <returns>A tuple containing the subscription object and a boolean indicating whether the client was already subscribed to the channel.</returns>
-    (Subscription, bool alreadySubscribed) Subscribe(string channel);
+    (Subscription, bool AlreadySubscribed) Subscribe(string channel);
+
+    internal void SubscribeInternal(string channel, List<Subscription> subscriptions);
 
     /// <summary>
     /// Unsubscribes from the specified channel.

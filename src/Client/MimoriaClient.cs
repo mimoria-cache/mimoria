@@ -147,13 +147,13 @@ public sealed class MimoriaClient : IMimoriaClient
 
     private async ValueTask ResubscribeIfNeeded()
     {
-        var subscribedChannels = this.mimoriaSocketClient.SubscribedChannels;
-        if (subscribedChannels.Count == 0)
+        var subscriptions = this.mimoriaSocketClient.Subscriptions;
+        if (subscriptions.Count == 0)
         {
             return;
         }
 
-        foreach (var channel in subscribedChannels)
+        foreach (var (channel, _) in subscriptions)
         {
             await this.SendSubscribeAsync(channel);
         }
@@ -684,6 +684,13 @@ public sealed class MimoriaClient : IMimoriaClient
         byteBuffer.EndPacket();
 
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
+    }
+
+    Task IMimoriaClient.SubscribeInternalAsync(string channel, List<Subscription> subscriptions)
+    {
+        this.mimoriaSocketClient.SubscribeInternal(channel, subscriptions);
+
+        return this.SendSubscribeAsync(channel);
     }
 
     /// <inheritdoc />
