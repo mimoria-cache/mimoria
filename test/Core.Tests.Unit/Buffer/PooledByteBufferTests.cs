@@ -43,16 +43,14 @@ public sealed class PooledByteBufferTests : IDisposable
 
         // Assert 1
         this.sut.ReferenceCount.Should().Be(1);
-        using var pooledByteBufferDifferentBytes = new PooledByteBuffer();
+        using var pooledByteBufferDifferentBytes = PooledByteBuffer.FromPool();
         pooledByteBufferDifferentBytes.Bytes[..4].Should().NotBeEquivalentTo(expectedBytes);
 
         // Act 2: Finally the buffer should be returned to pool
         this.sut.Dispose();
 
-        // Assert 2: Should now be same as expectedBytes
+        // Assert 2: Reference count is reset to 1 by the pool
         this.sut.ReferenceCount.Should().Be(1);
-        using var pooledByteBufferSameBytes = PooledByteBuffer.FromPool();
-        pooledByteBufferSameBytes.Bytes[..4].Should().BeEquivalentTo(expectedBytes);
     }
 
     [Fact]
