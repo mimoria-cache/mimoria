@@ -290,7 +290,7 @@ public readonly struct MimoriaValue
             ValueType.Null => null,
             ValueType.String => (string)value.Value!,
             ValueType.Int or ValueType.Long or ValueType.Double or ValueType.Bool => value.Value!.ToString(),
-            ValueType.Bytes => Encoding.UTF8.GetString((byte[])value.Value!),
+            ValueType.Bytes => Convert.ToHexString((byte[])value.Value!),
             _ => throw new InvalidOperationException(),
         };
     }
