@@ -1,8 +1,6 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
-
-using FluentAssertions;
 
 using Varelen.Mimoria.Core.Buffer;
 
@@ -27,14 +25,14 @@ public sealed class PooledByteBufferTests : IDisposable
         using var newSut = PooledByteBuffer.FromPool();
 
         // Assert
-        newSut.Bytes[..4].Should().BeEquivalentTo(expectedBytes);
+        Assert.Equal(expectedBytes, newSut.Bytes[..4]);
     }
 
     [Fact]
     public void Dispose_When_ReferenceCountIsZero_Then_ByteBufferIsReturnedToPool()
     {
         // Arrange
-        byte[] expectedBytes = [1, 2, 3, 4];
+        byte[] expectedBytes = [5, 6, 7, 8];
         this.sut.WriteBytes(expectedBytes);
 
         // Act 1
@@ -42,15 +40,15 @@ public sealed class PooledByteBufferTests : IDisposable
         this.sut.Dispose();
 
         // Assert 1
-        this.sut.ReferenceCount.Should().Be(1);
+        Assert.Equal((uint)1, this.sut.ReferenceCount);
         using var pooledByteBufferDifferentBytes = PooledByteBuffer.FromPool();
-        pooledByteBufferDifferentBytes.Bytes[..4].Should().NotBeEquivalentTo(expectedBytes);
+        Assert.NotEqual(expectedBytes, pooledByteBufferDifferentBytes.Bytes[..4]);
 
         // Act 2: Finally the buffer should be returned to pool
         this.sut.Dispose();
 
         // Assert 2: Reference count is reset to 1 by the pool
-        this.sut.ReferenceCount.Should().Be(1);
+        Assert.Equal((uint)1, this.sut.ReferenceCount);
     }
 
     [Fact]
@@ -59,11 +57,11 @@ public sealed class PooledByteBufferTests : IDisposable
         // Act & Assert
         this.sut.Retain();
 
-        this.sut.ReferenceCount.Should().Be(2);
+        Assert.Equal((uint)2, this.sut.ReferenceCount);
 
         this.sut.Dispose();
 
-        this.sut.ReferenceCount.Should().Be(1);
+        Assert.Equal((uint)1, this.sut.ReferenceCount);
     }
 
     [Fact]
@@ -74,8 +72,8 @@ public sealed class PooledByteBufferTests : IDisposable
         byte read = sut.ReadByte();
 
         // Assert
-        this.sut.Size.Should().Be(1);
-        read.Should().Be(5);
+        Assert.Equal(1, this.sut.Size);
+        Assert.Equal(5, read);
     }
 
     [Fact]
@@ -86,8 +84,8 @@ public sealed class PooledByteBufferTests : IDisposable
         uint read = this.sut.ReadUInt();
 
         // Assert
-        this.sut.Size.Should().Be(4);
-        read.Should().Be(500);
+        Assert.Equal(4, this.sut.Size);
+        Assert.Equal(500u, read);
     }
 
     [Fact]
@@ -99,7 +97,7 @@ public sealed class PooledByteBufferTests : IDisposable
         this.sut.WriteByte(1);
 
         // Act & Assert
-        this.sut.Invoking(b => b.ReadUInt()).Should().Throw<ArgumentException>();
+        Assert.Throws<ArgumentException>(() => this.sut.ReadUInt());
     }
 
     [Theory]
@@ -120,8 +118,8 @@ public sealed class PooledByteBufferTests : IDisposable
         uint read = this.sut.ReadVarUInt();
 
         // Assert
-        this.sut.Size.Should().Be(expectedSize);
-        read.Should().Be(expectedValue);
+        Assert.Equal(expectedSize, this.sut.Size);
+        Assert.Equal(expectedValue, read);
     }
 
     [Fact]
@@ -132,8 +130,8 @@ public sealed class PooledByteBufferTests : IDisposable
         ulong read = this.sut.ReadULong();
 
         // Assert
-        this.sut.Size.Should().Be(8);
-        read.Should().Be(ulong.MaxValue);
+        Assert.Equal(8, this.sut.Size);
+        Assert.Equal(ulong.MaxValue, read);
     }
 
     [Fact]
@@ -144,8 +142,8 @@ public sealed class PooledByteBufferTests : IDisposable
         float read = this.sut.ReadFloat();
 
         // Assert
-        this.sut.Size.Should().Be(4);
-        read.Should().Be(3.1415F);
+        Assert.Equal(4, this.sut.Size);
+        Assert.Equal(3.1415F, read);
     }
 
     [Fact]
@@ -159,8 +157,8 @@ public sealed class PooledByteBufferTests : IDisposable
         Guid read = this.sut.ReadGuid();
 
         // Assert
-        this.sut.Size.Should().Be(16);
-        read.Should().Be(guid);
+        Assert.Equal(16, this.sut.Size);
+        Assert.Equal(guid, read);
     }
 
     [Fact]
@@ -175,8 +173,8 @@ public sealed class PooledByteBufferTests : IDisposable
         string read = this.sut.ReadString()!;
 
         // Assert
-        this.sut.Size.Should().Be(value.Length + valueVarUIntSize);
-        read.Should().Be(value);
+        Assert.Equal(value.Length + valueVarUIntSize, this.sut.Size);
+        Assert.Equal(value, read);
     }
 
     [Fact]
@@ -187,8 +185,8 @@ public sealed class PooledByteBufferTests : IDisposable
         string? read = this.sut.ReadString();
 
         // Assert
-        this.sut.Size.Should().Be(1);
-        read.Should().BeNull();
+        Assert.Equal(1, this.sut.Size);
+        Assert.Null(read);
     }
 
     [Fact]
@@ -198,7 +196,7 @@ public sealed class PooledByteBufferTests : IDisposable
         this.sut.WriteVarUInt(100);
 
         // Act & Assert
-        this.sut.Invoking(b => b.ReadString()).Should().Throw<ArgumentException>();
+        Assert.Throws<ArgumentException>(() => this.sut.ReadString());
     }
 
     [Fact]
@@ -213,8 +211,8 @@ public sealed class PooledByteBufferTests : IDisposable
         string read = this.sut.ReadString()!;
 
         // Assert
-        this.sut.Bytes.Length.Should().Be(bufferSizeBefore * PooledByteBuffer.BufferGrowFactor);
-        read.Should().Be(value);
+        Assert.Equal(bufferSizeBefore * PooledByteBuffer.BufferGrowFactor, this.sut.Bytes.Length);
+        Assert.Equal(value, read);
     }
 
     [Fact]
@@ -225,10 +223,8 @@ public sealed class PooledByteBufferTests : IDisposable
         this.sut.WriteBytes(new byte[PooledByteBuffer.MaxStringSizeBytes + 1]);
 
         // Act & Assert
-        this.sut.Invoking(x => x.ReadString())
-            .Should()
-            .Throw<ArgumentException>()
-            .WithMessage($"Read string value length '{PooledByteBuffer.MaxStringSizeBytes + 1}' exceeded max allowed length '{PooledByteBuffer.MaxStringSizeBytes}'");
+        var exception = Assert.Throws<ArgumentException>(() => this.sut.ReadString());
+        Assert.Equal($"Read string value length '{PooledByteBuffer.MaxStringSizeBytes + 1}' exceeded max allowed length '{PooledByteBuffer.MaxStringSizeBytes}'", exception.Message);
     }
 
     [Fact]
@@ -243,8 +239,8 @@ public sealed class PooledByteBufferTests : IDisposable
         this.sut.ReadBytes(readFibonacci);
 
         // Assert
-        this.sut.Size.Should().Be(fibonacci.Length);
-        readFibonacci.Should().BeEquivalentTo(fibonacci);
+        Assert.Equal(fibonacci.Length, this.sut.Size);
+        Assert.Equal(fibonacci, readFibonacci);
     }
 
     [Fact]
@@ -260,7 +256,7 @@ public sealed class PooledByteBufferTests : IDisposable
         otherPooledByteBuffer.WriteUInt(4);
 
         // Assert
-        this.sut.Equals(otherPooledByteBuffer).Should().BeTrue();
+        Assert.True(this.sut.Equals(otherPooledByteBuffer));
     }
 
     [Fact]
@@ -276,7 +272,7 @@ public sealed class PooledByteBufferTests : IDisposable
         otherPooledByteBuffer.WriteUInt(2);
 
         // Assert
-        this.sut.Equals(otherPooledByteBuffer).Should().BeFalse();
+        Assert.False(this.sut.Equals(otherPooledByteBuffer));
     }
 
     [Fact]
@@ -286,10 +282,8 @@ public sealed class PooledByteBufferTests : IDisposable
         var value = new string('t', (int)PooledByteBuffer.MaxStringSizeBytes + 1);
 
         // Act & Assert
-        this.sut.Invoking(x => x.WriteString(value))
-        .Should()
-        .Throw<ArgumentException>()
-            .WithMessage($"Written string value length '{value.Length}' exceeded max allowed length '{PooledByteBuffer.MaxStringSizeBytes}'");
+        var exception = Assert.Throws<ArgumentException>(() => this.sut.WriteString(value));
+        Assert.Equal($"Written string value length '{value.Length}' exceeded max allowed length '{PooledByteBuffer.MaxStringSizeBytes}'", exception.Message);
     }
 
     public void Dispose()
