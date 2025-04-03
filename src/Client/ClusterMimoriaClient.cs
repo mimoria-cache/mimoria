@@ -100,13 +100,13 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
             await mimoriaClient.ConnectAsync(cancellationToken);
 
             var subscription = await mimoriaClient.SubscribeAsync(Channels.PrimaryChanged, cancellationToken);
-            subscription.Payload += HandlePrimaryChanged;
+            subscription.Payload += HandlePrimaryChangedAsync;
 
             this.mimoriaClients.Add(mimoriaClient);
         }
     }
 
-    private void HandlePrimaryChanged(MimoriaValue payload)
+    private async ValueTask HandlePrimaryChangedAsync(MimoriaValue payload)
     {
         int newPrimaryServerId = payload;
 
@@ -131,8 +131,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
 
             foreach (var (channel, subs) in this.subscriptions)
             {
-                // TODO: Async events
-                newPrimary.SubscribeInternalAsync(channel, subs).GetAwaiter().GetResult();
+                await newPrimary.SubscribeInternalAsync(channel, subs);
             }
         }
     }

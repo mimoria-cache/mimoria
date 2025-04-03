@@ -39,7 +39,7 @@ public interface IMimoriaSocketClient : ISocketClient
     /// </summary>
     /// <param name="channel">The name of the channel to subscribe to.</param>
     /// <returns>A tuple containing the subscription object and a boolean indicating whether the client was already subscribed to the channel.</returns>
-    (Subscription, bool AlreadySubscribed) Subscribe(string channel);
+    Task<(Subscription, bool AlreadySubscribed)> SubscribeAsync(string channel);
 
     internal void SubscribeInternal(string channel, List<Subscription> subscriptions);
 
@@ -48,5 +48,5 @@ public interface IMimoriaSocketClient : ISocketClient
     /// </summary>
     /// <param name="channel">The name of the channel to unsubscribe from.</param>
     /// <returns>True if the client was successfully unsubscribed; otherwise, false.</returns>
-    bool Unsubscribe(string channel);
+    Task<bool> UnsubscribeAsync(string channel);
 }

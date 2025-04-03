@@ -88,13 +88,14 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         await this.mimoriaClient.ConnectAsync(cancellationToken);
 
         var expirationSubscription = await this.mimoriaClient.SubscribeAsync(Channels.KeyExpiration, cancellationToken);
-        expirationSubscription.Payload += HandleExpirationSubscription_Payload;
+        expirationSubscription.Payload += HandleExpirationAsync;
     }
 
-    private void HandleExpirationSubscription_Payload(MimoriaValue payload)
+    private ValueTask HandleExpirationAsync(MimoriaValue payload)
     {
         string key = (string)payload!;
         this.memoryCache.Remove(key);
+        return ValueTask.CompletedTask;
     }
 
     public Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default)

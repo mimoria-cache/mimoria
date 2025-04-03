@@ -25,7 +25,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
     private readonly IRetryPolicy<IByteBuffer> operationRetryPolicy;
     private readonly ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer>> taskCompletionSources;
     private readonly ConcurrentDictionary<string, List<Subscription>> subscriptions;
-    private readonly ReaderWriterLockSlim subscriptionsReadWriteLock;
+    private readonly SemaphoreSlim subscriptionsSemaphore;
     private readonly Channel<(string channel, MimoriaValue payload)> publishChannel;
 
     ICollection<(string Channel, List<Subscription> Subscriptions)> IMimoriaSocketClient.Subscriptions => this.subscriptions.Select(keyValue => (keyValue.Key, keyValue.Value)).ToList();
@@ -57,7 +57,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         this.operationRetryPolicy = operationRetryPolicy;
         this.taskCompletionSources = new ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer>>();
         this.subscriptions = new ConcurrentDictionary<string, List<Subscription>>();
-        this.subscriptionsReadWriteLock = new ReaderWriterLockSlim();
+        this.subscriptionsSemaphore = new SemaphoreSlim(initialCount: 1, maxCount: 1);
         this.publishChannel = Channel.CreateUnbounded<(string channel, MimoriaValue payload)>();
 
         _ = Task.Factory.StartNew(this.ProcessPublishesAsync, TaskCreationOptions.LongRunning);
@@ -74,18 +74,18 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
                     continue;
                 }
 
-                this.subscriptionsReadWriteLock.EnterReadLock();
+                await this.subscriptionsSemaphore.WaitAsync();
 
                 try
                 {
                     foreach (Subscription subscription in foundSubscriptions)
                     {
-                        subscription.OnPayload(payload);
+                        await subscription.OnPayloadAsync(payload);
                     }
                 }
                 finally
                 {
-                    this.subscriptionsReadWriteLock.ExitReadLock();
+                    this.subscriptionsSemaphore.Release();
                 }
             }
         }
@@ -173,9 +173,9 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         => this.SendAsync(byteBuffer, cancellationToken);
 
     /// <inheritdoc />
-    public (Subscription, bool AlreadySubscribed) Subscribe(string channel)
+    public async Task<(Subscription, bool AlreadySubscribed)> SubscribeAsync(string channel)
     {
-        this.subscriptionsReadWriteLock.EnterWriteLock();
+        await this.subscriptionsSemaphore.WaitAsync();
 
         try
         {
@@ -192,7 +192,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         }
         finally
         {
-            this.subscriptionsReadWriteLock.ExitWriteLock();
+            this.subscriptionsSemaphore.Release();
         }
     }
 
@@ -200,9 +200,9 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         => this.subscriptions[channel] = subscriptions;
 
     /// <inheritdoc />
-    public bool Unsubscribe(string channel)
+    public async Task<bool> UnsubscribeAsync(string channel)
     {
-        this.subscriptionsReadWriteLock.EnterWriteLock();
+        await this.subscriptionsSemaphore.WaitAsync();
 
         try
         {
@@ -210,7 +210,7 @@ public sealed class MimoriaSocketClient : AsyncTcpSocketClient, IMimoriaSocketCl
         }
         finally
         {
-            this.subscriptionsReadWriteLock.ExitWriteLock();
+            this.subscriptionsSemaphore.Release();
         }
     }
 

@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -15,17 +15,25 @@ public sealed class Subscription
     /// Represents the method that will handle the payload event.
     /// </summary>
     /// <param name="payload">The payload.</param>
-    public delegate void OnPayloadEvent(MimoriaValue payload);
+    public delegate ValueTask OnPayloadEventAsync(MimoriaValue payload);
 
     /// <summary>
     /// Occurs when a payload is received on the channel.
     /// </summary>
-    public event OnPayloadEvent? Payload;
+    public event OnPayloadEventAsync? Payload;
 
     /// <summary>
     /// Raises the <see cref="Payload"/> event with the given payload.
     /// </summary>
     /// <param name="payload">The payload.</param>
-    public void OnPayload(MimoriaValue payload)
-        => this.Payload?.Invoke(payload);
+    public async ValueTask OnPayloadAsync(MimoriaValue payload)
+    {
+        if (this.Payload is not null)
+        {
+            foreach (OnPayloadEventAsync handler in this.Payload.GetInvocationList().Cast<OnPayloadEventAsync>())
+            {
+                await handler(payload);
+            }
+        }
+    }
 }

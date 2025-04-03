@@ -664,7 +664,7 @@ public sealed class MimoriaClient : IMimoriaClient
     /// <inheritdoc />
     public async Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
-        (Subscription subscription, bool alreadySubscribed) = this.mimoriaSocketClient.Subscribe(channel);
+        (Subscription subscription, bool alreadySubscribed) = await this.mimoriaSocketClient.SubscribeAsync(channel);
 
         if (!alreadySubscribed)
         {
@@ -696,7 +696,7 @@ public sealed class MimoriaClient : IMimoriaClient
     /// <inheritdoc />
     public async Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
-        if (!this.mimoriaSocketClient.Unsubscribe(channel))
+        if (!await this.mimoriaSocketClient.UnsubscribeAsync(channel))
         {
             // We have no subscription, so do nothing
             return;
