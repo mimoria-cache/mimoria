@@ -18,9 +18,10 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         // Act
         Subscription subscription = await clusterMimoriaClient.SubscribeAsync("test");
-        subscription.Payload += (payload) =>
+        subscription.Payload += payload =>
         {
             value = payload;
+            return ValueTask.CompletedTask;
         };
         await clusterMimoriaClient.PublishAsync("test", "value");
 
@@ -40,9 +41,10 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         // Act
         Subscription subscription = await clusterMimoriaClient.SubscribeAsync("test");
-        subscription.Payload += (payload) =>
+        subscription.Payload += payload =>
         {
             value = payload;
+            return ValueTask.CompletedTask;
         };
         await clusterMimoriaClient.PublishAsync("test", new byte[] { 1, 2, 3, 4 });
 
@@ -62,9 +64,10 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         // Act
         Subscription subscription = await clusterMimoriaClient.SubscribeAsync("test");
-        subscription.Payload += (payload) =>
+        subscription.Payload += payload =>
         {
             value = payload;
+            return ValueTask.CompletedTask;
         };
 
         await clusterMimoriaClient.UnsubscribeAsync("test");
@@ -103,9 +106,10 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         // Act
         Subscription subscription = await clusterMimoriaClient.SubscribeAsync("test");
-        subscription.Payload += (payload) =>
+        subscription.Payload += payload =>
         {
             value = payload;
+            return ValueTask.CompletedTask;
         };
 
         this.mimoriaServerTwo.Stop();

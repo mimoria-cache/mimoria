@@ -21,9 +21,10 @@ public partial class MimoriaServerTests : IAsyncLifetime
         string? receivedPayload = null;
 
         Subscription subscription = await mimoriaClient.SubscribeAsync(channel);
-        subscription.Payload += (payload) =>
+        subscription.Payload += payload =>
         {
             receivedPayload = payload;
+            return ValueTask.CompletedTask;
         };
 
         // Act 1
@@ -59,10 +60,11 @@ public partial class MimoriaServerTests : IAsyncLifetime
         string? receivedPayload = null;
 
         Subscription subscription = await mimoriaClient.SubscribeAsync(Channels.KeyDeletion);
-        subscription.Payload += (deletedKey) =>
+        subscription.Payload += deletedKey =>
         {
             receivedPayload = deletedKey;
             calledCount++;
+            return ValueTask.CompletedTask;
         };
 
         // Act
@@ -107,7 +109,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
 
         // Act
         Subscription subscription = await listenerClient.SubscribeAsync(Channels.ForListAdded(channel));
-        subscription.Payload += (payload) =>
+        subscription.Payload += payload =>
         {
             string item = payload!;
 
@@ -115,6 +117,8 @@ public partial class MimoriaServerTests : IAsyncLifetime
             {
                 receivedPayloads.Add(item);
             }
+
+            return ValueTask.CompletedTask;
         };
 
         var tasks = new List<Task>(capacity: clients.Count);
