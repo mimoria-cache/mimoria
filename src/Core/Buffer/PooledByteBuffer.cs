@@ -637,7 +637,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         => other is not null
             && this.writeIndex == other.WriteIndex
             && this.Size == other.Size
-            && this.buffer[0..this.Size].SequenceEqual(other.Bytes[0..other.Size]);
+            && this.buffer.AsSpan(0, this.Size).SequenceEqual(other.Bytes.AsSpan(0, other.Size));
 
     /// <summary>
     /// Returns a new byte buffer from the pool.
