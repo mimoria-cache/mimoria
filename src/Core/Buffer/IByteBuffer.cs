@@ -25,6 +25,11 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     int WriteIndex { get; set; }
 
     /// <summary>
+    /// Gets or sets the read index in the buffer.
+    /// </summary>
+    int ReadIndex { get; set; }
+
+    /// <summary>
     /// Writes a boolean value to the buffer.
     /// </summary>
     /// <param name="value">The boolean value to write.</param>

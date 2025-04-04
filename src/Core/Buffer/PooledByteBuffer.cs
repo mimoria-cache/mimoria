@@ -71,6 +71,15 @@ public sealed class PooledByteBuffer : IByteBuffer
     }
 
     /// <inheritdoc />
+    public int ReadIndex
+    {
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.readIndex;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        set => this.readIndex = value;
+    }
+
+    /// <inheritdoc />
     public uint ReferenceCount => this.referenceCount;
 
 #if DEBUG
