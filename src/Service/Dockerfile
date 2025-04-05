@@ -1,4 +1,6 @@
 FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
+# Workaround until https://github.com/testcontainers/testcontainers-dotnet/pull/1397 is released
+RUN chown app:app /app
 USER $APP_UID
 WORKDIR /app
 ENV DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS=1
