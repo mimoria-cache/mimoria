@@ -22,7 +22,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     /// <summary>
     /// The default buffer size.
     /// </summary>
-    public const int DefaultBufferSize = 65_536;
+    public const int DefaultBufferSize = 2_048;
 
     /// <summary>
     /// The buffer grow factor.
