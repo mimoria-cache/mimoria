@@ -1,6 +1,6 @@
 FROM mcr.microsoft.com/dotnet/runtime:9.0 AS base
-USER $APP_UID
 WORKDIR /app
+USER $APP_UID
 ENV DOTNET_SYSTEM_NET_SOCKETS_INLINE_COMPLETIONS=1
 ENV DOTNET_ThreadPool_UnfairSemaphoreSpinLimit=0
 
@@ -24,5 +24,9 @@ RUN dotnet publish "./Service.csproj" -c Release -o /app/publish /p:UseAppHost=f
 FROM base AS final
 WORKDIR /app
 COPY --from=publish /app/publish .
+# Workaround until https://github.com/testcontainers/testcontainers-dotnet/pull/1397 is released
+USER root
+RUN chown -R app:app /app
+USER $APP_UID
 #ENTRYPOINT ["./Varelen.Mimoria.Service"]
 ENTRYPOINT ["dotnet", "Varelen.Mimoria.Service.dll"]
