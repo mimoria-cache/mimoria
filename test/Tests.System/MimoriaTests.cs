@@ -2,60 +2,24 @@
 //
 // SPDX-License-Identifier: MIT
 
-using DotNet.Testcontainers;
-using DotNet.Testcontainers.Builders;
-using DotNet.Testcontainers.Configurations;
-using DotNet.Testcontainers.Containers;
-using DotNet.Testcontainers.Images;
-
 using Varelen.Mimoria.Client;
 
 namespace Varelen.Mimoria.Tests.System;
 
-public class MimoriaTests : IAsyncLifetime
+public class MimoriaTests : IClassFixture<MimoriaContainerFixture>
 {
-    private const string Ip = "127.0.0.1";
-    private const string Password = "tests";
+    private readonly MimoriaContainerFixture mimoriaContainerFixture;
 
-    private IFutureDockerImage image = null!;
-    private IContainer container = null!;
-
-    public async Task InitializeAsync()
+    public MimoriaTests(MimoriaContainerFixture mimoriaContainerFixture)
     {
-        ConsoleLogger.Instance.DebugLogLevelEnabled = true;
-
-        using IOutputConsumer outputConsumer = Consume.RedirectStdoutAndStderrToConsole();
-
-        this.image = new ImageFromDockerfileBuilder()
-            .WithDockerfileDirectory(CommonDirectoryPath.GetSolutionDirectory(), string.Empty)
-            .WithDockerfile("src/Service/Dockerfile")
-            .Build();
-
-        await this.image.CreateAsync();
-
-        this.container = new ContainerBuilder()
-            .WithOutputConsumer(outputConsumer)
-            .WithImage(this.image)
-            .WithEnvironment("MIMORIA__PASSWORD", Password)
-            .WithPortBinding(6565, assignRandomHostPort: true)
-            .WithWaitStrategy(Wait.ForUnixContainer().UntilPortIsAvailable(6565))
-            .Build();
-
-        await this.container.StartAsync();
-    }
-
-    public async Task DisposeAsync()
-    {
-        await this.container.DisposeAsync();
-        await this.image.DeleteAsync();
-        await this.image.DisposeAsync();
+        this.mimoriaContainerFixture = mimoriaContainerFixture;
     }
 
     [Fact]
-    public async Task MimoriaTest_SetString_And_GetString()
+    public async Task MimoriaTests_When_SetStringAndGetString_Then_CorrectValueIsReturned()
     {
         // Arrange
-        var mimoriaClient = new MimoriaClient(Ip, this.container.GetMappedPublicPort(6565), Password);
+        var mimoriaClient = new MimoriaClient(MimoriaContainerFixture.Ip, this.mimoriaContainerFixture.Container.GetMappedPublicPort(6565), MimoriaContainerFixture.Password);
         await mimoriaClient.ConnectAsync();
 
         // Act
