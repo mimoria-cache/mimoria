@@ -84,6 +84,7 @@ builder.Services.AddMimoria(options =>
 {
     options.Host = "localhost";
     options.Port = 6565;
+    options.Password = "PleaseChooseAVeryLongOne";
     options.OperationTimeout = TimeSpan.FromMilliseconds(250);
     options.ConnectRetryPolicy = new ExponentialRetryPolicy(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException));
     options.OperationRetryPolicy = new ExponentialRetryPolicy<IByteBuffer>(initialDelay: 1000, maxRetries: 4, typeof(TimeoutException));
