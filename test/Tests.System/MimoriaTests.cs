@@ -2,7 +2,9 @@
 //
 // SPDX-License-Identifier: MIT
 
+using DotNet.Testcontainers;
 using DotNet.Testcontainers.Builders;
+using DotNet.Testcontainers.Configurations;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
 
@@ -20,6 +22,10 @@ public class MimoriaTests : IAsyncLifetime
 
     public async Task InitializeAsync()
     {
+        ConsoleLogger.Instance.DebugLogLevelEnabled = true;
+
+        using IOutputConsumer outputConsumer = Consume.RedirectStdoutAndStderrToConsole();
+
         this.image = new ImageFromDockerfileBuilder()
             .WithDockerfileDirectory(CommonDirectoryPath.GetSolutionDirectory(), string.Empty)
             .WithDockerfile("src/Service/Dockerfile")
@@ -28,6 +34,7 @@ public class MimoriaTests : IAsyncLifetime
         await this.image.CreateAsync();
 
         this.container = new ContainerBuilder()
+            .WithOutputConsumer(outputConsumer)
             .WithImage(this.image)
             .WithEnvironment("MIMORIA__PASSWORD", Password)
             .WithPortBinding(6565, assignRandomHostPort: true)
