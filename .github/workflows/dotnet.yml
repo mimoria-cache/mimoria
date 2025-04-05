@@ -23,4 +23,7 @@ jobs:
     - name: Build
       run: dotnet build --no-restore
     - name: Test
+      env:
+        TESTCONTAINERS_HOST_OVERRIDE: "host.docker.internal"
+        TESTCONTAINERS_RYUK_DISABLED: "true"
       run: dotnet test --no-build --verbosity normal
