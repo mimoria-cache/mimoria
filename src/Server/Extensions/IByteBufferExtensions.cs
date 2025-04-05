@@ -19,7 +19,7 @@ public static class IByteBufferExtensions
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static string ReadRequiredKey(this IByteBuffer @this)
     {
-        string? key = @this.ReadString();
+        string? key = @this.ReadStringPooled();
         
         return key is null
             ? throw new ArgumentException("A key cannot be null")
