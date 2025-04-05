@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using CommunityToolkit.HighPerformance.Buffers;
+
 namespace Varelen.Mimoria.Core.Buffer;
 
 /// <summary>
@@ -208,6 +210,14 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     /// </summary>
     /// <returns>The string value read from the buffer.</returns>
     string? ReadString();
+
+    /// <summary>
+    /// Reads a (pooled) string value from the buffer.
+    /// 
+    /// Used for key strings to avoid allocations for commmon keys.
+    /// </summary>
+    /// <returns>The string value read from the buffer (maybe a pooled instance from the <see cref="StringPool"/>).</returns>
+    string? ReadStringPooled();
 
     /// <summary>
     /// Reads a span of bytes from the buffer.

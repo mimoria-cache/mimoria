@@ -1,6 +1,8 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
+
+using CommunityToolkit.HighPerformance.Buffers;
 
 using Microsoft.Extensions.ObjectPool;
 
@@ -512,13 +514,13 @@ public sealed class PooledByteBuffer : IByteBuffer
         return new TimeOnly(ticks);
     }
 
-    /// <inheritdoc />
-    public string? ReadString()
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool TryReadStringInternal(out uint length)
     {
-        uint length = this.ReadVarUInt();
+        length = this.ReadVarUInt();
         if (length == 0)
         {
-            return null;
+            return false;
         }
 
         this.ThrowIfOutOfRange(length);
@@ -526,6 +528,17 @@ public sealed class PooledByteBuffer : IByteBuffer
         if (length > MaxStringSizeBytes)
         {
             throw new ArgumentException($"Read string value length '{length}' exceeded max allowed length '{MaxStringSizeBytes}'");
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public string? ReadString()
+    {
+        if (!this.TryReadStringInternal(out uint length))
+        {
+            return null;
         }
 
         byte[] bytes = ArrayPool<byte>.Shared.Rent((int)length);
@@ -536,6 +549,29 @@ public sealed class PooledByteBuffer : IByteBuffer
             this.ReadBytes(bytesSpan);
 
             return Encoding.UTF8.GetString(bytesSpan);
+        }
+        finally
+        {
+            ArrayPool<byte>.Shared.Return(bytes);
+        }
+    }
+
+    /// <inheritdoc />
+    public string? ReadStringPooled()
+    {
+        if (!this.TryReadStringInternal(out uint length))
+        {
+            return null;
+        }
+
+        byte[] bytes = ArrayPool<byte>.Shared.Rent((int)length);
+        
+        try
+        {
+            Span<byte> bytesSpan = bytes.AsSpan(0, (int)length);
+            this.ReadBytes(bytesSpan);
+
+            return StringPool.Shared.GetOrAdd(bytesSpan, Encoding.UTF8);
         }
         finally
         {
