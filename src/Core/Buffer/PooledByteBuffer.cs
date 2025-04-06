@@ -311,7 +311,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     {
         if (value is null)
         {
-            this.WriteVarUInt(0);
+            this.WriteByte(0);
             return;
         }
 
