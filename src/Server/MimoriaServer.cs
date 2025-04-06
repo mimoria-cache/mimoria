@@ -131,13 +131,13 @@ public sealed class MimoriaServer : IMimoriaServer
             }
 
             this.logger.LogInformation("Waiting for node to be ready");
-            await this.nodeReadyTaskCompletionSource.Task;
+            await this.nodeReadyTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(15), "Waiting for node to be ready has timed out");
             this.logger.LogInformation("Node ready");
 
             _ = this.bullyAlgorithm!.StartAsync();
 
             this.logger.LogInformation("Waiting for cluster to be ready");
-            await this.clusterReadyTaskCompletionSource.Task;
+            await this.clusterReadyTaskCompletionSource.Task.WaitAsync(TimeSpan.FromSeconds(15), "Waiting for cluster to be ready has timed out");
             this.logger.LogInformation("Cluster ready");
         }
 
