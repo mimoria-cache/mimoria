@@ -654,7 +654,7 @@ public sealed class ExpiringDictionaryCache : ICache
     {
         internal TValue Value { get; set; }
 
-        internal DateTime Added { get; set; } = DateTime.UtcNow;
+        internal DateTime Added { get; } = DateTime.UtcNow;
 
         internal uint TtlMilliseconds { get; set; }
 
