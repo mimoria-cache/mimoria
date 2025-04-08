@@ -71,7 +71,7 @@ public sealed class ExpiringDictionaryCache : ICache
         if (expireCheckInterval != TimeSpan.Zero)
         {
             this.periodicTimer = new PeriodicTimer(this.expireCheckInterval);
-            _ = Task.Run(async () => await this.PeriodicallyClearExpiredKeysAsync());
+            _ = Task.Run(this.PeriodicallyClearExpiredKeysAsync);
         }
     }
 
