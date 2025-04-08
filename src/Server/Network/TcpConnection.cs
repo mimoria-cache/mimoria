@@ -41,7 +41,7 @@ public sealed class TcpConnection : ITcpConnection
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
-            this.Disconnect();
+            await this.DisconnectAsync();
         }
         finally
         {
@@ -49,7 +49,7 @@ public sealed class TcpConnection : ITcpConnection
         }
     }
 
-    public void Disconnect()
+    public async Task DisconnectAsync()
     {
         if (!Interlocked.Exchange(ref this.connected, false))
         {
@@ -69,7 +69,7 @@ public sealed class TcpConnection : ITcpConnection
             this.Socket.Close();
             this.LengthPrefixedPacketReader.Dispose();
 
-            this.tcpSocketServer.HandleCloseConnectionInternal(this);
+            await this.tcpSocketServer.HandleCloseConnectionInternal(this);
         }
     }
 

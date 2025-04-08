@@ -141,7 +141,7 @@ public sealed class MimoriaServer : IMimoriaServer
             this.logger.LogInformation("Cluster ready");
         }
 
-        this.mimoriaSocketServer.Disconnected += HandleTcpConnectionDisconnected;
+        this.mimoriaSocketServer.Disconnected += HandleTcpConnectionDisconnectedAsync;
         this.mimoriaSocketServer.Start(this.monitor.CurrentValue.Ip, (ushort)this.monitor.CurrentValue.Port, this.monitor.CurrentValue.Backlog);
 
         this.logger.LogInformation("Mimoria server started on '{Ip}:{Port}'", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
@@ -188,10 +188,9 @@ public sealed class MimoriaServer : IMimoriaServer
         await this.pubSubService.PublishAsync(Channels.PrimaryChanged, this.bullyAlgorithm.Leader);
     }
 
-    private void HandleTcpConnectionDisconnected(TcpConnection tcpConnection)
+    private async Task HandleTcpConnectionDisconnectedAsync(TcpConnection tcpConnection)
     {
-        // TODO: Async events
-        _ = this.pubSubService.UnsubscribeAsync(tcpConnection);
+        await this.pubSubService.UnsubscribeAsync(tcpConnection);
     }
 
     public void Stop()
@@ -204,8 +203,9 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         this.bullyAlgorithm?.Stop();
-        this.mimoriaSocketServer.Disconnected -= HandleTcpConnectionDisconnected;
-        this.mimoriaSocketServer.Stop();
+        this.mimoriaSocketServer.Disconnected -= HandleTcpConnectionDisconnectedAsync;
+        // TODO: Async stop
+        this.mimoriaSocketServer.StopAsync().GetAwaiter().GetResult();
         this.pubSubService.Dispose();
         this.replicator?.Dispose();
         this.cache.Dispose();

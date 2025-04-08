@@ -9,5 +9,5 @@ public interface ISocketServer
     public ulong Connections { get; }
 
     void Start(string ip, ushort port, ushort backlog = 50);
-    void Stop();
+    Task StopAsync();
 }

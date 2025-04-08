@@ -95,7 +95,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
                 int received = await tcpConnection.Socket.ReceiveAsync(tcpConnection.ReceiveBuffer.AsMemory(), SocketFlags.None);
                 if (received == 0)
                 {
-                    tcpConnection.Disconnect();
+                    await tcpConnection.DisconnectAsync();
                     return;
                 }
 
@@ -124,11 +124,11 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         }
         catch (Exception exception) when (exception is SocketException or ObjectDisposedException)
         {
-            tcpConnection.Disconnect();
+            await tcpConnection.DisconnectAsync();
         }
         catch (Exception exception)
         {
-            tcpConnection.Disconnect();
+            await tcpConnection.DisconnectAsync();
 
             this.logger.LogError(exception, "Unexpected error while receiving from connection '{ConnectionId}' ('{ConnectionEndPoint}')", tcpConnection.Id, tcpConnection.RemoteEndPoint);
         }
@@ -137,19 +137,19 @@ public abstract class AsyncTcpSocketServer : ISocketServer
     protected abstract ValueTask HandlePacketReceivedAsync(TcpConnection tcpConnection, IByteBuffer byteBuffer);
 
     protected abstract void HandleOpenConnection(TcpConnection tcpConnection);
-    protected abstract void HandleCloseConnection(TcpConnection tcpConnection);
+    protected abstract Task HandleCloseConnectionAsync(TcpConnection tcpConnection);
 
-    internal void HandleCloseConnectionInternal(TcpConnection tcpConnection)
+    internal async Task HandleCloseConnectionInternal(TcpConnection tcpConnection)
     {
         bool removed = this.connections.TryRemove(tcpConnection.Id, out _);
         Debug.Assert(removed, $"Unable to remove connection with id '{tcpConnection.Id}'");
         
-        this.HandleCloseConnection(tcpConnection);
+        await this.HandleCloseConnectionAsync(tcpConnection);
 
         this.metrics.DecrementConnections();
     }
 
-    public void Stop()
+    public async Task StopAsync()
     {
         if (!Interlocked.Exchange(ref this.running, false))
         {
@@ -173,7 +173,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
         foreach (var (_, tcpConnection) in this.connections)
         {
-            tcpConnection.Disconnect();
+            await tcpConnection.DisconnectAsync();
         }
     }
 }

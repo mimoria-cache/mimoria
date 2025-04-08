@@ -35,14 +35,14 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         {
             this.logger.LogWarning("Client '{EndPoint}' sent an unsupported operation '{Operation}'", tcpConnection.RemoteEndPoint, operation);
             await SendErrorResponseAsync(tcpConnection, operation, requestId, $"Operation '{operation}' is unsupported");
-            tcpConnection.Disconnect();
+            await tcpConnection.DisconnectAsync();
             return;
         }
 
         if (operation != Operation.Login && !tcpConnection.Authenticated)
         {
             await SendErrorResponseAsync(tcpConnection, operation, requestId, $"Authentication required to use operation '{operation}'");
-            tcpConnection.Disconnect();
+            await tcpConnection.DisconnectAsync();
             return;
         }
 
@@ -53,13 +53,13 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         catch (ArgumentException exception)
         {
             await SendErrorResponseAsync(tcpConnection, operation, requestId, exception.Message);
-            tcpConnection.Disconnect();
+            await tcpConnection.DisconnectAsync();
         }
         catch (Exception exception)
         {
             this.logger.LogError(exception, "Error while processing handler for operation '{Operation}' and client '{Client}'", operation, tcpConnection.RemoteEndPoint);
             await SendErrorResponseAsync(tcpConnection, operation, requestId, $"An internal server error occurred while processing handler for operation '{operation}'. See server logs for more information.");
-            tcpConnection.Disconnect();
+            await tcpConnection.DisconnectAsync();
         }
     }
 
@@ -77,14 +77,25 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         return tcpConnection.SendAsync(byteBuffer);
     }
 
+    private async Task OnDisconnected(TcpConnection tcpConnection)
+    {
+        if (this.Disconnected is not null)
+        {
+            foreach (IMimoriaSocketServer.TcpConnectionEvent handler in this.Disconnected.GetInvocationList().Cast<IMimoriaSocketServer.TcpConnectionEvent>())
+            {
+                await handler(tcpConnection);
+            }
+        }
+    }
+
     protected override void HandleOpenConnection(TcpConnection tcpConnection)
     {
         this.logger.LogInformation("New connection '{RemoteEndPoint}'", tcpConnection.RemoteEndPoint);
     }
 
-    protected override void HandleCloseConnection(TcpConnection tcpConnection)
+    protected override async Task HandleCloseConnectionAsync(TcpConnection tcpConnection)
     {
-        this.Disconnected?.Invoke(tcpConnection);
+        await this.OnDisconnected(tcpConnection);
 
         this.logger.LogInformation("Closed connection '{RemoteEndPoint}'", tcpConnection.RemoteEndPoint);
     }
