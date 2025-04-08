@@ -254,11 +254,14 @@ public class ExpiringDictionaryCacheTests
         const int IterationCount = 1_000_000;
 
         // Act
-        for (int i = 0; i < IterationCount; i++)
+        await Task.Run(async () =>
         {
-            await sut.SetStringAsync("key" + i, "value" + i, ttlMilliseconds: 50);
-            await sut.GetStringAsync("key" + i);
-        }
+            for (int i = 0; i < IterationCount; i++)
+            {
+                await sut.SetStringAsync("key" + i, "value" + i, ttlMilliseconds: 50);
+                await sut.GetStringAsync("key" + i);
+            }
+        });
 
         await Task.Delay(500);
 
