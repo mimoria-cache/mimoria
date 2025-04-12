@@ -383,10 +383,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public bool ReadBool()
-    {
-        this.ThrowIfOutOfRange(1);
-        return this.buffer[this.readIndex++] == 1;
-    }
+        => this.ReadByte() == 1;
 
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
