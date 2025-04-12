@@ -60,10 +60,11 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the string value to set.</param>
     /// <param name="value">The string value to set.</param>
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task SetStringAsync(string key, string? value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+    Task SetStringAsync(string key, string? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the list at the specified key without allocating a new list instance.
@@ -90,20 +91,22 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="value">The value to add to the list.</param>
     /// <param name="ttl">The time-to-live for the key.</param>
     /// <param name="valueTtl">The time-to-live for the value.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default);
+    Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Removes a value from the list at the specified key.
     /// </summary>
     /// <param name="key">The key of the list to remove the value from.</param>
     /// <param name="value">The value to remove from the list.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default);
+    Task RemoveListAsync(string key, string value, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a value exists in the list at the specified key.
@@ -131,10 +134,11 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the object to set.</param>
     /// <param name="binarySerializable">The object to set.</param>
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+    Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets an object of type <typeparamref name="T"/> in JSON format associated with the specified key.
@@ -155,10 +159,11 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="t">The object to set.</param>
     /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+    Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a byte array associated with the specified key.
@@ -175,10 +180,11 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the byte array to set.</param>
     /// <param name="value">The byte array to set.</param>
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+    Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Sets the counter value for the specified key.
@@ -186,30 +192,33 @@ public interface IMimoriaClient : IAsyncDisposable
     /// </summary>
     /// <param name="key">The key of the counter to set.</param>
     /// <param name="value">The value to set the counter to.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default);
+    Task SetCounterAsync(string key, long value, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Increments the counter value for the specified key by the given increment amount.
     /// </summary>
     /// <param name="key">The key of the counter to increment.</param>
     /// <param name="increment">The increment amount.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly with a default value after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the new counter value.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default);
+    Task<long> IncrementCounterAsync(string key, long increment, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Decrements the counter value for the specified key by the given decrement amount.
     /// </summary>
     /// <param name="key">The key of the counter to decrement.</param>
     /// <param name="decrement">The decrement amount.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly with a default value after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the new counter value.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default);
+    Task<long> DecrementCounterAsync(string key, long decrement, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the counter value for the specified key.
@@ -238,10 +247,11 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="subKey">The sub-key of the value to set.</param>
     /// <param name="subValue">The value to set.</param>
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+    Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets a map associated with the specified key.
@@ -258,10 +268,11 @@ public interface IMimoriaClient : IAsyncDisposable
     /// <param name="key">The key of the map to set.</param>
     /// <param name="map">The map to set.</param>
     /// <param name="ttl">The time-to-live for the key-value pair.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default);
+    Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a key exists in the server.
@@ -276,10 +287,11 @@ public interface IMimoriaClient : IAsyncDisposable
     /// Deletes a key from the server.
     /// </summary>
     /// <param name="key">The key to delete.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task DeleteAsync(string key, CancellationToken cancellationToken = default);
+    Task DeleteAsync(string key, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Gets the server statistics.

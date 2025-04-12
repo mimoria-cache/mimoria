@@ -66,7 +66,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         this.expiration = expiration;
     }
 
-    public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default)
+    public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
         {
@@ -80,7 +80,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
             this.memoryCache.Set(key, new List<string>() { value }, absoluteExpirationRelativeToNow: this.expiration);
         }
 
-        return this.mimoriaClient.AddListAsync(key, value, ttl, valueTtl, cancellationToken);
+        return this.mimoriaClient.AddListAsync(key, value, ttl, valueTtl, fireAndForget, cancellationToken);
     }
 
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
@@ -114,11 +114,11 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.ContainsListAsync(key, value, cancellationToken);
     }
 
-    public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    public Task DeleteAsync(string key, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Remove(key);
 
-        return this.mimoriaClient.DeleteAsync(key, cancellationToken);
+        return this.mimoriaClient.DeleteAsync(key, fireAndForget, cancellationToken);
     }
 
     public Task DisconnectAsync(CancellationToken cancellationToken = default)
@@ -196,7 +196,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return value;
     }
 
-    public Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default)
+    public Task RemoveListAsync(string key, string value, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
         {
@@ -206,28 +206,28 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
             list!.Remove(value);
         }
 
-        return this.mimoriaClient.RemoveListAsync(key, value, cancellationToken);
+        return this.mimoriaClient.RemoveListAsync(key, value, fireAndForget, cancellationToken);
     }
 
-    public Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, binarySerializable, absoluteExpirationRelativeToNow: this.expiration);
 
-        return this.mimoriaClient.SetObjectBinaryAsync(key, binarySerializable, ttl, cancellationToken);
+        return this.mimoriaClient.SetObjectBinaryAsync(key, binarySerializable, ttl, fireAndForget, cancellationToken);
     }
 
-    public Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, t, absoluteExpirationRelativeToNow: this.expiration);
 
-        return this.mimoriaClient.SetObjectJsonAsync(key, t, jsonSerializerOptions, ttl, cancellationToken);
+        return this.mimoriaClient.SetObjectJsonAsync(key, t, jsonSerializerOptions, ttl, fireAndForget, cancellationToken);
     }
 
-    public Task SetStringAsync(string key, string? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task SetStringAsync(string key, string? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
 
-        return this.mimoriaClient.SetStringAsync(key, value, ttl, cancellationToken);
+        return this.mimoriaClient.SetStringAsync(key, value, ttl, fireAndForget, cancellationToken);
     }
 
     public Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default)
@@ -243,28 +243,28 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetBytesAsync(key, cancellationToken);
     }
 
-    public Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
 
-        return this.mimoriaClient.SetBytesAsync(key, value, ttl, cancellationToken);
+        return this.mimoriaClient.SetBytesAsync(key, value, ttl, fireAndForget, cancellationToken);
     }
 
-    public Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default)
+    public Task SetCounterAsync(string key, long value, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
 
-        return this.mimoriaClient.SetCounterAsync(key, value, cancellationToken);
+        return this.mimoriaClient.SetCounterAsync(key, value, fireAndForget, cancellationToken);
     }
 
-    public Task<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
-        => this.mimoriaClient.IncrementCounterAsync(key, increment, cancellationToken);
+    public Task<long> IncrementCounterAsync(string key, long increment, bool fireAndForget = false, CancellationToken cancellationToken = default)
+        => this.mimoriaClient.IncrementCounterAsync(key, increment, fireAndForget, cancellationToken);
 
-    public Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
-        => this.IncrementCounterAsync(key, -decrement, cancellationToken);
+    public Task<long> DecrementCounterAsync(string key, long decrement, bool fireAndForget = false, CancellationToken cancellationToken = default)
+        => this.IncrementCounterAsync(key, -decrement, fireAndForget, cancellationToken);
 
     public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
-        => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
+        => this.IncrementCounterAsync(key, increment: 0, fireAndForget: false, cancellationToken);
 
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)
     {
@@ -282,7 +282,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetMapValueAsync(key, subKey, cancellationToken);
     }
 
-    public Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? mapObject))
         {
@@ -296,7 +296,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
             this.memoryCache.Set(key, new Dictionary<string, MimoriaValue> { { subKey, subValue } }, absoluteExpirationRelativeToNow: this.expiration);
         }
 
-        return this.mimoriaClient.SetMapValueAsync(key, subKey, subValue, ttl, cancellationToken);
+        return this.mimoriaClient.SetMapValueAsync(key, subKey, subValue, ttl, fireAndForget, cancellationToken);
     }
 
     public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default)
@@ -312,11 +312,11 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetMapAsync(key, cancellationToken);
     }
 
-    public Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    public Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, map, absoluteExpirationRelativeToNow: this.expiration);
 
-        return this.mimoriaClient.SetMapAsync(key, map, ttl, cancellationToken);
+        return this.mimoriaClient.SetMapAsync(key, map, ttl, fireAndForget, cancellationToken);
     }
 
     public IBulkOperation Bulk()

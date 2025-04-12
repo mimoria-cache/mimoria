@@ -12,6 +12,9 @@ using Varelen.Mimoria.Core;
 
 namespace Varelen.Mimoria.Client;
 
+/// <summary>
+/// A client implementation that connects to a cluster of Mimoria servers.
+/// </summary>
 public sealed class ClusterMimoriaClient : IClusterMimoriaClient
 {
     private const int DefaultPrimaryRetryCount = 6;
@@ -24,20 +27,36 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     private readonly int primaryRetryCount;
     private readonly int primaryRetryDelay;
 
+    /// <inheritdoc />
     public int? ServerId => this.mimoriaClients.Where(mimoriaClient => mimoriaClient.IsPrimary).First().ServerId;
 
+    /// <inheritdoc />
     public bool IsConnected => this.mimoriaClients.All(mimoriaClient => mimoriaClient.IsConnected);
 
+    /// <inheritdoc />
     public bool IsPrimary { get => throw new NotSupportedException(); set => throw new NotSupportedException(); }
 
+    /// <inheritdoc />
     public IReadOnlyList<IMimoriaClient> MimoriaClients => this.mimoriaClients;
 
+    /// <summary>
+    /// Creates a new cluster client with the default retry count and delay.
+    /// </summary>
+    /// <param name="password">The password of the servers.</param>
+    /// <param name="ipEndPoints">The server IP endpoints.</param>
     public ClusterMimoriaClient(string password, params IPEndPoint[] ipEndPoints)
         : this(password, DefaultPrimaryRetryCount, DefaultPrimaryRetryDelay, ipEndPoints)
     {
 
     }
 
+    /// <summary>
+    /// Creates a new cluster client with the specified retry count and delay.
+    /// </summary>
+    /// <param name="password">The password of the servers.</param>
+    /// <param name="primaryRetryCount">The primary server retry count.</param>
+    /// <param name="primaryRetryDelay">The primary server retry delay.</param>
+    /// <param name="ipEndPoints">The server IP endpoints.</param>
     public ClusterMimoriaClient(string password, int primaryRetryCount, int primaryRetryDelay, params IPEndPoint[] ipEndPoints)
     {
         this.password = password;
@@ -91,6 +110,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         return readingMimoriaClient ?? throw new NoSecondaryAvailableException();
     }
 
+    /// <inheritdoc />
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         foreach (IPEndPoint remoteEndPoint in this.ipEndPoints)
@@ -151,7 +171,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         {
             await Task.Delay(this.primaryRetryDelay);
 
-            await RetryPrimaryOperationAsync(operationAsync, retry + 1);
+            await this.RetryPrimaryOperationAsync(operationAsync, retry + 1);
         }
     }
 
@@ -170,70 +190,80 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         {
             await Task.Delay(this.primaryRetryDelay);
 
-            return await RetryPrimaryOperationAsync(operationAsync, retry + 1);
+            return await this.RetryPrimaryOperationAsync(operationAsync, retry + 1);
         }
     }
 
-    public Task SetStringAsync(string key, string? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task SetStringAsync(string key, string? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.SetStringAsync(key, value, ttl, cancellationToken);
+            return mimoriaClient.SetStringAsync(key, value, ttl, fireAndForget, cancellationToken);
         });
     }
 
+    /// <inheritdoc />
     public Task<string?> GetStringAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetStringAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default)
         => this.GetStringAsync(key, preferSecondary: false, cancellationToken);
 
-    public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.AddListAsync(key, value, ttl, valueTtl, cancellationToken);
+            return mimoriaClient.AddListAsync(key, value, ttl, valueTtl, fireAndForget, cancellationToken);
         });
     }
 
+    /// <inheritdoc />
     public IBulkOperation Bulk()
     {
         IMimoriaClient mimoriaClient = this.GetPrimary();
         return new BulkOperation((MimoriaClient)mimoriaClient);
     }
 
+    /// <inheritdoc />
     public Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default)
         => this.ContainsListAsync(key, value, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public Task<bool> ContainsListAsync(string key, string value, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.ContainsListAsync(key, value, cancellationToken);
     }
 
-    public Task<long> DecrementCounterAsync(string key, long decrement, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task<long> DecrementCounterAsync(string key, long decrement, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.DecrementCounterAsync(key, decrement, cancellationToken);
+            return mimoriaClient.DecrementCounterAsync(key, decrement, fireAndForget, cancellationToken);
         });
     }
 
-    public Task DeleteAsync(string key, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task DeleteAsync(string key, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.DeleteAsync(key, cancellationToken);
+            return mimoriaClient.DeleteAsync(key, fireAndForget, cancellationToken);
         });
     }
 
+    /// <inheritdoc />
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
         foreach (IMimoriaClient mimoriaClient in this.mimoriaClients)
@@ -242,171 +272,199 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         }
     }
 
+    /// <inheritdoc />
     public ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
         => this.ExistsAsync(key, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public ValueTask<bool> ExistsAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.ExistsAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<byte[]?> GetBytesAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetBytesAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default)
         => this.GetBytesAsync(key, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
         => this.GetListAsync(key, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetListAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public IAsyncEnumerable<string> GetListEnumerableAsync(string key, CancellationToken cancellationToken = default)
         => this.GetListEnumerableAsync(key, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public IAsyncEnumerable<string> GetListEnumerableAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetListEnumerableAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default)
         => this.GetMapAsync(key, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetMapAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetMapValueAsync(key, subKey, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)
         => this.GetMapValueAsync(key, subKey, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public Task<T?> GetObjectBinaryAsync<T>(string key, bool preferSecondary, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetObjectBinaryAsync<T>(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<T?> GetObjectBinaryAsync<T>(string key, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
         => this.GetObjectBinaryAsync<T>(key, preferSecondary: false, cancellationToken);
 
+    /// <inheritdoc />
     public Task<T?> GetObjectJsonAsync<T>(string key, bool preferSecondary, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
         return mimoriaClient.GetObjectJsonAsync<T>(key, jsonSerializerOptions, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
         => this.GetObjectJsonAsync<T>(key, preferSecondary: false, jsonSerializerOptions, cancellationToken);
 
+    /// <inheritdoc />
     public Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
             return mimoriaClient.GetStatsAsync(cancellationToken);
         });
     }
 
-    public async Task<long> IncrementCounterAsync(string key, long increment, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public async Task<long> IncrementCounterAsync(string key, long increment, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         return await RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.IncrementCounterAsync(key, increment, cancellationToken);
+            return mimoriaClient.IncrementCounterAsync(key, increment, fireAndForget, cancellationToken);
         });
     }
 
+    /// <inheritdoc />
     public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
-        => this.IncrementCounterAsync(key, increment: 0, cancellationToken);
+        => this.IncrementCounterAsync(key, increment: 0, fireAndForget: false, cancellationToken);
 
-    public Task RemoveListAsync(string key, string value, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task RemoveListAsync(string key, string value, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.RemoveListAsync(key, value, cancellationToken);
+            return mimoriaClient.RemoveListAsync(key, value, fireAndForget, cancellationToken);
         });
     }
 
-    public Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.SetBytesAsync(key, value, ttl, cancellationToken);
+            return mimoriaClient.SetBytesAsync(key, value, ttl, fireAndForget, cancellationToken);
         });
     }
 
-    public Task SetCounterAsync(string key, long value, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task SetCounterAsync(string key, long value, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.SetCounterAsync(key, value, cancellationToken);
+            return mimoriaClient.SetCounterAsync(key, value, fireAndForget, cancellationToken);
         });
     }
 
-    public Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.SetMapAsync(key, map, ttl, cancellationToken);
+            return mimoriaClient.SetMapAsync(key, map, ttl, fireAndForget, cancellationToken);
         });
     }
 
-    public Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.SetMapValueAsync(key, subKey, subValue, ttl, cancellationToken);
+            return mimoriaClient.SetMapValueAsync(key, subKey, subValue, ttl, fireAndForget, cancellationToken);
         });
     }
 
-    public Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.SetObjectBinaryAsync(key, binarySerializable, ttl, cancellationToken);
+            return mimoriaClient.SetObjectBinaryAsync(key, binarySerializable, ttl, fireAndForget, cancellationToken);
         });
     }
 
-    public Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, CancellationToken cancellationToken = default)
+    /// <inheritdoc />
+    public Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
-            return mimoriaClient.SetObjectJsonAsync(key, t, jsonSerializerOptions, ttl, cancellationToken);
+            return mimoriaClient.SetObjectJsonAsync(key, t, jsonSerializerOptions, ttl, fireAndForget, cancellationToken);
         });
     }
 
+    /// <inheritdoc />
     public Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
     {
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
             return mimoriaClient.PublishAsync(channel, payload, cancellationToken);
         });
     }
 
+    /// <inheritdoc />
     public async Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
         Subscription subscription = await RetryPrimaryOperationAsync(() =>
@@ -431,17 +489,19 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         return subscription;
     }
 
+    /// <inheritdoc />
     public Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)
     {
         _ = this.subscriptions.Remove(channel);
 
-        return RetryPrimaryOperationAsync(() =>
+        return this.RetryPrimaryOperationAsync(() =>
         {
             IMimoriaClient mimoriaClient = this.GetPrimary();
             return mimoriaClient.UnsubscribeAsync(channel, cancellationToken);
         });
     }
 
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
         => await this.DisconnectAsync();
 }

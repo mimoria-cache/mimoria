@@ -14,5 +14,5 @@ public interface IMimoriaSocketServer : ISocketServer
 
     public event TcpConnectionEvent? Disconnected;
 
-    void SetOperationHandlers(Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers);
+    void SetOperationHandlers(Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, bool, ValueTask>> operationHandlers);
 }

@@ -127,6 +127,9 @@ public sealed class ClusterClient
         var operation = (Operation)byteBuffer.ReadByte();
         uint requestId = byteBuffer.ReadUInt();
 
+        // Ignoring fire and forget
+        _ = byteBuffer.ReadByte();
+
         switch (operation)
         {
             case Operation.ElectionMessage:

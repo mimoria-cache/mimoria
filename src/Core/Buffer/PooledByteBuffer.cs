@@ -437,7 +437,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     public long ReadLong()
     {
         this.ThrowIfOutOfRange(8);
-     
+
         long value = BinaryPrimitives.ReadInt64BigEndian(this.buffer.AsSpan(this.readIndex));
         this.readIndex += 8;
         return value;
@@ -562,7 +562,7 @@ public sealed class PooledByteBuffer : IByteBuffer
         }
 
         byte[] bytes = ArrayPool<byte>.Shared.Rent((int)length);
-        
+
         try
         {
             Span<byte> bytesSpan = bytes.AsSpan(0, (int)length);
@@ -701,7 +701,7 @@ public sealed class PooledByteBuffer : IByteBuffer
     public static IByteBuffer FromPool(Operation operation)
     {
         PooledByteBuffer pooledByteBuffer = Pool.Get();
-       
+
         Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation) buffer is not zero size");
 
         pooledByteBuffer.WriteLengthPlaceholder();
@@ -710,19 +710,20 @@ public sealed class PooledByteBuffer : IByteBuffer
     }
 
     /// <summary>
-    /// Returns a new byte buffer from the pool with the specified operation and request ID.
+    /// Returns a new byte buffer from the pool with the specified operation, request ID and if it's fire and forget.
     /// </summary>
-    /// <returns>The byte buffer containing the operation and request ID.</returns>
+    /// <returns>The byte buffer containing the operation, request ID and if it's fire and forget.</returns>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static IByteBuffer FromPool(Operation operation, uint requestId)
+    public static IByteBuffer FromPool(Operation operation, uint requestId, bool fireAndForget = false)
     {
         PooledByteBuffer pooledByteBuffer = Pool.Get();
-        
+
         Debug.Assert(pooledByteBuffer.Size == 0, "PooledByteBuffer.FromPool(operation, requestId) buffer is not zero size");
 
         pooledByteBuffer.WriteLengthPlaceholder();
         pooledByteBuffer.WriteByte((byte)operation);
         pooledByteBuffer.WriteUInt(requestId);
+        pooledByteBuffer.WriteBool(fireAndForget);
         return pooledByteBuffer;
     }
 

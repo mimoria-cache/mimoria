@@ -99,6 +99,9 @@ public sealed class ClusterConnection
         var operation = (Operation)byteBuffer.ReadByte();
         var requestId = byteBuffer.ReadUInt();
 
+        // Ignoring fire and forget
+        _ = byteBuffer.ReadByte();
+
         switch (operation)
         {
             case Operation.ClusterLogin:

@@ -16,7 +16,7 @@ namespace Varelen.Mimoria.Server.Protocol;
 public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
 {
     private readonly ILogger<MimoriaSocketServer> logger;
-    private FrozenDictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers = null!;
+    private FrozenDictionary<Operation, Func<uint, TcpConnection, IByteBuffer, bool, ValueTask>> operationHandlers = null!;
 
     public event IMimoriaSocketServer.TcpConnectionEvent? Disconnected;
 
@@ -31,7 +31,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         var operation = (Operation)byteBuffer.ReadByte();
         uint requestId = byteBuffer.ReadUInt();
 
-        if (!this.operationHandlers.TryGetValue(operation, out Func<uint, TcpConnection, IByteBuffer, ValueTask>? operationHandler))
+        if (!this.operationHandlers.TryGetValue(operation, out Func<uint, TcpConnection, IByteBuffer, bool, ValueTask>? operationHandler))
         {
             this.logger.LogWarning("Client '{EndPoint}' sent an unsupported operation '{Operation}'", tcpConnection.RemoteEndPoint, operation);
             await SendErrorResponseAsync(tcpConnection, operation, requestId, $"Operation '{operation}' is unsupported");
@@ -46,9 +46,11 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
             return;
         }
 
+        var fireAndForget = byteBuffer.ReadBool();
+
         try
         {
-            await operationHandler(requestId, tcpConnection, byteBuffer);
+            await operationHandler(requestId, tcpConnection, byteBuffer, fireAndForget);
         }
         catch (ArgumentException exception)
         {
@@ -63,7 +65,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         }
     }
 
-    public void SetOperationHandlers(Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, ValueTask>> operationHandlers)
+    public void SetOperationHandlers(Dictionary<Operation, Func<uint, TcpConnection, IByteBuffer, bool, ValueTask>> operationHandlers)
         => this.operationHandlers = operationHandlers.ToFrozenDictionary();
 
     private static ValueTask SendErrorResponseAsync(TcpConnection tcpConnection, Operation operation, uint requestId, string errorText)
