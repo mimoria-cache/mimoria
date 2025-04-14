@@ -66,8 +66,8 @@ public sealed class MimoriaServer : IMimoriaServer
         this.cache = cache;
         this.metrics = metrics;
         this.clusterClients = [];
-        this.nodeReadyTaskCompletionSource = new TaskCompletionSource();
-        this.clusterReadyTaskCompletionSource = new TaskCompletionSource();
+        this.nodeReadyTaskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        this.clusterReadyTaskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
         if (this.monitor.CurrentValue.Cluster is not null)
         {
