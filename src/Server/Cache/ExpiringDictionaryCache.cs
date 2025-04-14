@@ -531,6 +531,11 @@ public sealed class ExpiringDictionaryCache : ICache
                             }
                         }
                         break;
+                        }
+                case null:
+                    {
+                        byteBuffer.WriteByte((byte)CacheValueType.Null);
+                        break;
                     }
                 default:
                     break;
