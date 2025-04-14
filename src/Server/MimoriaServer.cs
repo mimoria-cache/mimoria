@@ -27,7 +27,7 @@ namespace Varelen.Mimoria.Server;
 
 public sealed class MimoriaServer : IMimoriaServer
 {
-    private const uint ProtocolVersion = 1;
+    private const uint ProtocolVersion = 2;
 
     private readonly ILogger<MimoriaServer> logger;
     private readonly ILoggerFactory loggerFactory;
