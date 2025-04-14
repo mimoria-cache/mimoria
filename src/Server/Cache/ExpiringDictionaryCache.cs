@@ -114,12 +114,14 @@ public sealed class ExpiringDictionaryCache : ICache
             return null;
         }
 
-        var value = entry!.Value as ByteString
-            ?? throw new ArgumentException($"Value stored under '{key}' is not a string");
+        if (entry!.Value is not null && entry.Value is not ByteString)
+        {
+            throw new ArgumentException($"Value stored under '{key}' is not a string");
+        }
 
         this.IncrementHits();
 
-        return value;
+        return Unsafe.As<ByteString?>(entry.Value);
     }
 
     public async Task SetStringAsync(string key, ByteString? value, uint ttlMilliseconds, bool takeLock = true)
@@ -146,12 +148,14 @@ public sealed class ExpiringDictionaryCache : ICache
             return null;
         }
 
-        var bytes = entry!.Value as byte[]
-            ?? throw new ArgumentException($"Value stored under '{key}' is not bytes");
+        if (entry!.Value is not null && entry.Value is not byte[])
+        {
+            throw new ArgumentException($"Value stored under '{key}' is not bytes");
+        }
 
         this.IncrementHits();
 
-        return bytes;
+        return Unsafe.As<byte[]?>(entry.Value);
     }
 
     public async IAsyncEnumerable<ByteString> GetListAsync(string key, bool takeLock = true)
@@ -531,7 +535,7 @@ public sealed class ExpiringDictionaryCache : ICache
                             }
                         }
                         break;
-                        }
+                    }
                 case null:
                     {
                         byteBuffer.WriteByte((byte)CacheValueType.Null);
