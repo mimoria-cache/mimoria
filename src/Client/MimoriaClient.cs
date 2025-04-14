@@ -20,7 +20,7 @@ namespace Varelen.Mimoria.Client;
 /// </summary>
 public sealed class MimoriaClient : IMimoriaClient
 {
-    private const uint ProtocolVersion = 1;
+    private const uint ProtocolVersion = 2;
 
     private readonly IMimoriaSocketClient mimoriaSocketClient;
     private readonly IRetryPolicy connectRetryPolicy;
