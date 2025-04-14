@@ -506,7 +506,9 @@ public sealed class ExpiringDictionaryCache : ICache
                                     byteBuffer.WriteByte(0);
                                     break;
                                 case MimoriaValue.ValueType.Bytes:
-                                    byteBuffer.WriteBytes((byte[])mapValue.Value!);
+                                    var bytes = (byte[])mapValue.Value!;
+                                    byteBuffer.WriteVarUInt((uint)bytes.Length);
+                                    byteBuffer.WriteBytes(bytes.AsSpan());
                                     break;
                                 case MimoriaValue.ValueType.String:
                                     byteBuffer.WriteString((string?)mapValue.Value);
@@ -584,7 +586,7 @@ public sealed class ExpiringDictionaryCache : ICache
                     for (int j = 0; j < mapCount; j++)
                     {
                         string mapKey = byteBuffer.ReadString()!;
-                        var mapValue = MimoriaValue.Null;
+                        MimoriaValue mapValue;
 
                         var mapValueType = (MimoriaValue.ValueType)byteBuffer.ReadByte();
 
@@ -594,6 +596,10 @@ public sealed class ExpiringDictionaryCache : ICache
                                 mapValue = MimoriaValue.Null;
                                 break;
                             case MimoriaValue.ValueType.Bytes:
+                                uint bytesLength = byteBuffer.ReadVarUInt();
+                                var bytesValue = new byte[bytesLength];
+                                byteBuffer.ReadBytes(bytesValue);
+                                mapValue = bytesValue;
                                 break;
                             case MimoriaValue.ValueType.String:
                                 mapValue = byteBuffer.ReadString();
