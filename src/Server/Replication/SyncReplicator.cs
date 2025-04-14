@@ -28,7 +28,7 @@ public sealed class SyncReplicator : IReplicator
     private bool ShouldReplicate()
         => this.bullyAlgorithm.IsLeader;
 
-    public async ValueTask ReplicateSetStringAsync(string key, string? value, uint ttlMilliseconds)
+    public async ValueTask ReplicateSetStringAsync(string key, ByteString? value, uint ttlMilliseconds)
     {
         if (!this.ShouldReplicate())
         {
@@ -44,7 +44,7 @@ public sealed class SyncReplicator : IReplicator
             byteBuffer.WriteVarUInt(BatchCount);
             byteBuffer.WriteByte((byte)Operation.SetString);
             byteBuffer.WriteString(key);
-            byteBuffer.WriteString(value);
+            byteBuffer.WriteByteString(value);
             byteBuffer.WriteVarUInt(ttlMilliseconds);
             byteBuffer.EndPacket();
 
@@ -80,7 +80,7 @@ public sealed class SyncReplicator : IReplicator
         }));
     }
 
-    public async ValueTask ReplicateAddListAsync(string key, string? value, uint ttlMilliseconds, uint valueTtlMilliseconds)
+    public async ValueTask ReplicateAddListAsync(string key, ByteString? value, uint ttlMilliseconds, uint valueTtlMilliseconds)
     {
         if (!this.ShouldReplicate())
         {
@@ -95,7 +95,7 @@ public sealed class SyncReplicator : IReplicator
             byteBuffer.WriteVarUInt(BatchCount);
             byteBuffer.WriteByte((byte)Operation.AddList);
             byteBuffer.WriteString(key);
-            byteBuffer.WriteString(value);
+            byteBuffer.WriteByteString(value);
             byteBuffer.WriteVarUInt(ttlMilliseconds);
             byteBuffer.WriteVarUInt(valueTtlMilliseconds);
             byteBuffer.EndPacket();
@@ -104,7 +104,7 @@ public sealed class SyncReplicator : IReplicator
         }));
     }
 
-    public async ValueTask ReplicateRemoveListAsync(string key, string value)
+    public async ValueTask ReplicateRemoveListAsync(string key, ByteString value)
     {
         if (!this.ShouldReplicate())
         {
@@ -119,7 +119,7 @@ public sealed class SyncReplicator : IReplicator
             byteBuffer.WriteVarUInt(BatchCount);
             byteBuffer.WriteByte((byte)Operation.RemoveList);
             byteBuffer.WriteString(key);
-            byteBuffer.WriteString(value);
+            byteBuffer.WriteByteString(value);
             byteBuffer.EndPacket();
             
             return clusterConnection.Value.SendAndWaitForResponseAsync(requestId, byteBuffer).AsTask();

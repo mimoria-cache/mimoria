@@ -89,6 +89,16 @@ public readonly struct MimoriaValue
     /// <param name="s">The string value.</param>
     public MimoriaValue(string? s)
     {
+        this.Value = s is not null ? new ByteString(Encoding.UTF8.GetBytes(s)) : null;
+        this.Type = s != null ? ValueType.String : ValueType.Null;
+    }
+
+    /// <summary>
+    /// Initializes a new instance of the <see cref="MimoriaValue"/> struct with a <see cref="ByteString"/> value.
+    /// </summary>
+    /// <param name="s">The byte string value.</param>
+    public MimoriaValue(ByteString? s)
+    {
         this.Value = s;
         this.Type = s != null ? ValueType.String : ValueType.Null;
     }
@@ -145,7 +155,7 @@ public readonly struct MimoriaValue
         {
             ValueType.Null => true,
             ValueType.Bytes => ((byte[])this.Value!).SequenceEqual((byte[])other.Value!),
-            ValueType.String => (string)this.Value! == (string)other.Value!,
+            ValueType.String => ((ByteString)this.Value!).Bytes.AsSpan().SequenceEqual(((ByteString)other.Value!).Bytes.AsSpan()),
             ValueType.Int => (int)this.Value! == (int)other.Value!,
             ValueType.Long => (long)this.Value! == (long)other.Value!,
             ValueType.Double => (double)this.Value! == (double)other.Value!,
@@ -158,7 +168,7 @@ public readonly struct MimoriaValue
     public override int GetHashCode()
     {
         var hashCode = new HashCode();
-        hashCode.Add((int)this.Type);
+        hashCode.Add((byte)this.Type);
 
         switch (this.Type)
         {
@@ -168,7 +178,7 @@ public readonly struct MimoriaValue
                 hashCode.AddBytes((byte[])this.Value!);
                 break;
             case ValueType.String:
-                hashCode.Add((string)this.Value!);
+                hashCode.AddBytes((ByteString)this.Value!);
                 break;
             case ValueType.Int:
                 hashCode.Add((int)this.Value!);
@@ -196,7 +206,7 @@ public readonly struct MimoriaValue
         {
             ValueType.Null => "null",
             ValueType.Bytes => Convert.ToHexString((byte[])this.Value!),
-            ValueType.String => (string?)this.Value,
+            ValueType.String => Encoding.UTF8.GetString(((ByteString)this.Value!).Bytes.AsSpan()),
             ValueType.Int or ValueType.Long or ValueType.Double or ValueType.Bool => this.Value!.ToString(),
             _ => throw new InvalidOperationException($"Unknown type {this.Type}"),
         };
@@ -214,6 +224,13 @@ public readonly struct MimoriaValue
     /// </summary>
     /// <param name="value">The string value.</param>
     public static implicit operator MimoriaValue(string? value)
+        => new(value);
+
+    /// <summary>
+    /// Implicitly converts a byte string to a <see cref="MimoriaValue"/>.
+    /// </summary>
+    /// <param name="value">The byte string value.</param>
+    public static implicit operator MimoriaValue(ByteString? value)
         => new(value);
 
     /// <summary>
@@ -288,7 +305,7 @@ public readonly struct MimoriaValue
         return value.Type switch
         {
             ValueType.Null => null,
-            ValueType.String => (string)value.Value!,
+            ValueType.String => Encoding.UTF8.GetString(((ByteString)value.Value!).Bytes.AsSpan()),
             ValueType.Int or ValueType.Long or ValueType.Double or ValueType.Bool => value.Value!.ToString(),
             ValueType.Bytes => Convert.ToHexString((byte[])value.Value!),
             _ => throw new InvalidOperationException(),

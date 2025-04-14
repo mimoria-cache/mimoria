@@ -2,17 +2,19 @@
 //
 // SPDX-License-Identifier: MIT
 
+using Varelen.Mimoria.Core;
+
 namespace Varelen.Mimoria.Server.Replication;
 
 public interface IReplicator : IDisposable
 {
-    ValueTask ReplicateSetStringAsync(string key, string? value, uint ttlMilliseconds);
+    ValueTask ReplicateSetStringAsync(string key, ByteString? value, uint ttlMilliseconds);
 
     ValueTask ReplicateSetBytesAsync(string key, byte[]? value, uint ttlMilliseconds);
 
-    ValueTask ReplicateAddListAsync(string key, string? value, uint ttlMilliseconds, uint valueTtlMilliseconds);
+    ValueTask ReplicateAddListAsync(string key, ByteString? value, uint ttlMilliseconds, uint valueTtlMilliseconds);
 
-    ValueTask ReplicateRemoveListAsync(string key, string value);
+    ValueTask ReplicateRemoveListAsync(string key, ByteString value);
 
     ValueTask ReplicateDeleteAsync(string key);
 }

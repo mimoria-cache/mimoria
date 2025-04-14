@@ -336,6 +336,20 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public void WriteByteString(ByteString? value)
+    {
+        if (value is null)
+        {
+            this.WriteByte(0);
+            return;
+        }
+
+        this.WriteVarUInt((uint)value.Size);
+        this.WriteBytes(value.Bytes);
+    }
+
+    /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void WriteBytes(ReadOnlySpan<byte> source)
     {
         this.EnsureBufferSize(source.Length);
@@ -361,7 +375,7 @@ public sealed class PooledByteBuffer : IByteBuffer
                 this.WriteBytes((byte[])value.Value!);
                 break;
             case MimoriaValue.ValueType.String:
-                this.WriteString((string)value.Value!);
+                this.WriteByteString((ByteString)value.Value!);
                 break;
             case MimoriaValue.ValueType.Int:
                 this.WriteInt((int)value.Value!);
@@ -578,6 +592,21 @@ public sealed class PooledByteBuffer : IByteBuffer
 
     /// <inheritdoc />
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public ByteString? ReadByteString()
+    {
+        if (!this.TryReadStringInternal(out uint length))
+        {
+            return null;
+        }
+
+        var bytes = new byte[length];
+        this.ReadBytes(bytes.AsSpan());
+
+        return new ByteString(bytes);
+    }
+
+    /// <inheritdoc />
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public void ReadBytes(Span<byte> destination)
     {
         this.ThrowIfOutOfRange((uint)destination.Length);
@@ -611,7 +640,7 @@ public sealed class PooledByteBuffer : IByteBuffer
                 this.ReadBytes(bytes);
                 return bytes;
             case MimoriaValue.ValueType.String:
-                return this.ReadString();
+                return this.ReadByteString();
             case MimoriaValue.ValueType.Int:
                 return this.ReadInt();
             case MimoriaValue.ValueType.Long:

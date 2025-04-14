@@ -313,10 +313,10 @@ public sealed class MimoriaServer : IMimoriaServer
     private async ValueTask HandleGetStringAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
     {
         string key = byteBuffer.ReadRequiredKey();
-        string? value = await this.cache.GetStringAsync(key);
+        ByteString? value = await this.cache.GetStringAsync(key);
 
         IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.GetString, requestId, StatusCode.Ok);
-        responseBuffer.WriteString(value);
+        responseBuffer.WriteByteString(value);
         responseBuffer.EndPacket();
 
         await tcpConnection.SendAsync(responseBuffer);
@@ -325,7 +325,7 @@ public sealed class MimoriaServer : IMimoriaServer
     private async ValueTask HandleSetStringAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
     {
         string key = byteBuffer.ReadRequiredKey();
-        string? value = byteBuffer.ReadString();
+        ByteString? value = byteBuffer.ReadByteString();
         uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
         await this.cache.SetStringAsync(key, value, ttlMilliseconds);
@@ -350,9 +350,9 @@ public sealed class MimoriaServer : IMimoriaServer
         responseBuffer.WriteUInt(0);
 
         uint count = 0;
-        await foreach (string s in this.cache.GetListAsync(key))
+        await foreach (ByteString s in this.cache.GetListAsync(key))
         {
-            responseBuffer.WriteString(s);
+            responseBuffer.WriteByteString(s);
             count++;
         }
 
@@ -369,7 +369,7 @@ public sealed class MimoriaServer : IMimoriaServer
     private async ValueTask HandleAddListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
     {
         string key = byteBuffer.ReadRequiredKey();
-        string? value = byteBuffer.ReadString();
+        ByteString? value = byteBuffer.ReadByteString();
         uint ttlMilliseconds = byteBuffer.ReadVarUInt();
         uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
 
@@ -395,7 +395,7 @@ public sealed class MimoriaServer : IMimoriaServer
     private async ValueTask HandleRemoveListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
     {
         string key = byteBuffer.ReadRequiredKey();
-        string? value = byteBuffer.ReadString();
+        ByteString? value = byteBuffer.ReadByteString();
 
         // TODO: Should null values not be allowed in lists?
         if (value is null)
@@ -416,7 +416,8 @@ public sealed class MimoriaServer : IMimoriaServer
     private async ValueTask HandleContainsListAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
     {
         string key = byteBuffer.ReadRequiredKey();
-        string? value = byteBuffer.ReadString();
+        // TODO: The internal buffer could be pooled here because it is only used temporarily
+        ByteString? value = byteBuffer.ReadByteString();
 
         // TODO: Should we just return false?
         if (value is null)
@@ -628,16 +629,16 @@ public sealed class MimoriaServer : IMimoriaServer
 
                             await LockIfNeededAsync(key);
 
-                            string? value = await this.cache.GetStringAsync(key, takeLock: false);
+                            ByteString? value = await this.cache.GetStringAsync(key, takeLock: false);
 
                             responseBuffer.WriteByte((byte)Operation.GetString);
-                            responseBuffer.WriteString(value);
+                            responseBuffer.WriteByteString(value);
                             break;
                         }
                     case Operation.SetString:
                         {
                             string key = byteBuffer.ReadRequiredKey();
-                            string? value = byteBuffer.ReadString();
+                            ByteString? value = byteBuffer.ReadByteString();
                             uint ttl = byteBuffer.ReadVarUInt();
 
                             await LockIfNeededAsync(key);
@@ -665,9 +666,9 @@ public sealed class MimoriaServer : IMimoriaServer
                             responseBuffer.WriteUInt(0);
 
                             uint count = 0;
-                            await foreach (string s in this.cache.GetListAsync(key, takeLock: false))
+                            await foreach (ByteString s in this.cache.GetListAsync(key, takeLock: false))
                             {
-                                responseBuffer.WriteString(s);
+                                responseBuffer.WriteByteString(s);
                                 count++;
                             }
 
@@ -680,7 +681,7 @@ public sealed class MimoriaServer : IMimoriaServer
                     case Operation.AddList:
                         {
                             string key = byteBuffer.ReadRequiredKey();
-                            string? value = byteBuffer.ReadString();
+                            ByteString? value = byteBuffer.ReadByteString();
                             uint ttl = byteBuffer.ReadVarUInt();
                             uint valueTtl = byteBuffer.ReadVarUInt();
 
@@ -700,7 +701,7 @@ public sealed class MimoriaServer : IMimoriaServer
                     case Operation.RemoveList:
                         {
                             string key = byteBuffer.ReadRequiredKey();
-                            string? value = byteBuffer.ReadString();
+                            ByteString? value = byteBuffer.ReadByteString();
 
                             // TODO: Should null values not be allowed in lists?
                             if (value is null)
@@ -718,7 +719,8 @@ public sealed class MimoriaServer : IMimoriaServer
                     case Operation.ContainsList:
                         {
                             string key = byteBuffer.ReadRequiredKey();
-                            string? value = byteBuffer.ReadString();
+                            // TODO: The internal buffer could be pooled here because it is only used temporarily
+                            ByteString? value = byteBuffer.ReadByteString();
 
                             // TODO: Should we just return false?
                             if (value is null)

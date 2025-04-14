@@ -207,7 +207,7 @@ public sealed class ClusterClient
                     case Operation.SetString:
                         {
                             string key = byteBuffer.ReadString()!;
-                            string? value = byteBuffer.ReadString();
+                            ByteString? value = byteBuffer.ReadByteString();
                             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
                             await LockIfNeededAsync(key);
@@ -220,7 +220,7 @@ public sealed class ClusterClient
                     case Operation.AddList:
                         {
                             string key = byteBuffer.ReadString()!;
-                            string value = byteBuffer.ReadString()!;
+                            ByteString value = byteBuffer.ReadByteString()!;
                             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
                             uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
 
@@ -232,7 +232,7 @@ public sealed class ClusterClient
                     case Operation.RemoveList:
                         {
                             string key = byteBuffer.ReadString()!;
-                            string value = byteBuffer.ReadString()!;
+                            ByteString value = byteBuffer.ReadByteString()!;
 
                             await LockIfNeededAsync(key);
 

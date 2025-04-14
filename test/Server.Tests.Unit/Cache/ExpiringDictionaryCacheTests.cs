@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging.Abstractions;
 
 using NSubstitute;
 
+using System.Text;
+
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Server.Cache;
 using Varelen.Mimoria.Server.Metrics;
@@ -31,13 +33,15 @@ public class ExpiringDictionaryCacheTests
         // Arrange
         using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
 
-        // Act
-        await sut.SetStringAsync("key", "Mimoria", 0);
+        var expectedValue = new ByteString(Encoding.UTF8.GetBytes("Mimoria"));
 
-        string? value = await sut.GetStringAsync("key");
+        // Act
+        await sut.SetStringAsync("key", expectedValue, 0);
+
+        ByteString? actualValue = await sut.GetStringAsync("key");
 
         // Assert
-        Assert.Equal("Mimoria", value);
+        Assert.Equal(expectedValue, actualValue);
     }
 
     [Fact]
@@ -46,17 +50,19 @@ public class ExpiringDictionaryCacheTests
         // Arrange
         using var sut = this.CreateCache(TimeSpan.FromMilliseconds(500));
 
-        // Act
-        await sut.SetStringAsync("key", "Mimoria", 100);
+        var expectedValue = new ByteString(Encoding.UTF8.GetBytes("Mimoria"));
 
-        string? firstValue = await sut.GetStringAsync("key");
+        // Act
+        await sut.SetStringAsync("key", expectedValue, 100);
+
+        ByteString? firstValue = await sut.GetStringAsync("key");
 
         await Task.Delay(500);
 
-        string? secondValue = await sut.GetStringAsync("key");
+        ByteString? secondValue = await sut.GetStringAsync("key");
 
         // Assert
-        Assert.Equal("Mimoria", firstValue);
+        Assert.Equal(expectedValue, firstValue);
         Assert.Null(secondValue);
     }
 
@@ -114,11 +120,12 @@ public class ExpiringDictionaryCacheTests
         // Act
         for (int i = 0; i < MaxTestListCount; i++)
         {
-            await sut.AddListAsync(key, $"value{i}", 0, 0, MaxTestListCount);
+            var value = new ByteString(Encoding.UTF8.GetBytes($"value{i}"));
+            await sut.AddListAsync(key, value, 0, 0, MaxTestListCount);
         }
 
         // Act & Assert
-        var argumentException = await Assert.ThrowsAsync<ArgumentException>(() => sut.AddListAsync(key, "value", 0, 0, MaxTestListCount));
+        var argumentException = await Assert.ThrowsAsync<ArgumentException>(() => sut.AddListAsync(key, new ByteString(Encoding.UTF8.GetBytes("value")), 0, 0, MaxTestListCount));
         Assert.Equal($"List under key '{key}' has reached its maximum count of '{MaxTestListCount}'", argumentException.Message);
     }
 
@@ -130,21 +137,23 @@ public class ExpiringDictionaryCacheTests
 
         const string key = "key";
 
+        var expectedValue = new ByteString(Encoding.UTF8.GetBytes("value"));
+
         // Act
-        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
-        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
+        await sut.AddListAsync(key, expectedValue, 0, 0, MaxTestListCount);
+        await sut.AddListAsync(key, expectedValue, 0, 0, MaxTestListCount);
 
         // Assert
-        var values = new List<string>();
-        await foreach (string value in sut.GetListAsync(key))
+        var actualValues = new List<ByteString>();
+        await foreach (ByteString value in sut.GetListAsync(key))
         {
-            values.Add(value);
+            actualValues.Add(value);
         }
         
         Assert.Equal(1U, sut.Size);
-        Assert.Equal(2, values.Count);
-        Assert.Equal("value", values[0]);
-        Assert.Equal("value", values[1]);
+        Assert.Equal(2, actualValues.Count);
+        Assert.Equal(expectedValue, actualValues[0]);
+        Assert.Equal(expectedValue, actualValues[1]);
     }
 
     [Fact]
@@ -155,22 +164,24 @@ public class ExpiringDictionaryCacheTests
 
         const string key = "key";
 
-        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
-        await sut.AddListAsync(key, "value", 0, 0, MaxTestListCount);
+        var expectedValue = new ByteString(Encoding.UTF8.GetBytes("value"));
+
+        await sut.AddListAsync(key, expectedValue, 0, 0, MaxTestListCount);
+        await sut.AddListAsync(key, expectedValue, 0, 0, MaxTestListCount);
 
         // Act
-        await sut.RemoveListAsync(key, "value");
+        await sut.RemoveListAsync(key, expectedValue);
 
         // Assert
-        var values = new List<string>();
-        await foreach (string value in sut.GetListAsync(key))
+        var actualValues = new List<ByteString>();
+        await foreach (ByteString value in sut.GetListAsync(key))
         {
-            values.Add(value);
+            actualValues.Add(value);
         }
 
         Assert.Equal(1U, sut.Size);
-        Assert.Single(values);
-        Assert.Equal("value", values[0]);
+        Assert.Single(actualValues);
+        Assert.Equal(expectedValue, actualValues[0]);
     }
 
     [Fact]
@@ -181,23 +192,25 @@ public class ExpiringDictionaryCacheTests
 
         const string key = "key";
 
+        var expectedValue3 = new ByteString(Encoding.UTF8.GetBytes("value"));
+
         // Act
-        await sut.AddListAsync(key, "value1", 0, valueTtlMilliseconds: 250, MaxTestListCount);
-        await sut.AddListAsync(key, "value2", 0, valueTtlMilliseconds: 250, MaxTestListCount);
-        await sut.AddListAsync(key, "value3", 0, valueTtlMilliseconds: 5_000, MaxTestListCount);
+        await sut.AddListAsync(key, new ByteString(Encoding.UTF8.GetBytes("value1")), 0, valueTtlMilliseconds: 250, MaxTestListCount);
+        await sut.AddListAsync(key, new ByteString(Encoding.UTF8.GetBytes("value")), 0, valueTtlMilliseconds: 250, MaxTestListCount);
+        await sut.AddListAsync(key, expectedValue3, 0, valueTtlMilliseconds: 5_000, MaxTestListCount);
 
         await Task.Delay(1_000);
 
         // Assert
-        var values = new List<string>();
-        await foreach (string value in sut.GetListAsync(key))
+        var values = new List<ByteString>();
+        await foreach (ByteString value in sut.GetListAsync(key))
         {
             values.Add(value);
         }
 
         Assert.Equal(1U, sut.Size);
         Assert.Single(values);
-        Assert.Equal("value3", values[0]);
+        Assert.Equal(expectedValue3, values[0]);
     }
 
     [Fact]
@@ -258,12 +271,14 @@ public class ExpiringDictionaryCacheTests
         {
             for (int i = 0; i < IterationCount; i++)
             {
-                await sut.SetStringAsync("key" + i, "value" + i, ttlMilliseconds: 50);
+                var value = new ByteString(Encoding.UTF8.GetBytes($"value{i}"));
+
+                await sut.SetStringAsync("key" + i, value, ttlMilliseconds: 50);
                 await sut.GetStringAsync("key" + i);
             }
         });
 
-        await Task.Delay(500);
+        await Task.Delay(5000);
 
         // Assert
         Assert.Equal((ulong)0, sut.Size);
@@ -293,7 +308,9 @@ public class ExpiringDictionaryCacheTests
             {
                 for (int i = 0; i < IterationCount; i++)
                 {
-                    await sut.SetStringAsync("key", "value", 0);
+                    var value = new ByteString(Encoding.UTF8.GetBytes("value"));
+                    
+                    await sut.SetStringAsync("key", value, 0);
                     await sut.DeleteAsync("key");
                     await sut.GetStringAsync("key");
 
@@ -369,6 +386,8 @@ public class ExpiringDictionaryCacheTests
         int run = 0;
         int operations = 0;
 
+        var value = new ByteString(Encoding.UTF8.GetBytes("value"));
+
         // Act
         var tasks = new List<Task>(capacity: TaskCount);
 
@@ -379,8 +398,8 @@ public class ExpiringDictionaryCacheTests
             {
                 for (int i = 0; i < IterationCount; i++)
                 {
-                    await sut.AddListAsync("key", "value", ttlMilliseconds: 0, valueTtlMilliseconds: 0, ProtocolDefaults.MaxListCount);
-                    await sut.RemoveListAsync("key", "value");
+                    await sut.AddListAsync("key", value, ttlMilliseconds: 0, valueTtlMilliseconds: 0, ProtocolDefaults.MaxListCount);
+                    await sut.RemoveListAsync("key", value);
                     await foreach (var item in sut.GetListAsync("key"))
                     {
 

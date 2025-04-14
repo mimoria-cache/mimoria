@@ -4,6 +4,8 @@
 
 using Microsoft.Extensions.Logging;
 
+using System.Text;
+
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
 using Varelen.Mimoria.Server.Cache.Locking;
@@ -33,15 +35,15 @@ public class LoggingCache : ICache
         this.cache = cache;
     }
 
-    public Task<string?> GetStringAsync(string key, bool takeLock = true)
+    public Task<ByteString?> GetStringAsync(string key, bool takeLock = true)
     {
         this.logger.LogInformation("GetString: '{Key}'", key);
         return this.cache.GetStringAsync(key, takeLock);
     }
 
-    public async Task SetStringAsync(string key, string? value, uint ttlMilliseconds, bool takeLock = true)
+    public async Task SetStringAsync(string key, ByteString? value, uint ttlMilliseconds, bool takeLock = true)
     {
-        this.logger.LogInformation("SetString: '{Key}'='{Value}' (ttl='{Ttl}')", key, value ?? "null", ttlMilliseconds);
+        this.logger.LogInformation("SetString: '{Key}'='{Value}' (ttl='{Ttl}')", key, value is not null ? Encoding.UTF8.GetString(value.Bytes) : "null", ttlMilliseconds);
         await this.cache.SetStringAsync(key, value, ttlMilliseconds, takeLock);
     }
 
@@ -57,25 +59,25 @@ public class LoggingCache : ICache
         return this.cache.GetBytesAsync(key, takeLock);
     }
 
-    public IAsyncEnumerable<string> GetListAsync(string key, bool takeLock = true)
+    public IAsyncEnumerable<ByteString> GetListAsync(string key, bool takeLock = true)
     {
         this.logger.LogInformation("GetList: '{Key}'", key);
         return this.cache.GetListAsync(key, takeLock);
     }
 
-    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, uint valueTtlMilliseconds, uint maxCount, bool takeLock = true)
+    public async Task AddListAsync(string key, ByteString value, uint ttlMilliseconds, uint valueTtlMilliseconds, uint maxCount, bool takeLock = true)
     {
         this.logger.LogInformation("AddList: '{Key}'='{Value}' (ttl='{Ttl}')", key, value, ttlMilliseconds);
         await this.cache.AddListAsync(key, value, ttlMilliseconds, valueTtlMilliseconds, maxCount, takeLock);
     }
 
-    public async Task RemoveListAsync(string key, string value, bool takeLock = true)
+    public async Task RemoveListAsync(string key, ByteString value, bool takeLock = true)
     {
         this.logger.LogInformation("RemoveList: '{Key}'='{Value}'", key, value);
         await this.cache.RemoveListAsync(key, value, takeLock);
     }
 
-    public Task<bool> ContainsListAsync(string key, string value, bool takeLock = true)
+    public Task<bool> ContainsListAsync(string key, ByteString value, bool takeLock = true)
     {
         this.logger.LogInformation("ContainsList: '{Key}'='{Value}'", key, value);
         return this.cache.ContainsListAsync(key, value, takeLock);

@@ -104,7 +104,7 @@ public sealed class ExpiringDictionaryCache : ICache
         return (Expired: true, Entry: null);
     }
 
-    public async Task<string?> GetStringAsync(string key, bool takeLock = true)
+    public async Task<ByteString?> GetStringAsync(string key, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
@@ -114,7 +114,7 @@ public sealed class ExpiringDictionaryCache : ICache
             return null;
         }
 
-        var value = entry!.Value as string
+        var value = entry!.Value as ByteString
             ?? throw new ArgumentException($"Value stored under '{key}' is not a string");
 
         this.IncrementHits();
@@ -122,7 +122,7 @@ public sealed class ExpiringDictionaryCache : ICache
         return value;
     }
 
-    public async Task SetStringAsync(string key, string? value, uint ttlMilliseconds, bool takeLock = true)
+    public async Task SetStringAsync(string key, ByteString? value, uint ttlMilliseconds, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
@@ -154,7 +154,7 @@ public sealed class ExpiringDictionaryCache : ICache
         return bytes;
     }
 
-    public async IAsyncEnumerable<string> GetListAsync(string key, bool takeLock = true)
+    public async IAsyncEnumerable<ByteString> GetListAsync(string key, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
@@ -164,7 +164,7 @@ public sealed class ExpiringDictionaryCache : ICache
             yield break;
         }
 
-        var list = entry!.Value as ExpiringList<string>
+        var list = entry!.Value as ExpiringList<ByteString>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         this.IncrementHits();
@@ -177,20 +177,20 @@ public sealed class ExpiringDictionaryCache : ICache
         }
     }
 
-    public async Task AddListAsync(string key, string value, uint ttlMilliseconds, uint valueTtlMilliseconds, uint maxCount, bool takeLock = true)
+    public async Task AddListAsync(string key, ByteString value, uint ttlMilliseconds, uint valueTtlMilliseconds, uint maxCount, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
         if (!this.cache.TryGetValue(key, out Entry<object?>? entry))
         {
-            this.cache[key] = new Entry<object?>(new ExpiringList<string>(value, valueTtlMilliseconds), ttlMilliseconds);
+            this.cache[key] = new Entry<object?>(new ExpiringList<ByteString>(value, valueTtlMilliseconds), ttlMilliseconds);
             
             await this.pubSubService.PublishAsync(Channels.ForListAdded(key), value);
             
             return;
         }
 
-        var list = entry!.Value as ExpiringList<string>
+        var list = entry!.Value as ExpiringList<ByteString>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         if (list.Count + 1 > maxCount)
@@ -203,7 +203,7 @@ public sealed class ExpiringDictionaryCache : ICache
         await this.pubSubService.PublishAsync(Channels.ForListAdded(key), value);
     }
 
-    public async Task RemoveListAsync(string key, string value, bool takeLock = true)
+    public async Task RemoveListAsync(string key, ByteString value, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
@@ -213,7 +213,7 @@ public sealed class ExpiringDictionaryCache : ICache
             return;
         }
 
-        var list = entry!.Value as ExpiringList<string>
+        var list = entry!.Value as ExpiringList<ByteString>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         list.Remove(value);
@@ -225,7 +225,7 @@ public sealed class ExpiringDictionaryCache : ICache
         }
     }
 
-    public async Task<bool> ContainsListAsync(string key, string value, bool takeLock = true)
+    public async Task<bool> ContainsListAsync(string key, ByteString value, bool takeLock = true)
     {
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
 
@@ -235,7 +235,7 @@ public sealed class ExpiringDictionaryCache : ICache
             return false;
         }
 
-        var list = entry!.Value as ExpiringList<string>
+        var list = entry!.Value as ExpiringList<ByteString>
             ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
         this.IncrementHits();
@@ -453,6 +453,7 @@ public sealed class ExpiringDictionaryCache : ICache
         }
 
         byteBuffer.WriteVarUInt((uint)this.cache.Count);
+
         foreach (var (key, entry) in this.cache)
         {
             using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key);
@@ -474,19 +475,19 @@ public sealed class ExpiringDictionaryCache : ICache
                         byteBuffer.WriteLong(l);
                         break;
                     }
-                case string s:
+                case ByteString s:
                     {
                         byteBuffer.WriteByte((byte)CacheValueType.String);
-                        byteBuffer.WriteString(s);
+                        byteBuffer.WriteByteString(s);
                         break;
                     }
-                case ExpiringList<string> list:
+                case ExpiringList<ByteString> list:
                     {
                         byteBuffer.WriteByte((byte)CacheValueType.List);
                         byteBuffer.WriteVarUInt((uint)list.Count);
                         foreach (var (value, valueTtl) in list.Get())
                         {
-                            byteBuffer.WriteString(value);
+                            byteBuffer.WriteByteString(value);
                             byteBuffer.WriteVarUInt(valueTtl);
                         }
                         break;
@@ -511,7 +512,7 @@ public sealed class ExpiringDictionaryCache : ICache
                                     byteBuffer.WriteBytes(bytes.AsSpan());
                                     break;
                                 case MimoriaValue.ValueType.String:
-                                    byteBuffer.WriteString((string?)mapValue.Value);
+                                    byteBuffer.WriteByteString((ByteString)mapValue.Value!);
                                     break;
                                 case MimoriaValue.ValueType.Int:
                                     byteBuffer.WriteInt((int)mapValue.Value!);
@@ -543,7 +544,7 @@ public sealed class ExpiringDictionaryCache : ICache
 
     public void Deserialize(IByteBuffer byteBuffer)
     {
-        if (byteBuffer.Size <= 5)
+        if (byteBuffer.Size <= 6)
         {
             return;
         }
@@ -565,15 +566,15 @@ public sealed class ExpiringDictionaryCache : ICache
                     obj = null;
                     break;
                 case CacheValueType.String:
-                    obj = byteBuffer.ReadString();
+                    obj = byteBuffer.ReadByteString();
                     break;
                 case CacheValueType.List:
                     uint listCount = byteBuffer.ReadVarUInt();
-                    var list = new ExpiringList<string>(capacity: (int)listCount);
+                    var list = new ExpiringList<ByteString>(capacity: (int)listCount);
 
                     for (int j = 0; j < listCount; j++)
                     {
-                        list.Add(value: byteBuffer.ReadString()!, ttl: byteBuffer.ReadVarUInt());
+                        list.Add(value: byteBuffer.ReadByteString()!, ttl: byteBuffer.ReadVarUInt());
                     }
 
                     obj = list;
@@ -602,7 +603,7 @@ public sealed class ExpiringDictionaryCache : ICache
                                 mapValue = bytesValue;
                                 break;
                             case MimoriaValue.ValueType.String:
-                                mapValue = byteBuffer.ReadString();
+                                mapValue = byteBuffer.ReadByteString();
                                 break;
                             case MimoriaValue.ValueType.Int:
                                 mapValue = byteBuffer.ReadInt();

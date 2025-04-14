@@ -82,7 +82,7 @@ public sealed class AsyncReplicator : IReplicator
         }
     }
 
-    public async ValueTask ReplicateSetStringAsync(string key, string? value, uint ttlMilliseconds)
+    public async ValueTask ReplicateSetStringAsync(string key, ByteString? value, uint ttlMilliseconds)
     {
         await this.operationsBuffersSemaphore.WaitAsync();
 
@@ -91,7 +91,7 @@ public sealed class AsyncReplicator : IReplicator
             IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
             byteBuffer.WriteByte((byte)Operation.SetString);
             byteBuffer.WriteString(key);
-            byteBuffer.WriteString(value);
+            byteBuffer.WriteByteString(value);
             byteBuffer.WriteVarUInt(ttlMilliseconds);
 
             this.operationsBuffers.Enqueue(byteBuffer);
@@ -128,7 +128,7 @@ public sealed class AsyncReplicator : IReplicator
         }
     }
 
-    public async ValueTask ReplicateAddListAsync(string key, string? value, uint ttlMilliseconds, uint valueTtlMilliseconds)
+    public async ValueTask ReplicateAddListAsync(string key, ByteString? value, uint ttlMilliseconds, uint valueTtlMilliseconds)
     {
         await this.operationsBuffersSemaphore.WaitAsync();
 
@@ -137,7 +137,7 @@ public sealed class AsyncReplicator : IReplicator
             IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
             byteBuffer.WriteByte((byte)Operation.AddList);
             byteBuffer.WriteString(key);
-            byteBuffer.WriteString(value);
+            byteBuffer.WriteByteString(value);
             byteBuffer.WriteVarUInt(ttlMilliseconds);
             byteBuffer.WriteVarUInt(valueTtlMilliseconds);
             
@@ -149,7 +149,7 @@ public sealed class AsyncReplicator : IReplicator
         }
     }
 
-    public async ValueTask ReplicateRemoveListAsync(string key, string value)
+    public async ValueTask ReplicateRemoveListAsync(string key, ByteString value)
     {
         await this.operationsBuffersSemaphore.WaitAsync();
 
@@ -158,7 +158,7 @@ public sealed class AsyncReplicator : IReplicator
             IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
             byteBuffer.WriteByte((byte)Operation.RemoveList);
             byteBuffer.WriteString(key);
-            byteBuffer.WriteString(value);
+            byteBuffer.WriteByteString(value);
 
             this.operationsBuffers.Enqueue(byteBuffer);
         }

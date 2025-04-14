@@ -116,6 +116,12 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     void WriteString(string? value);
 
     /// <summary>
+    /// Writes a byte string value to the buffer.
+    /// </summary>
+    /// <param name="value">The byte string to write.</param>
+    void WriteByteString(ByteString? value);
+
+    /// <summary>
     /// Writes a span of bytes to the buffer.
     /// </summary>
     /// <param name="source">The span of bytes to write.</param>
@@ -218,6 +224,12 @@ public interface IByteBuffer : IDisposable, IEquatable<IByteBuffer>
     /// </summary>
     /// <returns>The string value read from the buffer (maybe a pooled instance from the <see cref="StringPool"/>).</returns>
     string? ReadStringPooled();
+
+    /// <summary>
+    /// Reads a byte string value from the buffer.
+    /// </summary>
+    /// <returns>The byte string read from the buffer.</returns>
+    ByteString? ReadByteString();
 
     /// <summary>
     /// Reads a span of bytes from the buffer.
