@@ -53,6 +53,7 @@ public sealed class LengthPrefixedPacketReader : IDisposable
 
             int remainingBytes = this.buffer.Size - (this.prefixLength + this.expectedPacketLength);
 
+            Debug.Assert(byteBuffer.Size == this.expectedPacketLength, "Byte buffer size should be equal to expected packet length");
             Debug.Assert(remainingBytes >= 0, "Remaining bytes should not be negative");
 
             if (remainingBytes == 0)
@@ -62,7 +63,7 @@ public sealed class LengthPrefixedPacketReader : IDisposable
                 yield return byteBuffer;
                 yield break;
             }
-            
+
             this.buffer.Bytes.AsSpan(this.prefixLength + this.expectedPacketLength, remainingBytes).CopyTo(this.buffer.Bytes);
             this.buffer.WriteIndex = remainingBytes;
 
