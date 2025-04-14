@@ -95,7 +95,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         NetworkStream networkStream = tcpClient.GetStream();
 
         using var byteBuffer = PooledByteBuffer.FromPool(Operation.Login, requestId: 0);
-        byteBuffer.WriteVarUInt(1);
+        byteBuffer.WriteVarUInt(2);
         byteBuffer.WriteString("WrongPassword");
         byteBuffer.EndPacket();
 
