@@ -85,26 +85,20 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     private IMimoriaClient GetReadingClient(bool preferSecondary)
     {
         IMimoriaClient? readingMimoriaClient = null;
-        int count = 0;
 
         foreach (IMimoriaClient mimoriaClient in this.mimoriaClients)
         {
-            if (!mimoriaClient.IsConnected)
-            {
-                continue;
-            }
-
             if (preferSecondary && mimoriaClient.IsPrimary)
             {
                 continue;
             }
 
-            count++;
-
-            if (Random.Shared.Next(count) == 0)
+            if (mimoriaClient.IsConnected)
             {
-                readingMimoriaClient = mimoriaClient;
+                return mimoriaClient;
             }
+
+            readingMimoriaClient ??= mimoriaClient;
         }
 
         return readingMimoriaClient ?? throw new NoSecondaryAvailableException();
