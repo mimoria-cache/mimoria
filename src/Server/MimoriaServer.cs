@@ -83,8 +83,8 @@ public sealed class MimoriaServer : IMimoriaServer
                 this.clusterServer,
                 TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderHeartbeatIntervalMs),
                 TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.LeaderMissingTimeoutMs),
-                TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.ElectionTimeoutMs),
-                this.HandleLeaderElectedAsync);
+                TimeSpan.FromMilliseconds(this.monitor.CurrentValue.Cluster.Election.ElectionTimeoutMs));
+            this.bullyAlgorithm.LeaderElected += this.HandleLeaderElectedAsync;
 
             this.logger.LogInformation("In cluster mode, using nodes: '{}'", string.Join(',', this.monitor.CurrentValue.Cluster!.Nodes.Select(n => $"{n.Host}:{n.Port}")));
 
@@ -147,10 +147,12 @@ public sealed class MimoriaServer : IMimoriaServer
         this.logger.LogInformation("Mimoria server started on '{Ip}:{Port}'", this.monitor.CurrentValue.Ip, this.monitor.CurrentValue.Port);
     }
 
-    private async Task HandleLeaderElectedAsync()
+    private async Task HandleLeaderElectedAsync(int newLeaderId)
     {
         Debug.Assert(this.bullyAlgorithm is not null, "bullyAlgorithm is null");
 
+        if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
+        {
         if (!this.bullyAlgorithm!.IsLeader)
         {
             Debug.Assert(this.clusterClients.ContainsKey(this.bullyAlgorithm.Leader));
@@ -161,7 +163,7 @@ public sealed class MimoriaServer : IMimoriaServer
             {
                 uint requestId = leaderClusterClient.IncrementRequestId();
 
-                var syncRequestBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);
+                    var syncRequestBuffer = PooledByteBuffer.FromPool(Operation.SyncRequest, requestId);
                 syncRequestBuffer.EndPacket();
 
                 // TODO: Awaiting this ends in a deadlock because it sends an operation and waits for it to be received
@@ -170,17 +172,12 @@ public sealed class MimoriaServer : IMimoriaServer
                     .AsTask()
                     .ContinueWith(t =>
                     {
-                        if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
-                        {
                             this.clusterReadyTaskCompletionSource.SetResult();
-                        }
                     });
             }
         }
         else
         {
-            if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
-            {
                 this.clusterReadyTaskCompletionSource.SetResult();
             }
         }
@@ -202,7 +199,12 @@ public sealed class MimoriaServer : IMimoriaServer
             this.clusterServer.Stop();
         }
 
+        if (this.bullyAlgorithm is not null)
+        {
+            this.bullyAlgorithm.LeaderElected -= this.HandleLeaderElectedAsync;
         this.bullyAlgorithm?.Stop();
+        }
+
         this.mimoriaSocketServer.Disconnected -= HandleTcpConnectionDisconnectedAsync;
         // TODO: Async stop
         this.mimoriaSocketServer.StopAsync().GetAwaiter().GetResult();

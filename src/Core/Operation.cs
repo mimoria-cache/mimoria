@@ -108,29 +108,33 @@ public enum Operation : byte
     /// <summary>
     /// Used to authenticate with a cluster.
     /// </summary>
-    ClusterLogin = 249,
+    ClusterLogin = 248,
     /// <summary>
     /// Sends an election message in a cluster.
     /// </summary>
-    ElectionMessage = 250,
+    ElectionMessage = 249,
     /// <summary>
     /// Sends an alive message in a cluster.
     /// </summary>
-    AliveMessage = 251,
+    AliveMessage = 250,
     /// <summary>
     /// Sends a victory message in a cluster.
     /// </summary>
-    VictoryMessage = 252,
+    VictoryMessage = 251,
     /// <summary>
     /// Sends a heartbeat message in a cluster.
     /// </summary>
-    HeartbeatMessage = 253,
+    HeartbeatMessage = 252,
     /// <summary>
     /// Sends a batch of operations which is used for replication.
     /// </summary>
-    Batch = 254,
+    Batch = 253,
     /// <summary>
-    /// Synchronizes data in a cluster (for example secondary requests sync from primary).
+    /// Request data synchronization in a cluster (for example secondary requests sync from primary).
     /// </summary>
-    Sync = 255
+    SyncRequest = 254,
+    /// <summary>
+    /// Response with the data to a sync request in a cluster (for example primary responds to secondary).
+    /// </summary>
+    SyncResponse = 255,
 }

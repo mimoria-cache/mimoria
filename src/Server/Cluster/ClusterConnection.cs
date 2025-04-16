@@ -28,7 +28,7 @@ public sealed class ClusterConnection
     private readonly ClusterServer clusterServer;
     private readonly Socket socket;
     private readonly ICache cache;
-    private readonly ConcurrentDictionary<uint, TaskCompletionSource> waitingResponses;
+    private readonly ConcurrentDictionary<uint, TaskCompletionSource<IByteBuffer?>> waitingResponses;
     private readonly LengthPrefixedPacketReader lengthPrefixedPacketReader;
 
     private bool connected;
@@ -122,25 +122,48 @@ public sealed class ClusterConnection
                     this.AliveReceived?.Invoke(leader);
                     break;
                 }
-            case Operation.Batch:
+            case Operation.VictoryMessage:
                 {
-                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource? taskComplectionSource))
+                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? taskComplectionSource))
                     {
-                        taskComplectionSource.SetResult();
+                        // TODO: Hmm.. The 'byteBuffer' livetime is currently handled outside of this method
+                        var buffer = PooledByteBuffer.FromPool();
+                        buffer.WriteBool(byteBuffer.ReadBool());
+                        buffer.WriteInt(byteBuffer.ReadInt());
+
+                        taskComplectionSource.SetResult(buffer);
                     }
                     break;
                 }
-            case Operation.Sync:
+            case Operation.Batch:
+                {
+                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? taskComplectionSource))
+                    {
+                        taskComplectionSource.SetResult(null);
+                    }
+                    break;
+                }
+            case Operation.SyncResponse:
+                {
+                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? taskComplectionSource))
+                    {
+                        this.cache.Deserialize(byteBuffer);
+                        
+                        taskComplectionSource.SetResult(null);
+                    }
+                    break;
+                }
+            case Operation.SyncRequest:
                 {
                     this.logger.LogDebug("Primary sync request from '{RemoteEndPoint}' with request id '{RequestId}'", this.RemoteEndPoint, requestId);
 
-                    var syncBuffer = PooledByteBuffer.FromPool(Operation.Sync, requestId);
+                    var syncResponseBuffer = PooledByteBuffer.FromPool(Operation.SyncResponse, requestId);
 
-                    await this.cache.SerializeAsync(syncBuffer);
+                    await this.cache.SerializeAsync(syncResponseBuffer);
 
-                    syncBuffer.EndPacket();
+                    syncResponseBuffer.EndPacket();
 
-                    await this.SendAsync(syncBuffer);
+                    await this.SendAsync(syncResponseBuffer);
                     break;
                 }
         }
@@ -162,17 +185,17 @@ public sealed class ClusterConnection
         }
     }
 
-    public async ValueTask SendAndWaitForResponseAsync(uint requestId, IByteBuffer byteBuffer)
+    public async ValueTask<IByteBuffer?> SendAndWaitForResponseAsync(uint requestId, IByteBuffer byteBuffer)
     {
         try
         {
-            var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var taskCompletionSource = new TaskCompletionSource<IByteBuffer?>(TaskCreationOptions.RunContinuationsAsynchronously);
             bool added = this.waitingResponses.TryAdd(requestId, taskCompletionSource);
             Debug.Assert(added, "Task completion was not added to dictionary");
 
             await this.socket.SendAllAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
 
-            await taskCompletionSource.Task;
+            return await taskCompletionSource.Task;
         }
         finally
         {

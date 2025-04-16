@@ -147,7 +147,14 @@ public sealed class ClusterClient
                 {
                     int leaderId = byteBuffer.ReadInt();
 
-                    await this.bullyAlgorithm.HandleVictoryAsync(leaderId);
+                    bool newLeaderNeedsResyncWithUs = await this.bullyAlgorithm.HandleVictoryAsync(leaderId);
+
+                    using var victoryResponse = PooledByteBuffer.FromPool(Operation.VictoryMessage, requestId);
+                    victoryResponse.WriteBool(newLeaderNeedsResyncWithUs);
+                    victoryResponse.WriteInt(newLeaderNeedsResyncWithUs ? this.bullyAlgorithm.Id : -1);
+                    victoryResponse.EndPacket();
+
+                    await this.SendAsync(victoryResponse.Bytes.AsMemory(0, victoryResponse.Size));
                     break;
                 }
             case Operation.HeartbeatMessage:
@@ -166,9 +173,22 @@ public sealed class ClusterClient
                     await this.SendAsync(batchBuffer.Bytes.AsMemory(0, batchBuffer.Size));
                     break;
                 }
-            case Operation.Sync:
+            case Operation.SyncRequest:
                 {
-                    this.logger.LogDebug("Received sync with '{ByteCount}' bytes", byteBuffer.Size);
+                    this.logger.LogDebug("Sync request from '{RemoteEndPoint}' with request id '{RequestId}'", this.remoteEndPoint, requestId);
+                    
+                    using var syncBuffer = PooledByteBuffer.FromPool(Operation.SyncResponse, requestId);
+                    
+                    await this.cache.SerializeAsync(syncBuffer);
+                    
+                    syncBuffer.EndPacket();
+                    
+                    await this.SendAsync(syncBuffer.Bytes.AsMemory(0, syncBuffer.Size));
+                    break;
+                }
+            case Operation.SyncResponse:
+                {
+                    this.logger.LogDebug("Sync response with '{ByteCount}' bytes", byteBuffer.Size);
 
                     this.cache.Deserialize(byteBuffer);
 
