@@ -32,6 +32,7 @@ public sealed class ClusterConnection
     private readonly LengthPrefixedPacketReader lengthPrefixedPacketReader;
 
     private bool connected;
+    private bool authenticated;
     private uint requestIdCounter;
 
     public int Id { get; private set; }
@@ -51,6 +52,7 @@ public sealed class ClusterConnection
         this.cache = cache;
         this.clusterServer = clusterServer;
         this.connected = true;
+        this.authenticated = false;
         this.waitingResponses = [];
         this.requestIdCounter = 0;
         this.lengthPrefixedPacketReader = new LengthPrefixedPacketReader(ProtocolDefaults.LengthPrefixLength);
@@ -93,6 +95,15 @@ public sealed class ClusterConnection
         }
     }
 
+    /// <summary>
+    /// Only allow other operations than <see cref="Operation.ClusterLogin"/> if authenticated.
+    /// </summary>
+    /// <param name="operation">The operation to check.</param>
+    /// <returns>true, if authenticated or the operation is <see cref="Operation.ClusterLogin"/></returns>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private bool IsAuthenticated(Operation operation)
+        => this.authenticated || operation == Operation.ClusterLogin;
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async Task HandlePacketReceivedAsync(IByteBuffer byteBuffer)
     {
@@ -102,70 +113,71 @@ public sealed class ClusterConnection
         // Ignoring fire and forget
         _ = byteBuffer.ReadByte();
 
+        if (!this.IsAuthenticated(operation))
+        {
+            this.logger.LogWarning("Cluster connection '{RemoteEndPoint}' tried to send operation '{Operation}' without being authenticated", this.RemoteEndPoint, operation);
+
+            this.Disconnect();
+            return;
+        }
+
         switch (operation)
         {
             case Operation.ClusterLogin:
                 string receivedPassword = byteBuffer.ReadString()!;
                 if (!receivedPassword.Equals(this.clusterServer.password, StringComparison.Ordinal))
                 {
+                    this.logger.LogWarning("Cluster connection '{RemoteEndPoint}' tried to login with wrong password", this.RemoteEndPoint);
+
                     this.Disconnect();
                     return;
                 }
 
                 this.Id = byteBuffer.ReadInt();
 
+                this.authenticated = true;
                 this.Authenticated?.Invoke(this);
                 break;
             case Operation.AliveMessage:
-                {
-                    int leader = byteBuffer.ReadInt();
-                    this.AliveReceived?.Invoke(leader);
-                    break;
-                }
+                int leader = byteBuffer.ReadInt();
+                this.AliveReceived?.Invoke(leader);
+                break;
             case Operation.VictoryMessage:
+                if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? victoryTaskComplectionSource))
                 {
-                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? taskComplectionSource))
-                    {
-                        // TODO: Hmm.. The 'byteBuffer' livetime is currently handled outside of this method
-                        var buffer = PooledByteBuffer.FromPool();
-                        buffer.WriteBool(byteBuffer.ReadBool());
-                        buffer.WriteInt(byteBuffer.ReadInt());
+                    // TODO: Hmm.. The 'byteBuffer' livetime is currently handled outside of this method
+                    var buffer = PooledByteBuffer.FromPool();
+                    buffer.WriteBool(byteBuffer.ReadBool());
+                    buffer.WriteInt(byteBuffer.ReadInt());
 
-                        taskComplectionSource.SetResult(buffer);
-                    }
-                    break;
+                    victoryTaskComplectionSource.SetResult(buffer);
                 }
+                break;
             case Operation.Batch:
+                if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? batchTaskComplectionSource))
                 {
-                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? taskComplectionSource))
-                    {
-                        taskComplectionSource.SetResult(null);
-                    }
-                    break;
+                    batchTaskComplectionSource.SetResult(null);
                 }
+                break;
             case Operation.SyncResponse:
+                if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? syncTaskComplectionSource))
                 {
-                    if (this.waitingResponses.TryRemove(requestId, out TaskCompletionSource<IByteBuffer?>? taskComplectionSource))
-                    {
-                        this.cache.Deserialize(byteBuffer);
-                        
-                        taskComplectionSource.SetResult(null);
-                    }
-                    break;
+                    this.cache.Deserialize(byteBuffer);
+
+                    syncTaskComplectionSource.SetResult(null);
                 }
+                break;
             case Operation.SyncRequest:
-                {
-                    this.logger.LogDebug("Primary sync request from '{RemoteEndPoint}' with request id '{RequestId}'", this.RemoteEndPoint, requestId);
+                this.logger.LogDebug("Primary sync request from '{RemoteEndPoint}' with request id '{RequestId}'", this.RemoteEndPoint, requestId);
 
-                    var syncResponseBuffer = PooledByteBuffer.FromPool(Operation.SyncResponse, requestId);
+                var syncResponseBuffer = PooledByteBuffer.FromPool(Operation.SyncResponse, requestId);
 
-                    await this.cache.SerializeAsync(syncResponseBuffer);
+                await this.cache.SerializeAsync(syncResponseBuffer);
 
-                    syncResponseBuffer.EndPacket();
+                syncResponseBuffer.EndPacket();
 
-                    await this.SendAsync(syncResponseBuffer);
-                    break;
-                }
+                await this.SendAsync(syncResponseBuffer);
+                break;
         }
     }
 
@@ -209,6 +221,8 @@ public sealed class ClusterConnection
         {
             return;
         }
+
+        this.authenticated = false;
 
         try
         {
