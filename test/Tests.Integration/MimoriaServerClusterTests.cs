@@ -29,11 +29,11 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
     private readonly ILoggerFactory loggerFactory;
     private readonly IMimoriaMetrics metrics;
-    private readonly ExpiringDictionaryCache cacheTwo;
     private readonly IPubSubService pubSubServiceOne;
     private readonly IPubSubService pubSubServiceTwo;
 
     private ExpiringDictionaryCache cacheOne;
+    private ExpiringDictionaryCache cacheTwo;
     private MimoriaServer mimoriaServerOne = null!;
     private MimoriaServer mimoriaServerTwo = null!;
     private ushort firstPort;
