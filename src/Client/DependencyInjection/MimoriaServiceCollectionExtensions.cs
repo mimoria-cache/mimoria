@@ -39,9 +39,7 @@ public static class MimoriaServiceCollectionExtensions
         services.AddSingleton<IMimoriaClient>(_ =>
         {
             var mimoriaClient = new MimoriaClient(configuration.Host, configuration.Port, configuration.Password, new MimoriaSocketClient(configuration.OperationTimeout, configuration.OperationRetryPolicy), configuration.ConnectRetryPolicy);
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            mimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return mimoriaClient;
+            return new LazyConnectingMimoriaClient(mimoriaClient);
         });
 
         return services;
@@ -85,9 +83,8 @@ public static class MimoriaServiceCollectionExtensions
         {
             var mimoriaClient = new MimoriaClient(configuration.Host, configuration.Port, configuration.Password, new MimoriaSocketClient(configuration.OperationTimeout, configuration.OperationRetryPolicy), configuration.ConnectRetryPolicy);
             var microCacheMimoriaClient = new MicrocacheMimoriaClient(mimoriaClient, expiration);
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            microCacheMimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return microCacheMimoriaClient;
+            
+            return new LazyConnectingMimoriaClient(mimoriaClient);
         });
 
         return services;
@@ -119,9 +116,7 @@ public static class MimoriaServiceCollectionExtensions
         services.AddSingleton<IShardedMimoriaClient>(_ =>
         {
             var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IPEndPoints.ToArray());
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            sharedMimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return sharedMimoriaClient;
+            return new LazyConnectingShardedMimoriaClient(sharedMimoriaClient);
         });
 
         return services;
@@ -139,9 +134,8 @@ public static class MimoriaServiceCollectionExtensions
         {
             var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IPEndPoints.ToArray());
             var microCacheMimoriaClient = new MicrocacheMimoriaClient(sharedMimoriaClient);
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            microCacheMimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return microCacheMimoriaClient;
+            
+            return new LazyConnectingShardedMimoriaClient(microCacheMimoriaClient);
         });
 
         return services;
