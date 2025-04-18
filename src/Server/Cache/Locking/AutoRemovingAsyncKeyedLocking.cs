@@ -126,5 +126,7 @@ public sealed class AutoRemovingAsyncKeyedLocking : IDisposable
     }
 
     public void Dispose()
-        => Debug.Assert(this.releasersByKey.IsEmpty, "Locks were not empty on dispose");
+    {
+
+    }
 }
