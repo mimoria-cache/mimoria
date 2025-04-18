@@ -62,7 +62,7 @@ public sealed class ExpiringDictionaryCache : ICache
         this.metrics = metrics;
         this.pubSubService = pubSubService;
         this.expireCheckInterval = expireCheckInterval;
-        this.cache = new ConcurrentDictionary<string, Entry<object?>>(concurrencyLevel: Environment.ProcessorCount, capacity: InitialCacheSize);
+        this.cache = new ConcurrentDictionary<string, Entry<object?>>(concurrencyLevel: Environment.ProcessorCount, capacity: InitialCacheSize, StringComparer.Ordinal);
         this.autoRemovingAsyncKeyedLocking = new AutoRemovingAsyncKeyedLocking(InitialLocksCacheSize);
         this.hits = 0;
         this.misses = 0;
@@ -308,7 +308,7 @@ public sealed class ExpiringDictionaryCache : ICache
         var (expired, entry) = await this.TryGetAndHandleExpireAsync(key);
         if (expired)
         {
-            this.cache[key] = new Entry<object?>(new Dictionary<string, MimoriaValue>() { { subKey, value } }, InfiniteTimeToLive);
+            this.cache[key] = new Entry<object?>(new Dictionary<string, MimoriaValue>(StringComparer.Ordinal) { { subKey, value } }, InfiniteTimeToLive);
             return;
         }
 
@@ -591,7 +591,7 @@ public sealed class ExpiringDictionaryCache : ICache
                 case CacheValueType.Map:
                     uint mapCount = byteBuffer.ReadVarUInt();
 
-                    var dictionary = new Dictionary<string, MimoriaValue>(capacity: (int)mapCount);
+                    var dictionary = new Dictionary<string, MimoriaValue>(capacity: (int)mapCount, StringComparer.Ordinal);
 
                     for (int j = 0; j < mapCount; j++)
                     {

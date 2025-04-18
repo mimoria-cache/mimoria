@@ -204,7 +204,7 @@ public sealed class ClusterClient
     private async Task HandleBatchAsync(IByteBuffer byteBuffer)
     {
         // TODO: Prime for dictionary, but better default?
-        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11);
+        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11, StringComparer.Ordinal);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         async ValueTask LockIfNeededAsync(string key)

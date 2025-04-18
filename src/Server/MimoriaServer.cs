@@ -607,7 +607,7 @@ public sealed class MimoriaServer : IMimoriaServer
         responseBuffer.WriteVarUInt(operationCount);
 
         // TODO: Prime for dictionary, but better default?
-        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11);
+        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11, StringComparer.Ordinal);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         async ValueTask LockIfNeededAsync(string key)
@@ -904,7 +904,7 @@ public sealed class MimoriaServer : IMimoriaServer
             throw new ArgumentException($"Read map count '{count}' exceeded max allowed count '{ProtocolDefaults.MaxMapCount}'");
         }
 
-        var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
+        var map = new Dictionary<string, MimoriaValue>(capacity: (int)count, StringComparer.Ordinal);
         for (int i = 0; i < count; i++)
         {
             string subKey = byteBuffer.ReadRequiredKey();
