@@ -25,7 +25,7 @@ public sealed class MimoriaClient : IMimoriaClient
     private readonly IMimoriaSocketClient mimoriaSocketClient;
     private readonly IRetryPolicy connectRetryPolicy;
 
-    private readonly string ip;
+    private readonly string host;
     private readonly ushort port;
     private readonly string password;
 
@@ -60,8 +60,8 @@ public sealed class MimoriaClient : IMimoriaClient
     /// <summary>
     /// Creates a new Mimoria client with the specified IP address, port, and password.
     /// </summary>
-    public MimoriaClient(string ip, ushort port, string password = "")
-        : this(ip, port, password, new MimoriaSocketClient())
+    public MimoriaClient(string host, ushort port, string password = "")
+        : this(host, port, password, new MimoriaSocketClient())
     {
 
     }
@@ -69,8 +69,8 @@ public sealed class MimoriaClient : IMimoriaClient
     /// <summary>
     /// Creates a new Mimoria client with the specified IP address, port, password, and Mimoria socket client.
     /// </summary>
-    public MimoriaClient(string ip, ushort port, string password, IMimoriaSocketClient mimoriaSocketClient)
-        : this(ip, port, password, mimoriaSocketClient, new LinearRetryPolicy(initialDelay: 250, maxRetries: 255, typeof(SocketException)))
+    public MimoriaClient(string host, ushort port, string password, IMimoriaSocketClient mimoriaSocketClient)
+        : this(host, port, password, mimoriaSocketClient, new LinearRetryPolicy(initialDelay: 250, maxRetries: 255, typeof(SocketException)))
     {
 
     }
@@ -79,13 +79,13 @@ public sealed class MimoriaClient : IMimoriaClient
     /// Creates a new Mimoria client with the specified IP address, port, password, Mimoria socket client, and connect retry policy.
     /// </summary>
     public MimoriaClient(
-        string ip,
+        string host,
         ushort port,
         string password,
         IMimoriaSocketClient mimoriaSocketClient,
         IRetryPolicy connectRetryPolicy)
     {
-        this.ip = ip;
+        this.host = host;
         this.port = port;
         this.password = password;
         this.mimoriaSocketClient = mimoriaSocketClient;
@@ -121,7 +121,7 @@ public sealed class MimoriaClient : IMimoriaClient
 
         await this.connectRetryPolicy.ExecuteAsync(async () =>
         {
-            await this.mimoriaSocketClient.ConnectAsync(this.ip, this.port, cancellationToken);
+            await this.mimoriaSocketClient.ConnectAsync(this.host, this.port, cancellationToken);
 
             this.connecting = false;
 
@@ -136,7 +136,7 @@ public sealed class MimoriaClient : IMimoriaClient
                 await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
             if (response.ReadByte() != 1)
             {
-                throw new MimoriaConnectionException($"Login to Mimoria instance at '{this.ip}:{this.port}' failed. Given password did not match configured password");
+                throw new MimoriaConnectionException($"Login to Mimoria instance at '{this.host}:{this.port}' failed. Given password did not match configured password");
             }
             this.ServerId = response.ReadInt();
             this.isPrimary = response.ReadBool();
