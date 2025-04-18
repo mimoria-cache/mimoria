@@ -29,7 +29,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task Election_Given_TwoNodes_When_SecondaryGoesOffAndComesBackOn_EverythingAsBefore()
+    public async Task Election_Given_TwoNodes_When_SecondaryGoesOffAndComesInstantlyBackOn_EverythingAsBefore()
     {
         Assert.False(this.mimoriaServerOne.BullyAlgorithm!.IsLeader);
         Assert.Equal(2, this.mimoriaServerOne.BullyAlgorithm.Leader);
@@ -44,6 +44,30 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         this.mimoriaServerOne = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cacheOne, this.metrics);
         await this.mimoriaServerOne.StartAsync();
+
+        Assert.False(this.mimoriaServerOne.BullyAlgorithm!.IsLeader);
+        Assert.Equal(2, this.mimoriaServerOne.BullyAlgorithm.Leader);
+
+        Assert.True(this.mimoriaServerTwo.BullyAlgorithm!.IsLeader);
+        Assert.Equal(2, this.mimoriaServerTwo.BullyAlgorithm.Leader);
+    }
+
+    [Fact]
+    public async Task Election_Given_TwoNodes_When_PrimaryGoesOffAndComesInstantlyBackOn_EverythingAsBefore()
+    {
+        Assert.False(this.mimoriaServerOne.BullyAlgorithm!.IsLeader);
+        Assert.Equal(2, this.mimoriaServerOne.BullyAlgorithm.Leader);
+
+        Assert.True(this.mimoriaServerTwo.BullyAlgorithm!.IsLeader);
+        Assert.Equal(2, this.mimoriaServerTwo.BullyAlgorithm.Leader);
+
+        this.mimoriaServerTwo.Stop();
+
+        var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
+        optionsMock.CurrentValue.Returns(new MimoriaOptions() { Password = Password, Port = this.secondPort, Cluster = new MimoriaOptions.ClusterOptions() { Id = 2, Port = this.secondClusterPort, Password = ClusterPassword, Nodes = [new() { Id = 1, Host = "127.0.0.1", Port = this.firstClusterPort }] } });
+
+        this.mimoriaServerTwo = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cacheTwo, this.metrics);
+        await this.mimoriaServerTwo.StartAsync();
 
         Assert.False(this.mimoriaServerOne.BullyAlgorithm!.IsLeader);
         Assert.Equal(2, this.mimoriaServerOne.BullyAlgorithm.Leader);
