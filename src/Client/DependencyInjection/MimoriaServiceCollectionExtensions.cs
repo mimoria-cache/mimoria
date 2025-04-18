@@ -115,7 +115,7 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
         {
-            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IpEndPoints.ToArray());
+            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.Endpoints.ToArray());
             return new LazyConnectingShardedMimoriaClient(sharedMimoriaClient);
         });
 
@@ -132,7 +132,7 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
         {
-            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IpEndPoints.ToArray());
+            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.Endpoints.ToArray());
             var microCacheMimoriaClient = new MicrocacheMimoriaClient(sharedMimoriaClient);
             
             return new LazyConnectingShardedMimoriaClient(microCacheMimoriaClient);
@@ -166,7 +166,7 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IClusterMimoriaClient>(_ =>
         {
-            var clusterMimoriaClient = new ClusterMimoriaClient(configuration.Password, configuration.IpEndPoints.ToArray());
+            var clusterMimoriaClient = new ClusterMimoriaClient(configuration.Password, configuration.Endpoints.ToArray());
             return new LazyConnectingClusterMimoriaClient(clusterMimoriaClient);
         });
 

@@ -16,6 +16,7 @@ namespace Varelen.Mimoria.Tests.System;
 
 public class MimoriaClusterResyncTests : IAsyncLifetime
 {
+    public const string Ip = "127.0.0.1";
     private const string Password = "cool";
     private const string ClusterPassword = "coolcluster";
 
@@ -132,9 +133,9 @@ public class MimoriaClusterResyncTests : IAsyncLifetime
     {
         // Arrange
         var clusterMimoriaClient = new ClusterMimoriaClient(Password, [
-            new IPEndPoint(IPAddress.Loopback, this.portOne),
-            new IPEndPoint(IPAddress.Loopback, this.portTwo),
-            new IPEndPoint(IPAddress.Loopback, this.portThree)
+            new ServerEndpoint(Ip, this.portOne),
+            new ServerEndpoint(Ip, this.portTwo),
+            new ServerEndpoint(Ip, this.portThree)
         ]);
         await clusterMimoriaClient.ConnectAsync();
 

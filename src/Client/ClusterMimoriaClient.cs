@@ -3,7 +3,6 @@
 // SPDX-License-Identifier: MIT
 
 using System.Diagnostics;
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -23,7 +22,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     private readonly List<IMimoriaClient> mimoriaClients;
     private readonly Dictionary<string, List<Subscription>> subscriptions;
     private readonly string password;
-    private readonly IPEndPoint[] ipEndPoints;
+    private readonly ServerEndpoint[] serverEndpoints;
     private readonly int retryCount;
     private readonly int retryDelay;
 
@@ -43,9 +42,10 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// Creates a new cluster client with the default retry count and delay.
     /// </summary>
     /// <param name="password">The password of the servers.</param>
-    /// <param name="ipEndPoints">The server IP endpoints.</param>
-    public ClusterMimoriaClient(string password, params IPEndPoint[] ipEndPoints)
-        : this(password, DefaultRetryCount, DefaultRetryDelay, ipEndPoints)
+    /// <param name="serverEndpoints">The server endpoints.</param>
+    /// <exception cref="ArgumentException">If less than two server endpoints are provided.</exception>
+    public ClusterMimoriaClient(string password, params ServerEndpoint[] serverEndpoints)
+        : this(password, DefaultRetryCount, DefaultRetryDelay, serverEndpoints)
     {
 
     }
@@ -56,13 +56,19 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <param name="password">The password of the servers.</param>
     /// <param name="retryCount">The retry count.</param>
     /// <param name="retryDelay">The retry delay.</param>
-    /// <param name="ipEndPoints">The server IP endpoints.</param>
-    public ClusterMimoriaClient(string password, int retryCount, int retryDelay, params IPEndPoint[] ipEndPoints)
+    /// <param name="serverEndpoints">The server endpoints.</param>
+    /// <exception cref="ArgumentException">If less than two server endpoints are provided.</exception>
+    public ClusterMimoriaClient(string password, int retryCount, int retryDelay, params ServerEndpoint[] serverEndpoints)
     {
+        if (serverEndpoints.Length < 2)
+        {
+            throw new ArgumentException("At least two server endpoints required", nameof(serverEndpoints));
+        }
+
         this.password = password;
         this.retryCount = retryCount;
         this.retryDelay = retryDelay;
-        this.ipEndPoints = ipEndPoints;
+        this.serverEndpoints = serverEndpoints;
         this.mimoriaClients = new List<IMimoriaClient>();
         this.subscriptions = new Dictionary<string, List<Subscription>>();
     }
@@ -107,9 +113,9 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
-        foreach (IPEndPoint remoteEndPoint in this.ipEndPoints)
+        foreach (ServerEndpoint serverEndpoint in this.serverEndpoints)
         {
-            var mimoriaClient = new MimoriaClient(remoteEndPoint, this.password);
+            var mimoriaClient = new MimoriaClient(serverEndpoint.Host, serverEndpoint.Port, this.password);
 
             await mimoriaClient.ConnectAsync(cancellationToken);
 

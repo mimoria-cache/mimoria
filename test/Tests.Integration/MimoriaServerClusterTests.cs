@@ -27,6 +27,8 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
     private const string Password = "password";
     private const string ClusterPassword = "clusterpassword";
 
+    private static readonly string Ip = IPAddress.Loopback.ToString();
+
     private readonly ILoggerFactory loggerFactory;
     private readonly IMimoriaMetrics metrics;
     private readonly IPubSubService pubSubServiceOne;
@@ -85,7 +87,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
     protected async Task<IClusterMimoriaClient> ConnectToClusterAsync()
     {
-        var mimoriaClient = new ClusterMimoriaClient(Password, [new IPEndPoint(IPAddress.Loopback, this.firstPort), new IPEndPoint(IPAddress.Loopback, this.secondPort)]);
+        var mimoriaClient = new ClusterMimoriaClient(Password, [new ServerEndpoint(Ip, this.firstPort), new ServerEndpoint(Ip, this.secondPort)]);
         await mimoriaClient.ConnectAsync();
         return mimoriaClient;
     }

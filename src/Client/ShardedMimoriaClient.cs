@@ -2,7 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -42,10 +41,10 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     /// Creates a new instance of the <see cref="ShardedMimoriaClient"/> class.
     /// </summary>
     /// <param name="password">The password of the mimoria servers.</param>
-    /// <param name="ipEndPoints">The server IP endpoints.</param>
-    /// <exception cref="ArgumentException">If less than two endpoints are provided.</exception>
-    public ShardedMimoriaClient(string password, params IPEndPoint[] ipEndPoints)
-        : this(new ConsistentHashing(new Murmur3Hasher()), password, ipEndPoints)
+    /// <param name="serverEndpoints">The server IP endpoints.</param>
+    /// <exception cref="ArgumentException">If less than two server endpoints are provided.</exception>
+    public ShardedMimoriaClient(string password, params ServerEndpoint[] serverEndpoints)
+        : this(new ConsistentHashing(new Murmur3Hasher()), password, serverEndpoints)
     {
 
     }
@@ -55,19 +54,19 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     /// </summary>
     /// <param name="consistentHashing">The consistent hashing implementation to use.</param>
     /// <param name="password">The password of the mimoria servers.</param>
-    /// <param name="ipEndPoints">The server IP endpoints.</param>
-    /// <exception cref="ArgumentException">If less than two endpoints are provided.</exception>
-    public ShardedMimoriaClient(IConsistentHashing consistentHashing, string password, params IPEndPoint[] ipEndPoints)
+    /// <param name="serverEndpoints">The server endpoints.</param>
+    /// <exception cref="ArgumentException">If less than two server endpoints are provided.</exception>
+    public ShardedMimoriaClient(IConsistentHashing consistentHashing, string password, params ServerEndpoint[] serverEndpoints)
     {
-        if (ipEndPoints.Length < 2)
+        if (serverEndpoints.Length < 2)
         {
-            throw new ArgumentException("At least two endpoints required", nameof(ipEndPoints));
+            throw new ArgumentException("At least two server endpoints required", nameof(serverEndpoints));
         }
 
         this.idMimoriaClients = new Dictionary<int, IMimoriaClient>();
         this.consistentHashing = consistentHashing;
-        this.mimoriaClients = ipEndPoints
-            .Select(ipEndPoint => new MimoriaClient(ipEndPoint.Address.ToString(), (ushort)ipEndPoint.Port, password))
+        this.mimoriaClients = serverEndpoints
+            .Select(serverEndpoint => new MimoriaClient(serverEndpoint.Host, serverEndpoint.Port, password))
             .ToList();
     }
 

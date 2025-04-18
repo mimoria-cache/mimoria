@@ -2,8 +2,6 @@
 //
 // SPDX-License-Identifier: MIT
 
-using System.Net;
-
 namespace Varelen.Mimoria.Client.DependencyInjection;
 
 /// <summary>
@@ -19,9 +17,9 @@ public sealed class ShardedMimoriaConfiguration
     public string Password { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the list of IP endpoints for the sharded Mimoria servers.
+    /// Gets or sets the list of server endpoints for the sharded Mimoria servers.
     /// 
     /// Default is an empty list.
     /// </summary>
-    public List<IPEndPoint> IpEndPoints { get; set; } = new List<IPEndPoint>();
+    public List<ServerEndpoint> Endpoints { get; set; } = new List<ServerEndpoint>();
 }
