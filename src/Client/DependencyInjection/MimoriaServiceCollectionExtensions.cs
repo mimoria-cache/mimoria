@@ -115,7 +115,7 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
         {
-            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IPEndPoints.ToArray());
+            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IpEndPoints.ToArray());
             return new LazyConnectingShardedMimoriaClient(sharedMimoriaClient);
         });
 
@@ -132,10 +132,42 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
         {
-            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IPEndPoints.ToArray());
+            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IpEndPoints.ToArray());
             var microCacheMimoriaClient = new MicrocacheMimoriaClient(sharedMimoriaClient);
             
             return new LazyConnectingShardedMimoriaClient(microCacheMimoriaClient);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the cluster Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configure">An action to configure the <see cref="ClusterMimoriaConfiguration"/>.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    public static IServiceCollection AddClusterMimoria(this IServiceCollection services, Action<ClusterMimoriaConfiguration> configure)
+    {
+        var clusterMimoriaConfiguration = new ClusterMimoriaConfiguration();
+
+        configure(clusterMimoriaConfiguration);
+
+        return services.AddClusterMimoria(clusterMimoriaConfiguration);
+    }
+
+    /// <summary>
+    /// Adds the cluster Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configuration">The <see cref="ClusterMimoriaConfiguration"/> to use for configuring the client.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    public static IServiceCollection AddClusterMimoria(this IServiceCollection services, ClusterMimoriaConfiguration configuration)
+    {
+        services.AddSingleton<IClusterMimoriaClient>(_ =>
+        {
+            var clusterMimoriaClient = new ClusterMimoriaClient(configuration.Password, configuration.IpEndPoints.ToArray());
+            return new LazyConnectingClusterMimoriaClient(clusterMimoriaClient);
         });
 
         return services;

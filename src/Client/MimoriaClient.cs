@@ -25,8 +25,6 @@ public sealed class MimoriaClient : IMimoriaClient
     private readonly IMimoriaSocketClient mimoriaSocketClient;
     private readonly IRetryPolicy connectRetryPolicy;
 
-    private uint requestIdCounter;
-
     private readonly string ip;
     private readonly ushort port;
     private readonly string password;
@@ -34,6 +32,8 @@ public sealed class MimoriaClient : IMimoriaClient
     private bool isPrimary;
 
     private volatile bool connecting;
+
+    private uint requestIdCounter;
 
     /// <inheritdoc />
     public int? ServerId { get; private set; }

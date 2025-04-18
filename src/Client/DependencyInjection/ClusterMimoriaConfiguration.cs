@@ -7,9 +7,9 @@ using System.Net;
 namespace Varelen.Mimoria.Client.DependencyInjection;
 
 /// <summary>
-/// Represents the configuration settings for connecting to a sharded Mimoria server.
+/// Represents the configuration settings for connecting to a Mimoria cluster.
 /// </summary>
-public sealed class ShardedMimoriaConfiguration
+public sealed class ClusterMimoriaConfiguration
 {
     /// <summary>
     /// Gets or sets the password for authenticating with the Mimoria servers.
@@ -19,7 +19,7 @@ public sealed class ShardedMimoriaConfiguration
     public string Password { get; set; } = string.Empty;
 
     /// <summary>
-    /// Gets or sets the list of IP endpoints for the sharded Mimoria servers.
+    /// Gets or sets the list of IP endpoints for the cluster Mimoria servers.
     /// 
     /// Default is an empty list.
     /// </summary>
