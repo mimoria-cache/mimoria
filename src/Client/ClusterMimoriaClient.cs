@@ -17,15 +17,15 @@ namespace Varelen.Mimoria.Client;
 /// </summary>
 public sealed class ClusterMimoriaClient : IClusterMimoriaClient
 {
-    private const int DefaultPrimaryRetryCount = 6;
-    private const int DefaultPrimaryRetryDelay = 1_000;
+    private const int DefaultRetryCount = 6;
+    private const int DefaultRetryDelay = 1_000;
 
     private readonly List<IMimoriaClient> mimoriaClients;
     private readonly Dictionary<string, List<Subscription>> subscriptions;
     private readonly string password;
     private readonly IPEndPoint[] ipEndPoints;
-    private readonly int primaryRetryCount;
-    private readonly int primaryRetryDelay;
+    private readonly int retryCount;
+    private readonly int retryDelay;
 
     /// <inheritdoc />
     public int? ServerId => this.mimoriaClients.Where(mimoriaClient => mimoriaClient.IsPrimary).First().ServerId;
@@ -45,7 +45,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <param name="password">The password of the servers.</param>
     /// <param name="ipEndPoints">The server IP endpoints.</param>
     public ClusterMimoriaClient(string password, params IPEndPoint[] ipEndPoints)
-        : this(password, DefaultPrimaryRetryCount, DefaultPrimaryRetryDelay, ipEndPoints)
+        : this(password, DefaultRetryCount, DefaultRetryDelay, ipEndPoints)
     {
 
     }
@@ -54,14 +54,14 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// Creates a new cluster client with the specified retry count and delay.
     /// </summary>
     /// <param name="password">The password of the servers.</param>
-    /// <param name="primaryRetryCount">The primary server retry count.</param>
-    /// <param name="primaryRetryDelay">The primary server retry delay.</param>
+    /// <param name="retryCount">The retry count.</param>
+    /// <param name="retryDelay">The retry delay.</param>
     /// <param name="ipEndPoints">The server IP endpoints.</param>
-    public ClusterMimoriaClient(string password, int primaryRetryCount, int primaryRetryDelay, params IPEndPoint[] ipEndPoints)
+    public ClusterMimoriaClient(string password, int retryCount, int retryDelay, params IPEndPoint[] ipEndPoints)
     {
         this.password = password;
-        this.primaryRetryCount = primaryRetryCount;
-        this.primaryRetryDelay = primaryRetryDelay;
+        this.retryCount = retryCount;
+        this.retryDelay = retryDelay;
         this.ipEndPoints = ipEndPoints;
         this.mimoriaClients = new List<IMimoriaClient>();
         this.subscriptions = new Dictionary<string, List<Subscription>>();
@@ -152,9 +152,9 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
 
     private async Task RetryPrimaryOperationAsync(Func<Task> operationAsync, int retry = 1)
     {
-        if (retry > this.primaryRetryCount)
+        if (retry > this.retryCount)
         {
-            throw new NoPrimaryAvailableException("No primary was available even after extended retrying");
+            throw new TimeoutException("No primary was available even after extended retrying");
         }
 
         try
@@ -163,7 +163,7 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         }
         catch (Exception exception) when (exception is TimeoutException or NoPrimaryAvailableException)
         {
-            await Task.Delay(this.primaryRetryDelay);
+            await Task.Delay(this.retryDelay);
 
             await this.RetryPrimaryOperationAsync(operationAsync, retry + 1);
         }
@@ -171,9 +171,9 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
 
     private async Task<T> RetryPrimaryOperationAsync<T>(Func<Task<T>> operationAsync, int retry = 1)
     {
-        if (retry > this.primaryRetryCount)
+        if (retry > this.retryCount)
         {
-            throw new NoPrimaryAvailableException("No primary was available even after extended retrying");
+            throw new TimeoutException("No primary was available even after extended retrying");
         }
 
         try
@@ -182,9 +182,28 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         }
         catch (Exception exception) when (exception is TimeoutException or NoPrimaryAvailableException)
         {
-            await Task.Delay(this.primaryRetryDelay);
+            await Task.Delay(this.retryDelay);
 
             return await this.RetryPrimaryOperationAsync(operationAsync, retry + 1);
+        }
+    }
+
+    private async Task<T> RetrySecondaryOperationAsync<T>(Func<Task<T>> operationAsync, int retry = 1)
+    {
+        if (retry > this.retryCount)
+        {
+            throw new TimeoutException("No server for reading was available even after extended retrying");
+        }
+
+        try
+        {
+            return await operationAsync();
+        }
+        catch (Exception exception) when (exception is TimeoutException or NoSecondaryAvailableException)
+        {
+            await Task.Delay(this.retryDelay);
+
+            return await this.RetrySecondaryOperationAsync(operationAsync, retry + 1);
         }
     }
 
@@ -201,8 +220,11 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public Task<string?> GetStringAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetStringAsync(key, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.GetStringAsync(key, cancellationToken);
+        });
     }
 
     /// <inheritdoc />
@@ -233,8 +255,11 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public Task<bool> ContainsListAsync(string key, string value, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.ContainsListAsync(key, value, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.ContainsListAsync(key, value, cancellationToken);
+        });
     }
 
     /// <inheritdoc />
@@ -273,15 +298,21 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public ValueTask<bool> ExistsAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.ExistsAsync(key, cancellationToken);
+        return new ValueTask<bool>(this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.ExistsAsync(key, cancellationToken).AsTask();
+        }));
     }
 
     /// <inheritdoc />
     public Task<byte[]?> GetBytesAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetBytesAsync(key, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.GetBytesAsync(key, cancellationToken);
+        });
     }
 
     /// <inheritdoc />
@@ -295,8 +326,11 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetListAsync(key, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.GetListAsync(key, cancellationToken);
+        });
     }
 
     /// <inheritdoc />
@@ -304,10 +338,18 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         => this.GetListEnumerableAsync(key, preferSecondary: false, cancellationToken);
 
     /// <inheritdoc />
-    public IAsyncEnumerable<string> GetListEnumerableAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
+    public async IAsyncEnumerable<string> GetListEnumerableAsync(string key, bool preferSecondary, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetListEnumerableAsync(key, cancellationToken);
+        IAsyncEnumerable<string> listEnumerable = await this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return Task.FromResult(mimoriaClient.GetListEnumerableAsync(key, cancellationToken));
+        });
+        
+        await foreach (string value in listEnumerable)
+        {
+            yield return value;
+        }
     }
 
     /// <inheritdoc />
@@ -317,15 +359,21 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetMapAsync(key, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.GetMapAsync(key, cancellationToken);
+        });
     }
 
     /// <inheritdoc />
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, bool preferSecondary, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetMapValueAsync(key, subKey, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.GetMapValueAsync(key, subKey, cancellationToken);
+        });
     }
 
     /// <inheritdoc />
@@ -335,8 +383,11 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public Task<T?> GetObjectBinaryAsync<T>(string key, bool preferSecondary, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetObjectBinaryAsync<T>(key, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.GetObjectBinaryAsync<T>(key, cancellationToken);
+        });
     }
 
     /// <inheritdoc />
@@ -346,8 +397,11 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     /// <inheritdoc />
     public Task<T?> GetObjectJsonAsync<T>(string key, bool preferSecondary, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
-        IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
-        return mimoriaClient.GetObjectJsonAsync<T>(key, jsonSerializerOptions, cancellationToken);
+        return this.RetrySecondaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetReadingClient(preferSecondary);
+            return mimoriaClient.GetObjectJsonAsync<T>(key, jsonSerializerOptions, cancellationToken);
+        });
     }
 
     /// <inheritdoc />

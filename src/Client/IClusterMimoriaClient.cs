@@ -32,7 +32,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// Is not supported for the cluster client.
     /// </summary>
     new bool IsPrimary { get; internal set; }
-    
+
     /// <summary>
     /// Gets a string value associated with the specified key.
     /// </summary>
@@ -40,6 +40,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the string value.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<string?> GetStringAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -49,6 +50,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token.</param>
     /// <returns>The async enumerable enumerating the values.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     IAsyncEnumerable<string> GetListEnumerableAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -58,6 +60,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the list of string values.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -68,6 +71,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains a boolean indicating whether the value exists in the list.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<bool> ContainsListAsync(string key, string value, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -78,6 +82,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the object of type <typeparamref name="T"/>.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<T?> GetObjectBinaryAsync<T>(string key, bool preferSecondary, CancellationToken cancellationToken = default) where T : IBinarySerializable, new();
 
     /// <summary>
@@ -89,6 +94,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="jsonSerializerOptions">The JSON serializer options.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the object of type <typeparamref name="T"/>.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<T?> GetObjectJsonAsync<T>(string key, bool preferSecondary, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -98,6 +104,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the byte array.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<byte[]?> GetBytesAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -108,6 +115,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the map value.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<MimoriaValue> GetMapValueAsync(string key, string subKey, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -117,6 +125,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the map.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
@@ -126,5 +135,6 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="preferSecondary">Whether to prefer a secondary node.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A value task that represents the asynchronous operation. The task result contains a boolean indicating whether the key exists.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
     ValueTask<bool> ExistsAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 }
