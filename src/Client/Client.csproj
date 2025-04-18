@@ -6,10 +6,10 @@
 		<Nullable>enable</Nullable>
 		<AssemblyName>Varelen.Mimoria.Client</AssemblyName>
 		<RootNamespace>Varelen.Mimoria.Client</RootNamespace>
-		<Version>0.0.1-alpha3</Version>
+		<Version>0.0.1-alpha4</Version>
 		<VersionPrefix>0.0.1</VersionPrefix>
-		<VersionSuffix>alpha3</VersionSuffix>
-		<PackageVersion>0.0.1-alpha3</PackageVersion>
+		<VersionSuffix>alpha4</VersionSuffix>
+		<PackageVersion>0.0.1-alpha4</PackageVersion>
 		<AssemblyVersion>0.0.1.0</AssemblyVersion>
 		<FileVersion>0.0.1.0</FileVersion>
 		<ProductVersion>0.0.1</ProductVersion>
