@@ -20,6 +20,11 @@ public static class ProtocolDefaults
     public const int MaxPasswordLength = 4096;
 
     /// <summary>
+    /// The maximum string size in bytes.
+    /// </summary>
+    public const uint MaxStringSizeBytes = 128_000_000;
+
+    /// <summary>
     /// The maximum allowed length for a byte array.
     /// </summary>
     public const int MaxByteArrayLength = 128_000_000;
