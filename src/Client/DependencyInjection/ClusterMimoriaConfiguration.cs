@@ -17,6 +17,16 @@ public sealed class ClusterMimoriaConfiguration
     public string Password { get; set; } = string.Empty;
 
     /// <summary>
+    /// Gets or sets the maximum number of retry attempts for operations before timing out.
+    /// </summary>
+    public int RetryCount { get; set; } = ClusterMimoriaClient.DefaultRetryCount;
+
+    /// <summary>
+    /// Gets or sets the delay in milliseconds between retry attempts.
+    /// </summary>
+    public int RetryDelay { get; set; } = ClusterMimoriaClient.DefaultRetryDelay;
+
+    /// <summary>
     /// Gets or sets the list of server endpoints for the cluster Mimoria servers.
     /// 
     /// Default is an empty list.

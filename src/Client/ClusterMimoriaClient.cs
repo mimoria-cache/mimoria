@@ -16,8 +16,15 @@ namespace Varelen.Mimoria.Client;
 /// </summary>
 public sealed class ClusterMimoriaClient : IClusterMimoriaClient
 {
-    private const int DefaultRetryCount = 6;
-    private const int DefaultRetryDelay = 1_000;
+    /// <summary>
+    /// The default retry count for operations.
+    /// </summary>
+    public const int DefaultRetryCount = 6;
+
+    /// <summary>
+    /// The default retry delay in milliseconds for operations.
+    /// </summary>
+    public const int DefaultRetryDelay = 1_000;
 
     private readonly List<IMimoriaClient> mimoriaClients;
     private readonly Dictionary<string, List<Subscription>> subscriptions;

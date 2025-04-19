@@ -166,7 +166,12 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IClusterMimoriaClient>(_ =>
         {
-            var clusterMimoriaClient = new ClusterMimoriaClient(configuration.Password, configuration.Endpoints.ToArray());
+            var clusterMimoriaClient = new ClusterMimoriaClient(
+                configuration.Password,
+                configuration.RetryCount,
+                configuration.RetryDelay,
+                configuration.Endpoints.ToArray());
+
             return new LazyConnectingClusterMimoriaClient(clusterMimoriaClient);
         });
 
