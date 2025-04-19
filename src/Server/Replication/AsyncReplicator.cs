@@ -168,6 +168,44 @@ public sealed class AsyncReplicator : IReplicator
         }
     }
 
+    public async ValueTask ReplicateSetCounterAsync(string key, long value)
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.SetCounter);
+            byteBuffer.WriteString(key);
+            byteBuffer.WriteLong(value);
+
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
+    public async ValueTask ReplicateIncrementCounterAsync(string key, long increment)
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.IncrementCounter);
+            byteBuffer.WriteString(key);
+            byteBuffer.WriteLong(increment);
+
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
     public async ValueTask ReplicateDeleteAsync(string key)
     {
         await this.operationsBuffersSemaphore.WaitAsync();

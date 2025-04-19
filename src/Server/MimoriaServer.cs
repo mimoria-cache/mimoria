@@ -577,6 +577,11 @@ public sealed class MimoriaServer : IMimoriaServer
 
         await this.cache.SetCounterAsync(key, value);
 
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateSetCounterAsync(key, value);
+        }
+
         await SendOkResponseAsync(tcpConnection, Operation.SetCounter, requestId, fireAndForget);
     }
 
@@ -586,6 +591,11 @@ public sealed class MimoriaServer : IMimoriaServer
         long increment = byteBuffer.ReadLong();
 
         long value = await this.cache.IncrementCounterAsync(key, increment);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateIncrementCounterAsync(key, increment);
+        }
 
         if (fireAndForget)
         {

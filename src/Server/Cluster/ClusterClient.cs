@@ -16,6 +16,7 @@ using Varelen.Mimoria.Core.Network;
 using Varelen.Mimoria.Server.Bully;
 using Varelen.Mimoria.Server.Cache;
 using Varelen.Mimoria.Server.Cache.Locking;
+using Varelen.Mimoria.Server.Extensions;
 
 namespace Varelen.Mimoria.Server.Cluster;
 
@@ -165,7 +166,7 @@ public sealed class ClusterClient
                 }
             case Operation.Batch:
                 {
-                    await  this.HandleBatchAsync(byteBuffer);
+                    await this.HandleBatchAsync(byteBuffer);
 
                     using var batchBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
                     batchBuffer.EndPacket();
@@ -226,7 +227,7 @@ public sealed class ClusterClient
                 {
                     case Operation.SetString:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             ByteString? value = byteBuffer.ReadByteString();
                             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
@@ -239,7 +240,7 @@ public sealed class ClusterClient
                         break;
                     case Operation.AddList:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             ByteString value = byteBuffer.ReadByteString()!;
                             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
                             uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
@@ -251,7 +252,7 @@ public sealed class ClusterClient
                         }
                     case Operation.RemoveList:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             ByteString value = byteBuffer.ReadByteString()!;
 
                             await LockIfNeededAsync(key);
@@ -261,7 +262,7 @@ public sealed class ClusterClient
                         }
                     case Operation.Delete:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
 
                             await LockIfNeededAsync(key);
 
@@ -270,7 +271,7 @@ public sealed class ClusterClient
                         }
                     case Operation.SetBytes:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             uint valueLength = byteBuffer.ReadVarUInt();
 
                             if (valueLength > ProtocolDefaults.MaxByteArrayLength)
@@ -291,14 +292,30 @@ public sealed class ClusterClient
                             else
                             {
                                 uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-                                await this.cache.SetBytesAsync(key, null, ttlMilliseconds, takeLock: false);
+                                await this.cache.SetBytesAsync(key, bytes: null, ttlMilliseconds, takeLock: false);
                             }
                             break;
                         }
                     case Operation.SetCounter:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            long value = byteBuffer.ReadLong();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.SetCounterAsync(key, value, takeLock: false);
+                            break;
+                        }
                     case Operation.IncrementCounter:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            long value = byteBuffer.ReadLong();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.IncrementCounterAsync(key, value, takeLock: false);
+                            break;
+                        }
                     case Operation.Bulk:
                         break;
                     case Operation.SetMapValue:
@@ -347,7 +364,7 @@ public sealed class ClusterClient
 
     public void Disconnect(bool reconnect = true)
     {
-        if (!Interlocked.Exchange(ref this.connected, false))
+        if (!Interlocked.Exchange(ref this.connected, value: false))
         {
             return;
         }
