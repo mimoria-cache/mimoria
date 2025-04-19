@@ -559,11 +559,11 @@ public sealed class MimoriaServer : IMimoriaServer
         else
         {
             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-            await this.cache.SetBytesAsync(key, null, ttlMilliseconds);
+            await this.cache.SetBytesAsync(key, bytes: null, ttlMilliseconds);
 
             if (this.replicator is not null)
             {
-                await this.replicator.ReplicateSetBytesAsync(key, null, ttlMilliseconds);
+                await this.replicator.ReplicateSetBytesAsync(key, value: null, ttlMilliseconds);
             }
         }
 
@@ -800,7 +800,7 @@ public sealed class MimoriaServer : IMimoriaServer
                             else
                             {
                                 uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-                                await this.cache.SetBytesAsync(key, null, ttlMilliseconds, takeLock: false);
+                                await this.cache.SetBytesAsync(key, bytes: null, ttlMilliseconds, takeLock: false);
                             }
 
                             responseBuffer.WriteByte((byte)Operation.SetBytes);

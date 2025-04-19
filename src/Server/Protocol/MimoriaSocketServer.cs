@@ -59,7 +59,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         }
         catch (Exception exception)
         {
-            this.logger.LogError(exception, "Error while processing handler for operation '{Operation}' and client '{Client}'", operation, tcpConnection.RemoteEndPoint);
+            this.logger.LogError(exception, "Unexpected error while processing handler for operation '{Operation}' and client '{Client}'", operation, tcpConnection.RemoteEndPoint);
             await SendErrorResponseAsync(tcpConnection, operation, requestId, $"An internal server error occurred while processing handler for operation '{operation}'. See server logs for more information.");
             await tcpConnection.DisconnectAsync();
         }
@@ -79,7 +79,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
         return tcpConnection.SendAsync(byteBuffer);
     }
 
-    private async Task OnDisconnected(TcpConnection tcpConnection)
+    private async Task OnDisconnectedAsync(TcpConnection tcpConnection)
     {
         if (this.Disconnected is not null)
         {
@@ -97,7 +97,7 @@ public class MimoriaSocketServer : AsyncTcpSocketServer, IMimoriaSocketServer
 
     protected override async Task HandleCloseConnectionAsync(TcpConnection tcpConnection)
     {
-        await this.OnDisconnected(tcpConnection);
+        await this.OnDisconnectedAsync(tcpConnection);
 
         this.logger.LogInformation("Closed connection '{RemoteEndPoint}'", tcpConnection.RemoteEndPoint);
     }
