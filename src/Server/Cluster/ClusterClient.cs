@@ -319,9 +319,36 @@ public sealed class ClusterClient
                     case Operation.Bulk:
                         break;
                     case Operation.SetMapValue:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            string mapKey = byteBuffer.ReadRequiredKey();
+                            MimoriaValue value = byteBuffer.ReadValue();
+                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                            
+                            await LockIfNeededAsync(key);
+                            
+                            await this.cache.SetMapValueAsync(key, mapKey, value, ttlMilliseconds, ProtocolDefaults.MaxMapCount, takeLock: false);
+                            break;
+                        }
                     case Operation.SetMap:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            uint mapCount = byteBuffer.ReadVarUInt();
+                            var map = new Dictionary<string, MimoriaValue>(capacity: (int)mapCount, StringComparer.Ordinal);
+                            for (int j = 0; j < mapCount; j++)
+                            {
+                                string mapKey = byteBuffer.ReadRequiredKey();
+                                MimoriaValue value = byteBuffer.ReadValue();
+
+                                map.Add(mapKey, value);
+                            }
+                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                            
+                            await LockIfNeededAsync(key);
+                            
+                            await this.cache.SetMapAsync(key, map, ttlMilliseconds, takeLock: false);
+                            break;
+                        }
                     default:
                         break;
                 }

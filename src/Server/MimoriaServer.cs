@@ -883,6 +883,11 @@ public sealed class MimoriaServer : IMimoriaServer
 
         await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds, ProtocolDefaults.MaxMapCount);
 
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateSetMapValueAsync(key, subKey, value, ttlMilliseconds);
+        }
+
         await SendOkResponseAsync(tcpConnection, Operation.SetMapValue, requestId, fireAndForget);
     }
 
@@ -926,6 +931,11 @@ public sealed class MimoriaServer : IMimoriaServer
         uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
         await this.cache.SetMapAsync(key, map, ttlMilliseconds);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateSetMapAsync(key, map, ttlMilliseconds);
+        }
 
         await SendOkResponseAsync(tcpConnection, Operation.SetMap, requestId, fireAndForget);
     }
