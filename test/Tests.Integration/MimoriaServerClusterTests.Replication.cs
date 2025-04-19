@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using Varelen.Mimoria.Core;
+
 namespace Varelen.Mimoria.Tests.Integration;
 
 public partial class MimoriaServerClusterTests : IAsyncLifetime
@@ -108,5 +110,42 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         Assert.Equal(55, secondIncrement);
         Assert.Equal(55, actualIncrementValue);
         Assert.Equal(100, actualSetValue);
+    }
+
+    [Fact]
+    public async Task Replication_Given_TwoNodes_When_SetMapValueAndSetMap_WithSyncReplication_Then_SecondaryAlsoHasKey()
+    {
+        // Arrange
+        const string keySetMapValue = "key:replication:map:value";
+        const string keySetMap = "key:replication:map:set";
+
+        await using var clusterMimoriaClient = await this.ConnectToClusterAsync();
+
+        var expectedMap = new Dictionary<string, MimoriaValue>
+        {
+            { "one", 2.4f },
+            { "two", 2.4d },
+            { "three", "value" },
+            { "four", true },
+            { "five", new byte[] { 1, 2, 3, 4 } }
+        };
+
+        // Act
+        await clusterMimoriaClient.SetMapValueAsync(keySetMapValue, "one", 2.4f);
+        await clusterMimoriaClient.SetMapValueAsync(keySetMapValue, "two", 2.4d);
+        await clusterMimoriaClient.SetMapValueAsync(keySetMapValue, "three", "value");
+        await clusterMimoriaClient.SetMapValueAsync(keySetMapValue, "four", true);
+        await clusterMimoriaClient.SetMapValueAsync(keySetMapValue, "five", new byte[] { 1, 2, 3, 4 });
+
+        await clusterMimoriaClient.SetMapAsync(keySetMap, expectedMap);
+
+        // Assert
+        var actualSetMapValue = await clusterMimoriaClient.GetMapAsync(keySetMapValue, preferSecondary: true);
+        var actualSetMap = await clusterMimoriaClient.GetMapAsync(keySetMap, preferSecondary: true);
+
+        Assert.Equal(expectedMap.Count, actualSetMapValue.Count);
+        Assert.Equal(expectedMap, actualSetMapValue);
+        Assert.Equal(expectedMap.Count, actualSetMap.Count);
+        Assert.Equal(expectedMap, actualSetMap);
     }
 }
