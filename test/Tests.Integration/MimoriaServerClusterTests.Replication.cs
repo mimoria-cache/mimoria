@@ -84,4 +84,29 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         // Assert
         Assert.Equal(value, actualValue);
     }
+
+    [Fact]
+    public async Task Replication_Given_TwoNodes_When_IncrementCounterAndSetCounter_WithSyncReplication_Then_SecondaryAlsoHasKey()
+    {
+        // Arrange
+        const string keyIncrement = "key:replication:counter:increment";
+        const string keySet = "key:replication:counter:set";
+
+        await using var clusterMimoriaClient = await this.ConnectToClusterAsync();
+
+        // Act
+        long firstIncrement = await clusterMimoriaClient.IncrementCounterAsync(keyIncrement, 5);
+        long secondIncrement = await clusterMimoriaClient.IncrementCounterAsync(keyIncrement, 50);
+
+        await clusterMimoriaClient.SetCounterAsync(keySet, 100);
+
+        // Assert
+        long? actualIncrementValue = await this.cacheOne.IncrementCounterAsync(keyIncrement, increment: 0);
+        long? actualSetValue = await this.cacheOne.IncrementCounterAsync(keySet, increment: 0);
+
+        Assert.Equal(5, firstIncrement);
+        Assert.Equal(55, secondIncrement);
+        Assert.Equal(55, actualIncrementValue);
+        Assert.Equal(100, actualSetValue);
+    }
 }
