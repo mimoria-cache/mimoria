@@ -38,7 +38,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
     public void Start(string ip, ushort port, ushort backlog = 50)
     {
-        if (Interlocked.Exchange(ref this.running, true))
+        if (Interlocked.Exchange(ref this.running, value: true))
         {
             return;
         }
@@ -47,7 +47,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
         {
             NoDelay = true
         };
-        this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+        this.socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, optionValue: true);
         this.socket.Bind(new IPEndPoint(IPAddress.Parse(ip), port));
         this.socket.Listen(backlog);
 
@@ -151,7 +151,7 @@ public abstract class AsyncTcpSocketServer : ISocketServer
 
     public async Task StopAsync()
     {
-        if (!Interlocked.Exchange(ref this.running, false))
+        if (!Interlocked.Exchange(ref this.running, value: false))
         {
             return;
         }

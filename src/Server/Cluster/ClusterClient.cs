@@ -16,6 +16,7 @@ using Varelen.Mimoria.Core.Network;
 using Varelen.Mimoria.Server.Bully;
 using Varelen.Mimoria.Server.Cache;
 using Varelen.Mimoria.Server.Cache.Locking;
+using Varelen.Mimoria.Server.Extensions;
 
 namespace Varelen.Mimoria.Server.Cluster;
 
@@ -165,7 +166,7 @@ public sealed class ClusterClient
                 }
             case Operation.Batch:
                 {
-                    await  this.HandleBatchAsync(byteBuffer);
+                    await this.HandleBatchAsync(byteBuffer);
 
                     using var batchBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
                     batchBuffer.EndPacket();
@@ -204,7 +205,7 @@ public sealed class ClusterClient
     private async Task HandleBatchAsync(IByteBuffer byteBuffer)
     {
         // TODO: Prime for dictionary, but better default?
-        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11);
+        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11, StringComparer.Ordinal);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         async ValueTask LockIfNeededAsync(string key)
@@ -226,7 +227,7 @@ public sealed class ClusterClient
                 {
                     case Operation.SetString:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             ByteString? value = byteBuffer.ReadByteString();
                             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
@@ -239,7 +240,7 @@ public sealed class ClusterClient
                         break;
                     case Operation.AddList:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             ByteString value = byteBuffer.ReadByteString()!;
                             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
                             uint valueTtlMilliseconds = byteBuffer.ReadVarUInt();
@@ -251,7 +252,7 @@ public sealed class ClusterClient
                         }
                     case Operation.RemoveList:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             ByteString value = byteBuffer.ReadByteString()!;
 
                             await LockIfNeededAsync(key);
@@ -261,7 +262,7 @@ public sealed class ClusterClient
                         }
                     case Operation.Delete:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
 
                             await LockIfNeededAsync(key);
 
@@ -270,7 +271,7 @@ public sealed class ClusterClient
                         }
                     case Operation.SetBytes:
                         {
-                            string key = byteBuffer.ReadString()!;
+                            string key = byteBuffer.ReadRequiredKey();
                             uint valueLength = byteBuffer.ReadVarUInt();
 
                             if (valueLength > ProtocolDefaults.MaxByteArrayLength)
@@ -291,20 +292,63 @@ public sealed class ClusterClient
                             else
                             {
                                 uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-                                await this.cache.SetBytesAsync(key, null, ttlMilliseconds, takeLock: false);
+                                await this.cache.SetBytesAsync(key, bytes: null, ttlMilliseconds, takeLock: false);
                             }
                             break;
                         }
                     case Operation.SetCounter:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            long value = byteBuffer.ReadLong();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.SetCounterAsync(key, value, takeLock: false);
+                            break;
+                        }
                     case Operation.IncrementCounter:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            long value = byteBuffer.ReadLong();
+
+                            await LockIfNeededAsync(key);
+
+                            await this.cache.IncrementCounterAsync(key, value, takeLock: false);
+                            break;
+                        }
                     case Operation.Bulk:
                         break;
                     case Operation.SetMapValue:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            string mapKey = byteBuffer.ReadRequiredKey();
+                            MimoriaValue value = byteBuffer.ReadValue();
+                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                            
+                            await LockIfNeededAsync(key);
+                            
+                            await this.cache.SetMapValueAsync(key, mapKey, value, ttlMilliseconds, ProtocolDefaults.MaxMapCount, takeLock: false);
+                            break;
+                        }
                     case Operation.SetMap:
-                        break;
+                        {
+                            string key = byteBuffer.ReadRequiredKey();
+                            uint mapCount = byteBuffer.ReadVarUInt();
+                            var map = new Dictionary<string, MimoriaValue>(capacity: (int)mapCount, StringComparer.Ordinal);
+                            for (int j = 0; j < mapCount; j++)
+                            {
+                                string mapKey = byteBuffer.ReadRequiredKey();
+                                MimoriaValue value = byteBuffer.ReadValue();
+
+                                map.Add(mapKey, value);
+                            }
+                            uint ttlMilliseconds = byteBuffer.ReadVarUInt();
+                            
+                            await LockIfNeededAsync(key);
+                            
+                            await this.cache.SetMapAsync(key, map, ttlMilliseconds, takeLock: false);
+                            break;
+                        }
                     default:
                         break;
                 }
@@ -347,7 +391,7 @@ public sealed class ClusterClient
 
     public void Disconnect(bool reconnect = true)
     {
-        if (!Interlocked.Exchange(ref this.connected, false))
+        if (!Interlocked.Exchange(ref this.connected, value: false))
         {
             return;
         }

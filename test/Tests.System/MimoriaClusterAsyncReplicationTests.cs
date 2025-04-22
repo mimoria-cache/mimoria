@@ -6,14 +6,13 @@ using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using DotNet.Testcontainers.Images;
 
-using System.Net;
-
 using Varelen.Mimoria.Client;
 
 namespace Varelen.Mimoria.Tests.System;
 
 public class MimoriaClusterAsyncReplicationTests : IAsyncLifetime
 {
+    public const string Ip = "127.0.0.1";
     private const string Password = "cool";
     private const string ClusterPassword = "coolcluster";
     private const int ReplicationIntervalMilliseconds = 3000;
@@ -120,9 +119,9 @@ public class MimoriaClusterAsyncReplicationTests : IAsyncLifetime
         const string value = "value";
 
         var clusterMimoriaClient = new ClusterMimoriaClient(Password, [
-            new IPEndPoint(IPAddress.Loopback, this.firstInstance.GetMappedPublicPort(6565)),
-            new IPEndPoint(IPAddress.Loopback, this.secondInstance.GetMappedPublicPort(6565)),
-            new IPEndPoint(IPAddress.Loopback, this.thirdInstance.GetMappedPublicPort(6565))
+            new ServerEndpoint(Ip, this.firstInstance.GetMappedPublicPort(6565)),
+            new ServerEndpoint(Ip, this.secondInstance.GetMappedPublicPort(6565)),
+            new ServerEndpoint(Ip, this.thirdInstance.GetMappedPublicPort(6565))
         ]);
         await clusterMimoriaClient.ConnectAsync();
 

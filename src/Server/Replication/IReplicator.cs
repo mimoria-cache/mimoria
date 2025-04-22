@@ -16,5 +16,13 @@ public interface IReplicator : IDisposable
 
     ValueTask ReplicateRemoveListAsync(string key, ByteString value);
 
+    ValueTask ReplicateSetMapValueAsync(string key, string subKey, MimoriaValue value, uint ttlMilliseconds);
+
+    ValueTask ReplicateSetMapAsync(string key, Dictionary<string, MimoriaValue> map, uint ttlMilliseconds);
+
+    ValueTask ReplicateSetCounterAsync(string key, long value);
+
+    ValueTask ReplicateIncrementCounterAsync(string key, long increment);
+
     ValueTask ReplicateDeleteAsync(string key);
 }

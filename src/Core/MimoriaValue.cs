@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Text;
 
 [assembly: InternalsVisibleTo("Varelen.Mimoria.Server")]
@@ -12,6 +13,7 @@ namespace Varelen.Mimoria.Core;
 /// <summary>
 /// Represents a value that can be stored in a Mimoria map.
 /// </summary>
+[StructLayout(LayoutKind.Auto)]
 public readonly struct MimoriaValue
 {
     /// <summary>

@@ -3,6 +3,7 @@
 // SPDX-License-Identifier: MIT
 
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 
 namespace Varelen.Mimoria.Server.Cache;
 
@@ -77,6 +78,7 @@ public sealed class ExpiringList<TValue>
         }
     }
 
+    [StructLayout(LayoutKind.Auto)]
     private readonly struct ListEntry<TValueEntry>
     {
         public TValueEntry Value { get; }

@@ -4,6 +4,9 @@
 
 namespace Varelen.Mimoria.Client;
 
+/// <summary>
+/// Represents the statistics of a Mimoria server.
+/// </summary>
 public readonly struct Stats
 {
     /// <summary>
@@ -41,6 +44,7 @@ public readonly struct Stats
     /// </summary>
     public float CacheHitRatio { get; init; }
 
+    /// <inheritdoc />
     public override string? ToString()
         => $"Uptime: {this.Uptime}, Connections: {this.Connections}, CacheSize: {this.CacheSize}, CacheHits: {this.CacheHits}, CacheMisses: {this.CacheMisses}, CacheHitRatio: {this.CacheHitRatio} ({this.CacheHitRatio * 100}%)";
 }

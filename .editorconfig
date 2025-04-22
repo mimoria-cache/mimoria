@@ -5,7 +5,7 @@ end_of_line = lf
 insert_final_newline = true
 
 [*.cs]
-file_header_template = SPDX-FileCopyrightText: 2024 varelen\n\nSPDX-License-Identifier: MIT
+file_header_template = SPDX-FileCopyrightText: 2025 varelen\n\nSPDX-License-Identifier: MIT
 
 indent_style = space
 indent_size = 4

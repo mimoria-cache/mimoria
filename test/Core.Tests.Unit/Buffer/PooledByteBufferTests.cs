@@ -219,12 +219,12 @@ public sealed class PooledByteBufferTests : IDisposable
     public void ReadString_When_ReadingStringLargerThanMaxStringSize_Then_ArgumentExceptionIsThrown()
     {
         // Arrange
-        this.sut.WriteVarUInt(PooledByteBuffer.MaxStringSizeBytes + 1);
-        this.sut.WriteBytes(new byte[PooledByteBuffer.MaxStringSizeBytes + 1]);
+        this.sut.WriteVarUInt(ProtocolDefaults.MaxStringSizeBytes + 1);
+        this.sut.WriteBytes(new byte[ProtocolDefaults.MaxStringSizeBytes + 1]);
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => this.sut.ReadString());
-        Assert.Equal($"Read string value length '{PooledByteBuffer.MaxStringSizeBytes + 1}' exceeded max allowed length '{PooledByteBuffer.MaxStringSizeBytes}'", exception.Message);
+        Assert.Equal($"Read string value length '{ProtocolDefaults.MaxStringSizeBytes + 1}' exceeded max allowed length '{ProtocolDefaults.MaxStringSizeBytes}'", exception.Message);
     }
 
     [Fact]
@@ -279,11 +279,11 @@ public sealed class PooledByteBufferTests : IDisposable
     public void WriteString_When_WritingStringLargerThanMaxStringSize_Then_ArgumentExceptionIsThrown()
     {
         // Arrange
-        var value = new string('t', (int)PooledByteBuffer.MaxStringSizeBytes + 1);
+        var value = new string('t', (int)ProtocolDefaults.MaxStringSizeBytes + 1);
 
         // Act & Assert
         var exception = Assert.Throws<ArgumentException>(() => this.sut.WriteString(value));
-        Assert.Equal($"Written string value length '{value.Length}' exceeded max allowed length '{PooledByteBuffer.MaxStringSizeBytes}'", exception.Message);
+        Assert.Equal($"Written string value length '{value.Length}' exceeded max allowed length '{ProtocolDefaults.MaxStringSizeBytes}'", exception.Message);
     }
 
     public void Dispose()

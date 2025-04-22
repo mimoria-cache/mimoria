@@ -41,7 +41,7 @@ public sealed class AutoRemovingAsyncKeyedLocking : IDisposable
     private readonly ConcurrentDictionary<string, ReferenceCountedReleaser> releasersByKey;
 
     public AutoRemovingAsyncKeyedLocking(int initialCapacity)
-        => this.releasersByKey = new(Environment.ProcessorCount, capacity: initialCapacity);
+        => this.releasersByKey = new(Environment.ProcessorCount, capacity: initialCapacity, StringComparer.Ordinal);
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public async ValueTask<ReferenceCountedReleaser?> LockAsync(string key, bool takeLock = true)

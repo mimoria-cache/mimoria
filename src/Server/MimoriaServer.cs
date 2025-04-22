@@ -559,11 +559,11 @@ public sealed class MimoriaServer : IMimoriaServer
         else
         {
             uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-            await this.cache.SetBytesAsync(key, null, ttlMilliseconds);
+            await this.cache.SetBytesAsync(key, bytes: null, ttlMilliseconds);
 
             if (this.replicator is not null)
             {
-                await this.replicator.ReplicateSetBytesAsync(key, null, ttlMilliseconds);
+                await this.replicator.ReplicateSetBytesAsync(key, value: null, ttlMilliseconds);
             }
         }
 
@@ -577,6 +577,11 @@ public sealed class MimoriaServer : IMimoriaServer
 
         await this.cache.SetCounterAsync(key, value);
 
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateSetCounterAsync(key, value);
+        }
+
         await SendOkResponseAsync(tcpConnection, Operation.SetCounter, requestId, fireAndForget);
     }
 
@@ -586,6 +591,11 @@ public sealed class MimoriaServer : IMimoriaServer
         long increment = byteBuffer.ReadLong();
 
         long value = await this.cache.IncrementCounterAsync(key, increment);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateIncrementCounterAsync(key, increment);
+        }
 
         if (fireAndForget)
         {
@@ -607,7 +617,7 @@ public sealed class MimoriaServer : IMimoriaServer
         responseBuffer.WriteVarUInt(operationCount);
 
         // TODO: Prime for dictionary, but better default?
-        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11);
+        var keyReleasers = new Dictionary<string, ReferenceCountedReleaser?>(capacity: 11, StringComparer.Ordinal);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         async ValueTask LockIfNeededAsync(string key)
@@ -800,7 +810,7 @@ public sealed class MimoriaServer : IMimoriaServer
                             else
                             {
                                 uint ttlMilliseconds = byteBuffer.ReadVarUInt();
-                                await this.cache.SetBytesAsync(key, null, ttlMilliseconds, takeLock: false);
+                                await this.cache.SetBytesAsync(key, bytes: null, ttlMilliseconds, takeLock: false);
                             }
 
                             responseBuffer.WriteByte((byte)Operation.SetBytes);
@@ -873,6 +883,11 @@ public sealed class MimoriaServer : IMimoriaServer
 
         await this.cache.SetMapValueAsync(key, subKey, value, ttlMilliseconds, ProtocolDefaults.MaxMapCount);
 
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateSetMapValueAsync(key, subKey, value, ttlMilliseconds);
+        }
+
         await SendOkResponseAsync(tcpConnection, Operation.SetMapValue, requestId, fireAndForget);
     }
 
@@ -904,7 +919,7 @@ public sealed class MimoriaServer : IMimoriaServer
             throw new ArgumentException($"Read map count '{count}' exceeded max allowed count '{ProtocolDefaults.MaxMapCount}'");
         }
 
-        var map = new Dictionary<string, MimoriaValue>(capacity: (int)count);
+        var map = new Dictionary<string, MimoriaValue>(capacity: (int)count, StringComparer.Ordinal);
         for (int i = 0; i < count; i++)
         {
             string subKey = byteBuffer.ReadRequiredKey();
@@ -916,6 +931,11 @@ public sealed class MimoriaServer : IMimoriaServer
         uint ttlMilliseconds = byteBuffer.ReadVarUInt();
 
         await this.cache.SetMapAsync(key, map, ttlMilliseconds);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateSetMapAsync(key, map, ttlMilliseconds);
+        }
 
         await SendOkResponseAsync(tcpConnection, Operation.SetMap, requestId, fireAndForget);
     }

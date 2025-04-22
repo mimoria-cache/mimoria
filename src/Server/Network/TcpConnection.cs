@@ -51,7 +51,7 @@ public sealed class TcpConnection : ITcpConnection
 
     public async Task DisconnectAsync()
     {
-        if (!Interlocked.Exchange(ref this.connected, false))
+        if (!Interlocked.Exchange(ref this.connected, value: false))
         {
             return;
         }

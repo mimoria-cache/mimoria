@@ -39,9 +39,7 @@ public static class MimoriaServiceCollectionExtensions
         services.AddSingleton<IMimoriaClient>(_ =>
         {
             var mimoriaClient = new MimoriaClient(configuration.Host, configuration.Port, configuration.Password, new MimoriaSocketClient(configuration.OperationTimeout, configuration.OperationRetryPolicy), configuration.ConnectRetryPolicy);
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            mimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return mimoriaClient;
+            return new LazyConnectingMimoriaClient(mimoriaClient);
         });
 
         return services;
@@ -85,9 +83,8 @@ public static class MimoriaServiceCollectionExtensions
         {
             var mimoriaClient = new MimoriaClient(configuration.Host, configuration.Port, configuration.Password, new MimoriaSocketClient(configuration.OperationTimeout, configuration.OperationRetryPolicy), configuration.ConnectRetryPolicy);
             var microCacheMimoriaClient = new MicrocacheMimoriaClient(mimoriaClient, expiration);
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            microCacheMimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return microCacheMimoriaClient;
+            
+            return new LazyConnectingMimoriaClient(mimoriaClient);
         });
 
         return services;
@@ -118,10 +115,8 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
         {
-            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IPEndPoints.ToArray());
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            sharedMimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return sharedMimoriaClient;
+            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.Endpoints.ToArray());
+            return new LazyConnectingShardedMimoriaClient(sharedMimoriaClient);
         });
 
         return services;
@@ -137,11 +132,47 @@ public static class MimoriaServiceCollectionExtensions
     {
         services.AddSingleton<IShardedMimoriaClient>(_ =>
         {
-            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.IPEndPoints.ToArray());
+            var sharedMimoriaClient = new ShardedMimoriaClient(configuration.Password, configuration.Endpoints.ToArray());
             var microCacheMimoriaClient = new MicrocacheMimoriaClient(sharedMimoriaClient);
-            // TODO: Is this the correct way or should each method in the client check and establish the connection lazy if needed?
-            microCacheMimoriaClient.ConnectAsync().GetAwaiter().GetResult();
-            return microCacheMimoriaClient;
+            
+            return new LazyConnectingShardedMimoriaClient(microCacheMimoriaClient);
+        });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Adds the cluster Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configure">An action to configure the <see cref="ClusterMimoriaConfiguration"/>.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    public static IServiceCollection AddClusterMimoria(this IServiceCollection services, Action<ClusterMimoriaConfiguration> configure)
+    {
+        var clusterMimoriaConfiguration = new ClusterMimoriaConfiguration();
+
+        configure(clusterMimoriaConfiguration);
+
+        return services.AddClusterMimoria(clusterMimoriaConfiguration);
+    }
+
+    /// <summary>
+    /// Adds the cluster Mimoria client services to the specified <see cref="IServiceCollection"/> with the specified configuration.
+    /// </summary>
+    /// <param name="services">The <see cref="IServiceCollection"/> to add the services to.</param>
+    /// <param name="configuration">The <see cref="ClusterMimoriaConfiguration"/> to use for configuring the client.</param>
+    /// <returns>The <see cref="IServiceCollection"/> so that additional calls can be chained.</returns>
+    public static IServiceCollection AddClusterMimoria(this IServiceCollection services, ClusterMimoriaConfiguration configuration)
+    {
+        services.AddSingleton<IClusterMimoriaClient>(_ =>
+        {
+            var clusterMimoriaClient = new ClusterMimoriaClient(
+                configuration.Password,
+                configuration.RetryCount,
+                configuration.RetryDelay,
+                configuration.Endpoints.ToArray());
+
+            return new LazyConnectingClusterMimoriaClient(clusterMimoriaClient);
         });
 
         return services;

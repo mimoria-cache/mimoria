@@ -187,7 +187,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
     private async ValueTask SendVictoryMessageAsync()
     {
-        int previousLeaderId = -1;
+        int victoryPreviousLeaderId = -1;
 
         foreach (var (_, clusterConnection) in this.clusterServer.Clients)
         {
@@ -203,16 +203,16 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
             bool needToResync = response.ReadBool();
             if (needToResync)
             {
-                previousLeaderId = response.ReadInt();
+                victoryPreviousLeaderId = response.ReadInt();
             }
         }
 
-        if (previousLeaderId != -1)
+        if (victoryPreviousLeaderId != -1)
         {
-            this.logger.LogDebug("We need to resync with the previous leader '{PreviousLeaderId}'", previousLeaderId);
+            this.logger.LogDebug("We need to resync with the previous leader '{PreviousLeaderId}'", victoryPreviousLeaderId);
 
             // TODO: What if the previous leader is not connected?
-            if (this.clusterServer.Clients.TryGetValue(previousLeaderId, out var client))
+            if (this.clusterServer.Clients.TryGetValue(victoryPreviousLeaderId, out var client))
             {
                 uint requestId = client.IncrementRequestId();
 
@@ -221,7 +221,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
                 _ = await client.SendAndWaitForResponseAsync(requestId, syncRequestBuffer);
 
-                this.logger.LogInformation("Resync with previous leader '{PreviousLeaderId}' completed", previousLeaderId);
+                this.logger.LogInformation("Resync with previous leader '{PreviousLeaderId}' completed", victoryPreviousLeaderId);
             }
         }
     }

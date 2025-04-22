@@ -30,16 +30,6 @@ public sealed class PooledByteBuffer : IByteBuffer
     public const byte BufferGrowFactor = 2;
 
     /// <summary>
-    /// The maximum string size in bytes.
-    /// </summary>
-    public const uint MaxStringSizeBytes = 128_000_000;
-
-    /// <summary>
-    /// The maximum byte array size in bytes.
-    /// </summary>
-    public const uint MaxByteArraySizeBytes = 128_000_000;
-
-    /// <summary>
     /// The byte size of a GUID.
     /// </summary>
     private const byte GuidByteSize = 16;
@@ -320,9 +310,9 @@ public sealed class PooledByteBuffer : IByteBuffer
         try
         {
             int written = Encoding.UTF8.GetBytes(value.AsSpan(), data.AsSpan());
-            if (written > MaxStringSizeBytes)
+            if (written > ProtocolDefaults.MaxStringSizeBytes)
             {
-                throw new ArgumentException($"Written string value length '{written}' exceeded max allowed length '{MaxStringSizeBytes}'");
+                throw new ArgumentException($"Written string value length '{written}' exceeded max allowed length '{ProtocolDefaults.MaxStringSizeBytes}'");
             }
 
             this.WriteVarUInt((uint)written);
@@ -536,9 +526,9 @@ public sealed class PooledByteBuffer : IByteBuffer
 
         this.ThrowIfOutOfRange(length);
 
-        if (length > MaxStringSizeBytes)
+        if (length > ProtocolDefaults.MaxStringSizeBytes)
         {
-            throw new ArgumentException($"Read string value length '{length}' exceeded max allowed length '{MaxStringSizeBytes}'");
+            throw new ArgumentException($"Read string value length '{length}' exceeded max allowed length '{ProtocolDefaults.MaxStringSizeBytes}'");
         }
 
         return true;
