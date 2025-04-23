@@ -32,6 +32,31 @@ public partial class MimoriaServerTests : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Bulk_Given_MimoriaClient_When_BulkSetStringGetStringWithFireAndForget_Then_CorrectValueIsReturned()
+    {
+        // Arrange
+        const string key = "bulk:string:key";
+        const string value = "value";
+
+        await using var mimoriaClient = await this.ConnectToServerAsync();
+
+        // Act
+        IBulkOperation bulkOperation = mimoriaClient.Bulk();
+        bulkOperation.SetString(key, value);
+        bulkOperation.GetString(key);
+
+        ImmutableList<object?> result = await bulkOperation.ExecuteAsync(fireAndForget: true);
+
+        // Wait for the server to process the request so we can assert the value later
+        await Task.Delay(100);
+
+        // Assert
+        Assert.Empty(result);
+        string? actualValue = await mimoriaClient.GetStringAsync(key);
+        Assert.Equal(value, actualValue);
+    }
+
+    [Fact]
     public async Task Bulk_Given_MimoriaClient_When_BulkIncrementCounter_Then_CorrectValueIsReturned()
     {
         // Arrange
