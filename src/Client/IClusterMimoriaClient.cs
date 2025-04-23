@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Text.Json;
 
 using Varelen.Mimoria.Core;
@@ -61,7 +62,7 @@ public interface IClusterMimoriaClient : IMimoriaClient
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
     /// <returns>A task that represents the asynchronous operation. The task result contains the list of string values.</returns>
     /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
-    Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
+    Task<ImmutableList<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Checks if a value exists in the list at the specified key.

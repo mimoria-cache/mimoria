@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -333,11 +334,11 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
         => this.GetBytesAsync(key, preferSecondary: false, cancellationToken);
 
     /// <inheritdoc />
-    public Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    public Task<ImmutableList<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
         => this.GetListAsync(key, preferSecondary: false, cancellationToken);
 
     /// <inheritdoc />
-    public Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
+    public Task<ImmutableList<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         return this.RetrySecondaryOperationAsync(() =>
         {

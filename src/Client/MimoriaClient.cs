@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -226,7 +227,7 @@ public sealed class MimoriaClient : IMimoriaClient
     }
 
     /// <inheritdoc />
-    public async Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
@@ -238,7 +239,7 @@ public sealed class MimoriaClient : IMimoriaClient
         uint count = response.ReadUInt();
         if (count == 0)
         {
-            return new List<string>();
+            return ImmutableList<string>.Empty;
         }
 
         var list = new List<string>(capacity: (int)count);
@@ -246,7 +247,7 @@ public sealed class MimoriaClient : IMimoriaClient
         {
             list.Add(response.ReadString()!);
         }
-        return list;
+        return list.ToImmutableList();
     }
 
     /// <inheritdoc />

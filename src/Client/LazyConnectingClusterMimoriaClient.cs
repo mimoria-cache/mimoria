@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -54,7 +55,7 @@ public sealed class LazyConnectingClusterMimoriaClient : LazyConnectingMimoriaCl
     }
 
     /// <inheritdoc />
-    public async Task<List<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<string>> GetListAsync(string key, bool preferSecondary, CancellationToken cancellationToken = default)
     {
         await base.EnsureConnectedAsync();
 

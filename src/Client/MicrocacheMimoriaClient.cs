@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Caching.Memory;
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -134,14 +135,14 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.ExistsAsync(key, cancellationToken);
     }
 
-    public Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    public Task<ImmutableList<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
         {
             var list = listObject as List<string>
                 ?? throw new ArgumentException($"Value stored under '{key}' is not a list");
 
-            return Task.FromResult(list!);
+            return Task.FromResult(list!.ToImmutableList());
         }
 
         return this.mimoriaClient.GetListAsync(key, cancellationToken);
@@ -149,7 +150,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
 
     public async IAsyncEnumerable<string> GetListEnumerableAsync(string key, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
-        List<string> list = await this.GetListAsync(key, cancellationToken);
+        ImmutableList<string> list = await this.GetListAsync(key, cancellationToken);
         foreach (string item in list)
         {
             yield return item;

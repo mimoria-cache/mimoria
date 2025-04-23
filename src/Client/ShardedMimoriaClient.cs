@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -116,7 +117,7 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     }
 
     /// <inheritdoc />
-    public async Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetMimoriaClient(key);
         return await mimoriaClient.GetListAsync(key, cancellationToken);
