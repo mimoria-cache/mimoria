@@ -8,6 +8,8 @@ using Microsoft.Extensions.Options;
 
 using NSubstitute;
 
+using System.Collections.Immutable;
+
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Server;
 using Varelen.Mimoria.Server.Bully;
@@ -75,7 +77,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         byte[]? bytesValue = await clusterMimoriaClient.GetBytesAsync("bytes", preferSecondary: true);
         byte[]? bytesValueNull = await clusterMimoriaClient.GetBytesAsync("bytes:null", preferSecondary: true);
 
-        List<string> listValue = await clusterMimoriaClient.GetListAsync("list", preferSecondary: true);
+        ImmutableList<string> listValue = await clusterMimoriaClient.GetListAsync("list", preferSecondary: true);
         
         Dictionary<string, MimoriaValue> mapValue = await clusterMimoriaClient.GetMapAsync("map", preferSecondary: true);
         

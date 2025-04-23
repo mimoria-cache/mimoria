@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using Varelen.Mimoria.Client;
 
 namespace Varelen.Mimoria.Tests.Integration;
@@ -22,12 +23,37 @@ public partial class MimoriaServerTests : IAsyncLifetime
         bulkOperation.SetString(key, value);
         bulkOperation.GetString(key);
 
-        List<object?> result = await bulkOperation.ExecuteAsync();
+        ImmutableList<object?> result = await bulkOperation.ExecuteAsync();
 
         // Assert
         Assert.Equal(2, result.Count);
         Assert.True((bool)result[0]!);
         Assert.Equal(value, result[1]);
+    }
+
+    [Fact]
+    public async Task Bulk_Given_MimoriaClient_When_BulkSetStringGetStringWithFireAndForget_Then_CorrectValueIsReturned()
+    {
+        // Arrange
+        const string key = "bulk:string:key";
+        const string value = "value";
+
+        await using var mimoriaClient = await this.ConnectToServerAsync();
+
+        // Act
+        IBulkOperation bulkOperation = mimoriaClient.Bulk();
+        bulkOperation.SetString(key, value);
+        bulkOperation.GetString(key);
+
+        ImmutableList<object?> result = await bulkOperation.ExecuteAsync(fireAndForget: true);
+
+        // Wait for the server to process the request so we can assert the value later
+        await Task.Delay(100);
+
+        // Assert
+        Assert.Empty(result);
+        string? actualValue = await mimoriaClient.GetStringAsync(key);
+        Assert.Equal(value, actualValue);
     }
 
     [Fact]
@@ -43,7 +69,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         bulkOperation.IncrementCounter(key, 100);
         bulkOperation.IncrementCounter(key, 200);
 
-        List<object?> result = await bulkOperation.ExecuteAsync();
+        ImmutableList<object?> result = await bulkOperation.ExecuteAsync();
 
         // Assert
         Assert.Equal(2, result.Count);

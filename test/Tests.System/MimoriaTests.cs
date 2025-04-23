@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using Varelen.Mimoria.Client;
 
 namespace Varelen.Mimoria.Tests.System;
@@ -43,7 +44,7 @@ public class MimoriaTests : IClassFixture<MimoriaContainerFixture>
         bulk.AddList("list", "two");
         bulk.ContainsList("list", "three");
 
-        List<object?> result = await bulk.ExecuteAsync();
+        ImmutableList<object?> result = await bulk.ExecuteAsync();
 
         // Assert
         Assert.Equal(3, result.Count);

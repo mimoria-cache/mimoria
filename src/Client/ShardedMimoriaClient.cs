@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
 
@@ -116,7 +117,7 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     }
 
     /// <inheritdoc />
-    public async Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetMimoriaClient(key);
         return await mimoriaClient.GetListAsync(key, cancellationToken);
@@ -289,15 +290,15 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     public IBulkOperation Bulk()
         => new ShardedBulkOperation(this);
 
-    internal static async Task<List<object?>> ExecuteBulkAsync(ShardedBulkOperation shardedBulkOperation, CancellationToken cancellationToken = default)
+    internal static async Task<ImmutableList<object?>> ExecuteBulkAsync(ShardedBulkOperation shardedBulkOperation, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         var responses = new List<object?>();
         foreach (var (_, bulkOperation) in shardedBulkOperation.BulkOperations)
         {
-            List<object?> response = await bulkOperation.ExecuteAsync(cancellationToken);
+            ImmutableList<object?> response = await bulkOperation.ExecuteAsync(fireAndForget, cancellationToken);
             responses.AddRange(response);
         }
-        return responses;
+        return responses.ToImmutableList();
     }
 
     internal MimoriaClient GetMimoriaClient(int serverId)

@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Net;
 using System.Net.Sockets;
 using System.Runtime.CompilerServices;
@@ -226,7 +227,7 @@ public sealed class MimoriaClient : IMimoriaClient
     }
 
     /// <inheritdoc />
-    public async Task<List<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
@@ -238,7 +239,7 @@ public sealed class MimoriaClient : IMimoriaClient
         uint count = response.ReadUInt();
         if (count == 0)
         {
-            return new List<string>();
+            return ImmutableList<string>.Empty;
         }
 
         var list = new List<string>(capacity: (int)count);
@@ -246,7 +247,7 @@ public sealed class MimoriaClient : IMimoriaClient
         {
             list.Add(response.ReadString()!);
         }
-        return list;
+        return list.ToImmutableList();
     }
 
     /// <inheritdoc />
@@ -567,7 +568,7 @@ public sealed class MimoriaClient : IMimoriaClient
         => new BulkOperation(this);
 
     /// <inheritdoc />
-    public async Task<List<object?>> ExecuteBulkAsync(BulkOperation bulkOperation, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<object?>> ExecuteBulkAsync(BulkOperation bulkOperation, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
@@ -577,6 +578,12 @@ public sealed class MimoriaClient : IMimoriaClient
         byteBuffer.EndPacket();
 
         bulkOperation.Dispose();
+
+        if (fireAndForget)
+        {
+            await this.mimoriaSocketClient.SendAndForgetAsync(byteBuffer, cancellationToken);
+            return ImmutableList<object?>.Empty;
+        }
 
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
         uint operationCount = response.ReadVarUInt();
@@ -675,7 +682,7 @@ public sealed class MimoriaClient : IMimoriaClient
             }
         }
 
-        return list;
+        return list.ToImmutableList();
     }
 
     /// <inheritdoc />

@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 
 namespace Varelen.Mimoria.Client;
@@ -108,8 +109,8 @@ public class ShardedBulkOperation : IBulkOperation, IDisposable
     }
 
     /// <inheritdoc />
-    public Task<List<object?>> ExecuteAsync(CancellationToken cancellationToken = default)
-        => ShardedMimoriaClient.ExecuteBulkAsync(this, cancellationToken);
+    public Task<ImmutableList<object?>> ExecuteAsync(bool fireAndForget = false, CancellationToken cancellationToken = default)
+        => ShardedMimoriaClient.ExecuteBulkAsync(this, fireAndForget, cancellationToken);
 
     /// <inheritdoc />
     public void Dispose()

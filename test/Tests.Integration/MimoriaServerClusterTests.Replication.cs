@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using Varelen.Mimoria.Core;
 
 namespace Varelen.Mimoria.Tests.Integration;
@@ -62,7 +63,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await clusterMimoriaClient.RemoveListAsync(key, values[2]);
 
-        List<string> actualValues = await clusterMimoriaClient.GetListAsync(key, preferSecondary: true);
+        ImmutableList<string> actualValues = await clusterMimoriaClient.GetListAsync(key, preferSecondary: true);
 
         // Assert
         Assert.Equal(3, actualValues.Count);
