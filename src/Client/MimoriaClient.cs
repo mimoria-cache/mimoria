@@ -568,7 +568,7 @@ public sealed class MimoriaClient : IMimoriaClient
         => new BulkOperation(this);
 
     /// <inheritdoc />
-    public async Task<List<object?>> ExecuteBulkAsync(BulkOperation bulkOperation, CancellationToken cancellationToken = default)
+    public async Task<ImmutableList<object?>> ExecuteBulkAsync(BulkOperation bulkOperation, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         uint requestId = this.GetNextRequestId();
 
@@ -578,6 +578,12 @@ public sealed class MimoriaClient : IMimoriaClient
         byteBuffer.EndPacket();
 
         bulkOperation.Dispose();
+
+        if (fireAndForget)
+        {
+            await this.mimoriaSocketClient.SendAndForgetAsync(byteBuffer, cancellationToken);
+            return ImmutableList<object?>.Empty;
+        }
 
         using IByteBuffer response = await this.mimoriaSocketClient.SendAndWaitForResponseAsync(requestId, byteBuffer, cancellationToken);
         uint operationCount = response.ReadVarUInt();
@@ -676,7 +682,7 @@ public sealed class MimoriaClient : IMimoriaClient
             }
         }
 
-        return list;
+        return list.ToImmutableList();
     }
 
     /// <inheritdoc />

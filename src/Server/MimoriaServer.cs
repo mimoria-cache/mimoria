@@ -857,6 +857,13 @@ public sealed class MimoriaServer : IMimoriaServer
 
         responseBuffer.EndPacket();
 
+        if (fireAndForget)
+        {
+            // TODO: Currently we write to the response buffer but don't use it, maybe a NoOp buffer implementation?
+            responseBuffer.Dispose();
+            return;
+        }
+
         await tcpConnection.SendAsync(responseBuffer);
     }
 

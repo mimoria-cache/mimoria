@@ -2,6 +2,8 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
+
 namespace Varelen.Mimoria.Client;
 
 /// <summary>
@@ -81,7 +83,8 @@ public interface IBulkOperation
     /// <summary>
     /// Executes all the operations in the bulk operation asynchronously.
     /// </summary>
+    /// <param name="fireAndForget">if set to <c>true</c>, the operation will not wait for the result and return an empty list instantly after the request is sent.</param>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
-    /// <returns>A task that represents the asynchronous operation. The task result contains a list of results for each operation in the bulk operation (in the same order the methods were called).</returns>
-    Task<List<object?>> ExecuteAsync(CancellationToken cancellationToken = default);
+    /// <returns>A task that represents the asynchronous operation. The task result contains a list of results for each operation in the bulk operation (in the same order the methods were called) or an empty list if fire and forget.</returns>
+    Task<ImmutableList<object?>> ExecuteAsync(bool fireAndForget = false, CancellationToken cancellationToken = default);
 }
