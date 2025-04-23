@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using Varelen.Mimoria.Client;
 
 namespace Varelen.Mimoria.Tests.Integration;
@@ -22,7 +23,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         bulkOperation.SetString(key, value);
         bulkOperation.GetString(key);
 
-        List<object?> result = await bulkOperation.ExecuteAsync();
+        ImmutableList<object?> result = await bulkOperation.ExecuteAsync();
 
         // Assert
         Assert.Equal(2, result.Count);
@@ -43,7 +44,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         bulkOperation.IncrementCounter(key, 100);
         bulkOperation.IncrementCounter(key, 200);
 
-        List<object?> result = await bulkOperation.ExecuteAsync();
+        ImmutableList<object?> result = await bulkOperation.ExecuteAsync();
 
         // Assert
         Assert.Equal(2, result.Count);

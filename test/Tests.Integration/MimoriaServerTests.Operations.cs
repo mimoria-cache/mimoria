@@ -2,6 +2,7 @@
 //
 // SPDX-License-Identifier: MIT
 
+using System.Collections.Immutable;
 using Varelen.Mimoria.Client;
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
@@ -217,7 +218,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         bool contains = await mimoriaClient.ContainsListAsync(key, value);
         bool containsNot = await mimoriaClient.ContainsListAsync(key, $"{value}random");
 
-        List<string> actualValue = await mimoriaClient.GetListAsync(key);
+        ImmutableList<string> actualValue = await mimoriaClient.GetListAsync(key);
 
         // Assert
         Assert.True(contains);
