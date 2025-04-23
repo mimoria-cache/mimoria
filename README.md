@@ -134,7 +134,7 @@ await mimoriaClient.AddListAsync("elements", "Air", ttl: default, valueTtl: Time
 
 await Task.Delay(TimeSpan.FromSeconds(2));
 
-List<string> list = await mimoriaClient.GetListAsync("elements");
+ImmutableList<string> list = await mimoriaClient.GetListAsync("elements");
 // List only contains 'Water'
 ```
 
