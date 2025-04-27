@@ -155,7 +155,7 @@ public sealed class MimoriaServer : IMimoriaServer
         {
         if (!this.bullyAlgorithm!.IsLeader)
         {
-            Debug.Assert(this.clusterClients.ContainsKey(this.bullyAlgorithm.Leader));
+                Debug.Assert(this.clusterClients.ContainsKey(this.bullyAlgorithm.Leader), $"Leader client '{this.bullyAlgorithm.Leader}' not found in cluster clients (cluster clients = '{string.Join(", ", this.clusterClients.Keys)}')");
 
             this.logger.LogInformation("Sending resync request to leader '{Leader}'", this.bullyAlgorithm.Leader);
 
