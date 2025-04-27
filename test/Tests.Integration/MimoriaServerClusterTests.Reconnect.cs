@@ -61,7 +61,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Port = this.secondPort, Password = Password, Cluster = new MimoriaOptions.ClusterOptions() { Id = 2, Port = this.secondClusterPort, Password = ClusterPassword, Nodes = [new() { Id = 1, Host = "127.0.0.1", Port = this.firstClusterPort }] } });
 
-        this.mimoriaServerTwo = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cacheTwo, this.metrics);
+        this.mimoriaServerTwo = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(this.loggerFactory.CreateLogger<MimoriaSocketServer>(), this.metrics), this.cacheTwo, this.metrics);
         await this.mimoriaServerTwo.StartAsync();
 
         await clusterMimoriaClient.SetStringAsync(key, value);
