@@ -43,11 +43,10 @@ public partial class MimoriaServerTests : IAsyncLifetime
         (this.mimoriaServerOne, port) = await this.CreateAndStartServerAsync();
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
         this.cache.Dispose();
-        return Task.CompletedTask;
     }
 
     private static ushort GetFreePort()

@@ -31,7 +31,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await using var clusterMimoriaClient = await this.ConnectToClusterAsync();
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         await clusterMimoriaClient.SetStringAsync(key, value);
 
@@ -56,7 +56,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await using var clusterMimoriaClient = await this.ConnectToClusterAsync();
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Port = this.secondPort, Password = Password, Cluster = new MimoriaOptions.ClusterOptions() { Id = 2, Port = this.secondClusterPort, Password = ClusterPassword, Nodes = [new() { Id = 1, Host = "127.0.0.1", Port = this.firstClusterPort }] } });

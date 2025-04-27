@@ -37,7 +37,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         Assert.True(this.mimoriaServerTwo.BullyAlgorithm!.IsLeader);
         Assert.Equal(2, this.mimoriaServerTwo.BullyAlgorithm.Leader);
 
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
 
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Port = this.firstPort, Password = Password, Cluster = new MimoriaOptions.ClusterOptions() { Id = 1, Port = this.firstClusterPort, Password = ClusterPassword, Nodes = [new() { Id = 2, Host = "127.0.0.1", Port = this.secondClusterPort }] } });
@@ -61,7 +61,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         Assert.True(this.mimoriaServerTwo.BullyAlgorithm!.IsLeader);
         Assert.Equal(2, this.mimoriaServerTwo.BullyAlgorithm.Leader);
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Password = Password, Port = this.secondPort, Cluster = new MimoriaOptions.ClusterOptions() { Id = 2, Port = this.secondClusterPort, Password = ClusterPassword, Nodes = [new() { Id = 1, Host = "127.0.0.1", Port = this.firstClusterPort }] } });
@@ -85,7 +85,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         Assert.True(this.mimoriaServerTwo.BullyAlgorithm!.IsLeader);
         Assert.Equal(2, this.mimoriaServerTwo.BullyAlgorithm.Leader);
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 

@@ -55,7 +55,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await clusterMimoriaClient.IncrementCounterAsync("counter", 2);
 
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
 
         this.cacheOne = new ExpiringDictionaryCache(this.loggerFactory.CreateLogger<ExpiringDictionaryCache>(), this.metrics, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
 
@@ -106,7 +106,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await clusterMimoriaClient.SetStringAsync("string", "value resync");
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 

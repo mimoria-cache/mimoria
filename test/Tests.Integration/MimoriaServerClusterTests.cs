@@ -66,15 +66,14 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         (this.mimoriaServerOne, this.mimoriaServerTwo, firstPort, firstClusterPort, secondPort, secondClusterPort) = await this.CreateClusterAsync();
     }
 
-    public Task DisposeAsync()
+    public async Task DisposeAsync()
     {
-        this.mimoriaServerOne.Stop();
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerOne.StopAsync();
+        await this.mimoriaServerTwo.StopAsync();
         this.pubSubServiceOne.Dispose();
         this.pubSubServiceTwo.Dispose();
         this.cacheOne.Dispose();
         this.cacheTwo.Dispose();
-        return Task.CompletedTask;
     }
 
     private static (ushort Port, ushort ClusterPort) GetFreePorts()

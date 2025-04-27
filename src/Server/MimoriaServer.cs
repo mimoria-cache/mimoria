@@ -192,7 +192,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await this.pubSubService.UnsubscribeAsync(tcpConnection);
     }
 
-    public void Stop()
+    public async Task StopAsync()
     {
         if (this.clusterServer is not null)
         {
@@ -208,8 +208,7 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         this.mimoriaSocketServer.Disconnected -= HandleTcpConnectionDisconnectedAsync;
-        // TODO: Async stop
-        this.mimoriaSocketServer.StopAsync().GetAwaiter().GetResult();
+        await this.mimoriaSocketServer.StopAsync();
         this.pubSubService.Dispose();
         this.replicator?.Dispose();
         this.cache.Dispose();

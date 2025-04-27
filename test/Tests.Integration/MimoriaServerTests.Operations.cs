@@ -37,7 +37,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
 
         await using var mimoriaClient = await this.ConnectToServerAsync();
 
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
 
         // Act & Assert
         var timeoutException = await Assert.ThrowsAsync<TimeoutException>(() => mimoriaClient.SetStringAsync(key, value));
