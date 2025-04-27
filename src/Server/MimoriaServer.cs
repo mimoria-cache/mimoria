@@ -155,8 +155,6 @@ public sealed class MimoriaServer : IMimoriaServer
         {
         if (!this.bullyAlgorithm!.IsLeader)
         {
-                Debug.Assert(this.clusterClients.ContainsKey(this.bullyAlgorithm.Leader), $"Leader client '{this.bullyAlgorithm.Leader}' not found in cluster clients (cluster clients = '{string.Join(", ", this.clusterClients.Keys)}')");
-
             this.logger.LogInformation("Sending resync request to leader '{Leader}'", this.bullyAlgorithm.Leader);
 
             if (this.clusterClients.TryGetValue(this.bullyAlgorithm.Leader, out ClusterClient? leaderClusterClient))
@@ -175,6 +173,10 @@ public sealed class MimoriaServer : IMimoriaServer
                             this.clusterReadyTaskCompletionSource.SetResult();
                     });
             }
+                else
+                {
+                    this.clusterReadyTaskCompletionSource.SetException(new InvalidOperationException($"Leader client '{this.bullyAlgorithm.Leader}' not found in cluster clients (cluster clients = '{string.Join(", ", this.clusterClients.Keys)}')"));
+                }
         }
         else
         {
