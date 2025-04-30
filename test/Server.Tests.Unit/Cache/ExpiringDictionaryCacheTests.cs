@@ -258,6 +258,62 @@ public class ExpiringDictionaryCacheTests
         Assert.Equal((ulong)MaxTestMapCount, (ulong)map.Count);
     }
 
+    [Theory]
+    [InlineData("user:one", Comparison.StartsWith, new string[] { "user:one:two", "user:one:three" })]
+    [InlineData("user:two", Comparison.StartsWith, new string[] { "user:two:three" })]
+    [InlineData("three", Comparison.EndsWith, new string[] { "user:one:three", "user:two:three" })]
+    [InlineData(":four", Comparison.EndsWith, new string[] { "user:three:four" })]
+    [InlineData("one", Comparison.Contains, new string[] { "user:one:two", "user:one:three" })]
+    [InlineData("two", Comparison.Contains, new string[] { "user:one:two", "user:two:three" })]
+    public async Task Delete_When_DeleteByPattern_Then_CorrectKeysAreDeleted(string pattern, Comparison comparison, string[] expectedKeys)
+    {
+        // Arrange
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
+
+        var value = new ByteString(Encoding.UTF8.GetBytes("value"));
+
+        await sut.SetStringAsync("user:one:two", value, 0);
+        await sut.SetStringAsync("user:one:three", value, 0);
+        await sut.SetStringAsync("user:two:three", value, 0);
+        await sut.SetStringAsync("user:three:four", value, 0);
+
+        // Act
+        await sut.DeleteAsync(pattern, comparison);
+
+        // Assert
+        var actualKeys = new List<string>(capacity: expectedKeys.Length);
+        foreach (var key in expectedKeys)
+        {
+            if (await sut.ExistsAsync(key))
+            {
+                actualKeys.Add(key);
+            }
+        }
+
+        Assert.Equal((ulong)expectedKeys.Length, sut.Size);
+        Assert.Equal(expectedKeys.Length, actualKeys.Count);
+        Assert.Equal(expectedKeys, actualKeys);
+    }
+
+    [Fact]
+    public async Task Clear_When_Clear_Then_AllKeysAreDeletedAsync()
+    {
+        // Arrange
+        using var sut = this.CreateCache(TimeSpan.FromSeconds(10));
+        
+        var value = new ByteString(Encoding.UTF8.GetBytes("value"));
+        
+        await sut.SetStringAsync("key1", value, 0);
+        await sut.SetStringAsync("key2", value, 0);
+        await sut.SetStringAsync("key3", value, 0);
+        
+        // Act
+        await sut.ClearAsync();
+
+        // Assert
+        Assert.Equal((ulong)0, sut.Size);
+    }
+
     [Fact]
     public async Task ConcurrentCleanupAsync()
     {
