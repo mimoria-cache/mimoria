@@ -22,6 +22,11 @@ public static class Channels
     public const string KeyDeletion = "__deletion";
 
     /// <summary>
+    /// Published to if the cache was cleared. Payload is a null <see cref="MimoriaValue"/>.
+    /// </summary>
+    public const string Clear = "__clear";
+
+    /// <summary>
     /// Published to if the primary server changed. Payload is the id (int) of the new primary server.
     /// </summary>
     public const string PrimaryChanged = "__primary:changed";

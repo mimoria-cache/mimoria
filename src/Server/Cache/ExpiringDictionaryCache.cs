@@ -438,6 +438,8 @@ public sealed class ExpiringDictionaryCache : ICache
 
             _ = this.cache.Remove(key, out _);
         }
+
+        await this.pubSubService.PublishAsync(Channels.Clear, MimoriaValue.Null);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
