@@ -270,6 +270,42 @@ public sealed class AsyncReplicator : IReplicator
         }
     }
 
+    public async ValueTask ReplicateDeletePatternAsync(string pattern, Comparison comparison)
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.DeletePattern);
+            byteBuffer.WriteString(pattern);
+            byteBuffer.WriteByte((byte)comparison);
+
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
+    public async ValueTask ReplicateClearAsync()
+    {
+        await this.operationsBuffersSemaphore.WaitAsync();
+
+        try
+        {
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool();
+            byteBuffer.WriteByte((byte)Operation.Clear);
+
+            this.operationsBuffers.Enqueue(byteBuffer);
+        }
+        finally
+        {
+            this.operationsBuffersSemaphore.Release();
+        }
+    }
+
     public void Dispose()
     {
         this.flushTimer.Dispose();

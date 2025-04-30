@@ -253,7 +253,9 @@ public sealed class MimoriaServer : IMimoriaServer
             { Operation.Subscribe, this.HandleSubscribeAsync },
             { Operation.Unsubscribe, this.HandleUnsubscribeAsync },
             { Operation.Publish, this.HandlePublishAsync },
-            { Operation.GetStats, this.HandleGetStatsAsync }
+            { Operation.GetStats, this.HandleGetStatsAsync },
+            { Operation.DeletePattern, this.HandleDeletePatternAsync },
+            { Operation.Clear, this.HandleClearAsync },
         };
 
         this.mimoriaSocketServer.SetOperationHandlers(operationHandlers);
@@ -946,6 +948,42 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         await SendOkResponseAsync(tcpConnection, Operation.SetMap, requestId, fireAndForget);
+    }
+
+    private async ValueTask HandleDeletePatternAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
+    {
+        string pattern = byteBuffer.ReadRequiredKey();
+        var comparison = (Comparison)byteBuffer.ReadByte();
+
+        ulong deleted = await this.cache.DeleteAsync(pattern, comparison);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateDeletePatternAsync(pattern, comparison);
+        }
+
+        if (fireAndForget)
+        {
+            return;
+        }
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.DeletePattern, requestId, StatusCode.Ok);
+        responseBuffer.WriteULong(deleted);
+        responseBuffer.EndPacket();
+
+        await tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private async ValueTask HandleClearAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
+    {
+        await this.cache.ClearAsync();
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateClearAsync();
+        }
+
+        await SendOkResponseAsync(tcpConnection, Operation.Clear, requestId, fireAndForget);
     }
 
     private async ValueTask HandleSubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)

@@ -4,6 +4,7 @@
 
 using Microsoft.Extensions.Caching.Memory;
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
@@ -19,6 +20,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     private readonly IMimoriaClient mimoriaClient;
     private readonly IMemoryCache memoryCache;
     private readonly TimeSpan expiration;
+    private readonly ConcurrentDictionary<string, bool> keys;
 
     public int? ServerId => this.mimoriaClient.ServerId;
 
@@ -65,6 +67,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         this.mimoriaClient = mimoriaClient;
         this.memoryCache = memoryCache;
         this.expiration = expiration;
+        this.keys = new ConcurrentDictionary<string, bool>();
     }
 
     public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
@@ -79,6 +82,8 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         else
         {
             this.memoryCache.Set(key, new List<string>() { value }, absoluteExpirationRelativeToNow: this.expiration);
+
+            _ = this.keys.TryAdd(key, true);
         }
 
         return this.mimoriaClient.AddListAsync(key, value, ttl, valueTtl, fireAndForget, cancellationToken);
@@ -118,8 +123,74 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public Task DeleteAsync(string key, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Remove(key);
+        _ = this.keys.TryRemove(key, out _);
 
         return this.mimoriaClient.DeleteAsync(key, fireAndForget, cancellationToken);
+    }
+
+    public Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        switch (comparison)
+        {
+            case Comparison.StartsWith:
+                {
+                    foreach (var (key, _) in this.keys)
+                    {
+                        if (!key.AsSpan().StartsWith(pattern.AsSpan(), StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        this.memoryCache.Remove(key);
+                        _ = this.keys.TryRemove(key, out _);
+                    }
+                    break;
+                }
+            case Comparison.EndsWith:
+                {
+                    foreach (var (key, _) in this.keys)
+                    {
+                        if (!key.AsSpan().EndsWith(pattern.AsSpan(), StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        this.memoryCache.Remove(key);
+                        _ = this.keys.TryRemove(key, out _);
+                    }
+                    break;
+                }
+            case Comparison.Contains:
+                {
+                    foreach (var (key, _) in this.keys)
+                    {
+                        if (!key.AsSpan().Contains(pattern.AsSpan(), StringComparison.Ordinal))
+                        {
+                            continue;
+                        }
+
+                        this.memoryCache.Remove(key);
+                        _ = this.keys.TryRemove(key, out _);
+                    }
+                    break;
+                }
+            default:
+                break;
+        }
+
+        return this.mimoriaClient.DeleteAsync(pattern, comparison, fireAndForget, cancellationToken);
+    }
+
+    public Task ClearAsync(bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        foreach (var (key, _) in this.keys)
+        {
+            this.memoryCache.Remove(key);
+        }
+
+        this.keys.Clear();
+
+        return this.mimoriaClient.ClearAsync(fireAndForget, cancellationToken);
     }
 
     public Task DisconnectAsync(CancellationToken cancellationToken = default)
@@ -213,6 +284,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, binarySerializable, absoluteExpirationRelativeToNow: this.expiration);
+        _ = this.keys.TryAdd(key, true);
 
         return this.mimoriaClient.SetObjectBinaryAsync(key, binarySerializable, ttl, fireAndForget, cancellationToken);
     }
@@ -220,6 +292,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, t, absoluteExpirationRelativeToNow: this.expiration);
+        _ = this.keys.TryAdd(key, true);
 
         return this.mimoriaClient.SetObjectJsonAsync(key, t, jsonSerializerOptions, ttl, fireAndForget, cancellationToken);
     }
@@ -227,6 +300,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public Task SetStringAsync(string key, string? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
+        _ = this.keys.TryAdd(key, true);
 
         return this.mimoriaClient.SetStringAsync(key, value, ttl, fireAndForget, cancellationToken);
     }
@@ -247,6 +321,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
+        _ = this.keys.TryAdd(key, true);
 
         return this.mimoriaClient.SetBytesAsync(key, value, ttl, fireAndForget, cancellationToken);
     }
@@ -254,6 +329,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public Task SetCounterAsync(string key, long value, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
+        _ = this.keys.TryAdd(key, true);
 
         return this.mimoriaClient.SetCounterAsync(key, value, fireAndForget, cancellationToken);
     }
@@ -295,6 +371,8 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         else
         {
             this.memoryCache.Set(key, new Dictionary<string, MimoriaValue> { { subKey, subValue } }, absoluteExpirationRelativeToNow: this.expiration);
+
+            _ = this.keys.TryAdd(key, true);
         }
 
         return this.mimoriaClient.SetMapValueAsync(key, subKey, subValue, ttl, fireAndForget, cancellationToken);
@@ -316,6 +394,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     public Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, map, absoluteExpirationRelativeToNow: this.expiration);
+        _ = this.keys.TryAdd(key, true);
 
         return this.mimoriaClient.SetMapAsync(key, map, ttl, fireAndForget, cancellationToken);
     }

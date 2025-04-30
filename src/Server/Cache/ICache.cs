@@ -41,6 +41,10 @@ public interface ICache : IDisposable
 
     Task DeleteAsync(string key, bool takeLock = true);
 
+    Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool takeLock = true);
+
+    Task ClearAsync(bool takeLock = true);
+
     ValueTask SerializeAsync(IByteBuffer byteBuffer);
 
     void Deserialize(IByteBuffer byteBuffer);
