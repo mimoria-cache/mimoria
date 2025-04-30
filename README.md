@@ -27,6 +27,7 @@ Currently under development.
 
 - [X] structured data (key-value, list, json, binary, map, counter)
   - [X] list has optional per value expiration
+- [X] delete keys by pattern (starts with, ends with, contains)
 - [X] publish and subscribe (built-in channels like key expiration, deletion, list added)
 - [X] good test coverage (unit, integration and system) and asserts
 - [X] metrics built-in with support for Azure Application Insights
