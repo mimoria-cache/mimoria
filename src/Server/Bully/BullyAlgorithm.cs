@@ -86,7 +86,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
     {
         if (this.leaderElected)
         {
-            this.logger.LogInformation("No need to start an election, we already have leader '{LeaderId}'", this.Leader);
+            this.logger.LogInformation("No need to start an election, we already have leader '{LeaderId}' and my id is '{MyId}'", this.Leader, this.id);
             return;
         }
 
@@ -292,7 +292,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         this.IsLeader = false;
         this.leaderElected = true;
 
-        this.logger.LogInformation("New leader is '{LeaderId}'", leaderId);
+        this.logger.LogInformation("New leader is '{LeaderId}' and my id is '{MyId}'", leaderId, this.id);
 
         await this.OnLeaderElectedAsync();
 

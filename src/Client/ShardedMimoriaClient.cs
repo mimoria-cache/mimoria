@@ -173,6 +173,22 @@ public sealed class ShardedMimoriaClient : IShardedMimoriaClient
     }
 
     /// <inheritdoc />
+    public Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        IMimoriaClient mimoriaClient = this.GetMimoriaClient(pattern);
+        return mimoriaClient.DeleteAsync(pattern, comparison, fireAndForget, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task ClearAsync(bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        foreach (IMimoriaClient mimoriaClient in this.mimoriaClients)
+        {
+            await mimoriaClient.ClearAsync(fireAndForget, cancellationToken);
+        }
+    }
+
+    /// <inheritdoc />
     public async Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
         IMimoriaClient mimoriaClient = this.GetMimoriaClient(key);

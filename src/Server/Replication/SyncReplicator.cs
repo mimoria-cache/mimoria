@@ -243,6 +243,48 @@ public sealed class SyncReplicator : IReplicator
         }));
     }
 
+    public async ValueTask ReplicateDeletePatternAsync(string pattern, Comparison comparison)
+    {
+        if (!this.ShouldReplicate())
+        {
+            return;
+        }
+
+        await Task.WhenAll(this.clusterServer.Clients.Select(clusterConnection =>
+        {
+            uint requestId = clusterConnection.Value.IncrementRequestId();
+        
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
+            byteBuffer.WriteVarUInt(BatchCount);
+            byteBuffer.WriteByte((byte)Operation.DeletePattern);
+            byteBuffer.WriteString(pattern);
+            byteBuffer.WriteByte((byte)comparison);
+            byteBuffer.EndPacket();
+            
+            return clusterConnection.Value.SendAndWaitForResponseAsync(requestId, byteBuffer).AsTask();
+        }));
+    }
+
+    public async ValueTask ReplicateClearAsync()
+    {
+        if (!this.ShouldReplicate())
+        {
+            return;
+        }
+
+        await Task.WhenAll(this.clusterServer.Clients.Select(clusterConnection =>
+        {
+            uint requestId = clusterConnection.Value.IncrementRequestId();
+            
+            IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Batch, requestId);
+            byteBuffer.WriteVarUInt(BatchCount);
+            byteBuffer.WriteByte((byte)Operation.Clear);
+            byteBuffer.EndPacket();
+            
+            return clusterConnection.Value.SendAndWaitForResponseAsync(requestId, byteBuffer).AsTask();
+        }));
+    }
+
     public void Dispose()
     {
         // Nothing to do

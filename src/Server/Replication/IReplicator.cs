@@ -25,4 +25,8 @@ public interface IReplicator : IDisposable
     ValueTask ReplicateIncrementCounterAsync(string key, long increment);
 
     ValueTask ReplicateDeleteAsync(string key);
+
+    ValueTask ReplicateDeletePatternAsync(string pattern, Comparison comparison);
+
+    ValueTask ReplicateClearAsync();
 }

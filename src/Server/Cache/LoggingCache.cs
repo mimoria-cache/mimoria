@@ -125,10 +125,22 @@ public class LoggingCache : ICache
         return this.cache.ExistsAsync(key, takeLock);
     }
 
-    public async Task DeleteAsync(string key, bool takeLock = true)
+    public Task DeleteAsync(string key, bool takeLock = true)
     {
         this.logger.LogInformation("Delete: '{Key}'", key);
-        await this.cache.DeleteAsync(key, takeLock);
+        return this.cache.DeleteAsync(key, takeLock);
+    }
+
+    public Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool takeLock = true)
+    {
+        this.logger.LogInformation("Delete: '{Pattern}' (comparison='{Comparison}')", pattern, comparison);
+        return this.cache.DeleteAsync(pattern, comparison, takeLock);
+    }
+
+    public Task ClearAsync(bool takeLock = true)
+    {
+        this.logger.LogInformation("Clear");
+        return this.cache.ClearAsync(takeLock);
     }
 
     public ValueTask SerializeAsync(IByteBuffer byteBuffer)

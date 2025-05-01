@@ -297,6 +297,26 @@ public sealed class ClusterMimoriaClient : IClusterMimoriaClient
     }
 
     /// <inheritdoc />
+    public Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        return this.RetryPrimaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetPrimary();
+            return mimoriaClient.DeleteAsync(pattern, comparison, fireAndForget, cancellationToken);
+        });
+    }
+
+    /// <inheritdoc />
+    public Task ClearAsync(bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        return this.RetryPrimaryOperationAsync(() =>
+        {
+            IMimoriaClient mimoriaClient = this.GetPrimary();
+            return mimoriaClient.ClearAsync(fireAndForget, cancellationToken);
+        });
+    }
+
+    /// <inheritdoc />
     public async Task DisconnectAsync(CancellationToken cancellationToken = default)
     {
         foreach (IMimoriaClient mimoriaClient in this.mimoriaClients)

@@ -71,7 +71,8 @@ public sealed class ClusterClient
 
                 await this.SendAsync(byteBuffer.Bytes.AsMemory(0, byteBuffer.Size));
 
-                _ = this.ReceiveAsync();
+                // Force to run asynchronously to avoid timing issues if it would complete synchronously
+                _ = Task.Run(this.ReceiveAsync);
             }
             catch (Exception)
             {

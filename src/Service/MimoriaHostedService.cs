@@ -39,8 +39,5 @@ public sealed class MimoriaHostedService : IHostedService
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
-    {
-        this.mimoriaServer.Stop();
-        return Task.CompletedTask;
-    }
+        => this.mimoriaServer.StopAsync();
 }

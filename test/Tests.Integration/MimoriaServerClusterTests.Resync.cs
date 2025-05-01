@@ -55,14 +55,14 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await clusterMimoriaClient.IncrementCounterAsync("counter", 2);
 
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
 
-        this.cacheOne = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, this.metrics, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
+        this.cacheOne = new ExpiringDictionaryCache(this.loggerFactory.CreateLogger<ExpiringDictionaryCache>(), this.metrics, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
 
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Port = this.firstPort, Password = Password, Cluster = new MimoriaOptions.ClusterOptions() { Id = 1, Port = this.firstClusterPort, Password = ClusterPassword, Nodes = [new() { Id = 2, Host = "127.0.0.1", Port = this.secondClusterPort }] } });
 
-        this.mimoriaServerOne = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cacheOne, this.metrics);
+        this.mimoriaServerOne = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(this.loggerFactory.CreateLogger<MimoriaSocketServer>(), this.metrics), this.cacheOne, this.metrics);
         await this.mimoriaServerOne.StartAsync();
 
         Assert.False(this.mimoriaServerOne.BullyAlgorithm!.IsLeader);
@@ -106,7 +106,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await clusterMimoriaClient.SetStringAsync("string", "value resync");
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         var taskCompletionSource = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -125,12 +125,12 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         await clusterMimoriaClient.SetStringAsync("string2", "value resync 2");
 
-        this.cacheTwo = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, this.metrics, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
+        this.cacheTwo = new ExpiringDictionaryCache(this.loggerFactory.CreateLogger<ExpiringDictionaryCache>(), this.metrics, Substitute.For<IPubSubService>(), TimeSpan.FromMinutes(5));
 
         var optionsMock = Substitute.For<IOptionsMonitor<MimoriaOptions>>();
         optionsMock.CurrentValue.Returns(new MimoriaOptions() { Password = Password, Port = this.secondPort, Cluster = new MimoriaOptions.ClusterOptions() { Id = 2, Port = secondClusterPort, Password = ClusterPassword, Nodes = [new() { Id = 1, Host = "127.0.0.1", Port = this.firstClusterPort }] } });
 
-        this.mimoriaServerTwo = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(NullLogger<MimoriaSocketServer>.Instance, this.metrics), this.cacheTwo, this.metrics);
+        this.mimoriaServerTwo = new MimoriaServer(this.loggerFactory.CreateLogger<MimoriaServer>(), this.loggerFactory, optionsMock, Substitute.For<IPubSubService>(), new MimoriaSocketServer(this.loggerFactory.CreateLogger<MimoriaSocketServer>(), this.metrics), this.cacheTwo, this.metrics);
         await this.mimoriaServerTwo.StartAsync();
 
         Assert.False(this.mimoriaServerOne.BullyAlgorithm!.IsLeader);

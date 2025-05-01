@@ -3,6 +3,8 @@
 // SPDX-License-Identifier: MIT
 
 using System.Collections.Immutable;
+using System.Text;
+
 using Varelen.Mimoria.Client;
 using Varelen.Mimoria.Core;
 using Varelen.Mimoria.Core.Buffer;
@@ -37,7 +39,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
 
         await using var mimoriaClient = await this.ConnectToServerAsync();
 
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
 
         // Act & Assert
         var timeoutException = await Assert.ThrowsAsync<TimeoutException>(() => mimoriaClient.SetStringAsync(key, value));
@@ -224,6 +226,70 @@ public partial class MimoriaServerTests : IAsyncLifetime
         Assert.True(contains);
         Assert.False(containsNot);
         Assert.Equal([value, value], actualValue);
+    }
+
+    [Theory]
+    [InlineData("user:one", Comparison.StartsWith, new string[] { "user:one:two", "user:one:three" })]
+    [InlineData("user:two", Comparison.StartsWith, new string[] { "user:two:three" })]
+    [InlineData("three", Comparison.EndsWith, new string[] { "user:one:three", "user:two:three" })]
+    [InlineData(":four", Comparison.EndsWith, new string[] { "user:three:four" })]
+    [InlineData("one", Comparison.Contains, new string[] { "user:one:two", "user:one:three" })]
+    [InlineData("two", Comparison.Contains, new string[] { "user:one:two", "user:two:three" })]
+    public async Task Operations_Given_MimoriaClient_When_DeleteByPattern_Then_CorrectKeysAreDeleted(string pattern, Comparison comparison, string[] expectedKeys)
+    {
+        // Arrange
+        await using var mimoriaClient = await this.ConnectToServerAsync();
+
+        const int size = 4;
+        const string value = "value";
+
+        await mimoriaClient.SetStringAsync("user:one:two", value);
+        await mimoriaClient.AddListAsync("user:one:three", value);
+        await mimoriaClient.SetBytesAsync("user:two:three", [100, 101, 102, 103]);
+        await mimoriaClient.SetCounterAsync("user:three:four", 100);
+
+        // Act
+        ulong deleted = await mimoriaClient.DeleteAsync(pattern, comparison);
+
+        // Assert
+        var actualKeys = new List<string>(capacity: expectedKeys.Length);
+        foreach (var key in expectedKeys)
+        {
+            if (await mimoriaClient.ExistsAsync(key))
+            {
+                actualKeys.Add(key);
+            }
+        }
+
+        Assert.Equal((ulong)expectedKeys.Length, size - deleted);
+        Assert.Equal(expectedKeys.Length, actualKeys.Count);
+        Assert.Equal(expectedKeys, actualKeys);
+    }
+
+    [Fact]
+    public async Task Operations_Given_MimoriaClient_When_Clear_Then_CacheIsCleared()
+    {
+        // Arrange
+        const string value = "value";
+
+        await using var mimoriaClient = await this.ConnectToServerAsync();
+
+        await mimoriaClient.AddListAsync("clear:list", value);
+        await mimoriaClient.SetStringAsync("clear:string", value);
+        await mimoriaClient.SetBytesAsync("clear:bytes", Encoding.UTF8.GetBytes(value));
+
+        Stats statsBefore = await mimoriaClient.GetStatsAsync();
+
+        // Act
+        await mimoriaClient.ClearAsync();
+
+        // Assert
+        string? stringValue = await mimoriaClient.GetStringAsync("clear:string");
+        Stats stats = await mimoriaClient.GetStatsAsync();
+
+        Assert.Equal((ulong)0, stats.CacheSize);
+        Assert.Equal((ulong)3, statsBefore.CacheSize);
+        Assert.Null(stringValue);
     }
 
     private class User : IBinarySerializable

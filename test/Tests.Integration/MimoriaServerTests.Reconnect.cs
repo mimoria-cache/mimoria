@@ -23,7 +23,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         Assert.True(mimoriaClient.IsConnected);
 
         // Act
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
 
         await Task.Delay(serverDowntimeMs);
 
@@ -64,7 +64,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         for (int i = 0; i < restartCount; i++)
         {
             // Act
-            this.mimoriaServerOne.Stop();
+            await this.mimoriaServerOne.StopAsync();
 
             await Task.Delay(1_000);
 
