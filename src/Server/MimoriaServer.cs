@@ -125,9 +125,9 @@ public sealed class MimoriaServer : IMimoriaServer
                 var addresses = await Dns.GetHostAddressesAsync(node.Host!);
 
                 var clusterClient = new ClusterClient(this.loggerFactory.CreateLogger<ClusterClient>(), this.monitor.CurrentValue.Cluster.Id, addresses[0].ToString(), node.Port!.Value, this.bullyAlgorithm!, this.cache, this.monitor.CurrentValue.Cluster.Password!);
-                await clusterClient.ConnectAsync();
-                
                 this.clusterClients.Add(node.Id!.Value, clusterClient);
+                
+                await clusterClient.ConnectAsync();
             }
 
             this.logger.LogInformation("Waiting for node to be ready");
