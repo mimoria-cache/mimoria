@@ -150,6 +150,7 @@ public sealed class MimoriaServer : IMimoriaServer
     private async Task HandleLeaderElectedAsync(int newLeaderId)
     {
         Debug.Assert(this.bullyAlgorithm is not null, "bullyAlgorithm is null");
+        Debug.Assert(this.bullyAlgorithm.Leader == newLeaderId, "Leader id mismatch");
 
         if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
         {
