@@ -52,6 +52,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
         this.loggerFactory = LoggerFactory.Create(builder =>
         {
+            builder.SetMinimumLevel(LogLevel.Trace);
             builder.AddProvider(new XUnitLoggerProvider(testOutputHelper));
         });
         this.metrics = Substitute.For<IMimoriaMetrics>();
