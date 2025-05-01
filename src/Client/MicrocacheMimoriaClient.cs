@@ -13,6 +13,9 @@ using Varelen.Mimoria.Core;
 
 namespace Varelen.Mimoria.Client;
 
+/// <summary>
+/// A client for Mimoria that uses a memory cache to store values locally for a short time.
+/// </summary>
 public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaClient
 {
     private static readonly TimeSpan DefaultExpiration = TimeSpan.FromSeconds(2);
@@ -22,16 +25,28 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
     private readonly TimeSpan expiration;
     private readonly ConcurrentDictionary<string, bool> keys;
 
+    /// <summary>
+    /// The server ID of the Mimoria server this client is connected to.
+    /// </summary>
     public int? ServerId => this.mimoriaClient.ServerId;
 
+    /// <summary>
+    /// Returns if the client is connected to the Mimoria server.
+    /// </summary>
     public bool IsConnected => this.mimoriaClient.IsConnected;
 
+    /// <summary>
+    /// Returns if the client is the primary server in a clustered setup.
+    /// </summary>
     public bool IsPrimary
     {
         get => this.mimoriaClient.IsPrimary;
         set => this.mimoriaClient.IsPrimary = value;
     }
 
+    /// <summary>
+    /// Returns the list of Mimoria clients (only if the underlying client is a <see cref="IShardedMimoriaClient"/>).
+    /// </summary>
     public IReadOnlyList<IMimoriaClient> MimoriaClients => this.mimoriaClient is IShardedMimoriaClient s ? s.MimoriaClients : Array.Empty<IMimoriaClient>();
 
     /// <summary>
@@ -46,22 +61,44 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
 
     }
 
+    /// <summary>
+    /// Creates a <see cref="MicrocacheMimoriaClient"/> instance with the specified expiration.
+    /// </summary>
+    /// <param name="ip">The IP of the Mimoria server.</param>
+    /// <param name="port">The port of the Mimoria server.</param>
+    /// <param name="password">The password of the Mimoria server.</param>
+    /// <param name="expiration">The expiration time for the local cache.</param>
     public MicrocacheMimoriaClient(string ip, ushort port, string password, TimeSpan expiration)
         : this(new MimoriaClient(ip, port, password), expiration)
     {
 
     }
 
+    /// <summary>
+    /// Creates a <see cref="MicrocacheMimoriaClient"/> instance with the default expiration of 2 seconds.
+    /// </summary>
+    /// <param name="mimoriaClient">The <see cref="IMimoriaClient"/> instance to use.</param>
     public MicrocacheMimoriaClient(IMimoriaClient mimoriaClient)
         : this(mimoriaClient, new MemoryCache(new MemoryCacheOptions()), DefaultExpiration)
     {
     }
 
+    /// <summary>
+    /// Creates a <see cref="MicrocacheMimoriaClient"/> instance with the specified expiration.
+    /// </summary>
+    /// <param name="mimoriaClient">The <see cref="IMimoriaClient"/> instance to use.</param>
+    /// <param name="expiration">The expiration time for the local cache.</param>
     public MicrocacheMimoriaClient(IMimoriaClient mimoriaClient, TimeSpan expiration)
         : this(mimoriaClient, new MemoryCache(new MemoryCacheOptions()), expiration)
     {
     }
 
+    /// <summary>
+    /// Creates a <see cref="MicrocacheMimoriaClient"/> instance with the specified expiration and memory cache.
+    /// </summary>
+    /// <param name="mimoriaClient">The <see cref="IMimoriaClient"/> instance to use.</param>
+    /// <param name="memoryCache">The <see cref="IMemoryCache"/> instance to use.</param>
+    /// <param name="expiration">The expiration time for the local cache.</param>
     public MicrocacheMimoriaClient(IMimoriaClient mimoriaClient, IMemoryCache memoryCache, TimeSpan expiration)
     {
         this.mimoriaClient = mimoriaClient;
@@ -70,6 +107,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         this.keys = new ConcurrentDictionary<string, bool>();
     }
 
+    /// <inheritdoc />
     public Task AddListAsync(string key, string value, TimeSpan ttl = default, TimeSpan valueTtl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
@@ -89,6 +127,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.AddListAsync(key, value, ttl, valueTtl, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async Task ConnectAsync(CancellationToken cancellationToken = default)
     {
         await this.mimoriaClient.ConnectAsync(cancellationToken);
@@ -104,6 +143,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return ValueTask.CompletedTask;
     }
 
+    /// <inheritdoc />
     public Task<bool> ContainsListAsync(string key, string value, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
@@ -120,6 +160,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.ContainsListAsync(key, value, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task DeleteAsync(string key, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Remove(key);
@@ -128,6 +169,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.DeleteAsync(key, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         switch (comparison)
@@ -181,6 +223,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.DeleteAsync(pattern, comparison, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task ClearAsync(bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         foreach (var (key, _) in this.keys)
@@ -193,9 +236,11 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.ClearAsync(fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task DisconnectAsync(CancellationToken cancellationToken = default)
         => this.mimoriaClient.DisconnectAsync(cancellationToken);
 
+    /// <inheritdoc />
     public ValueTask<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out _))
@@ -206,6 +251,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.ExistsAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<ImmutableList<string>> GetListAsync(string key, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
@@ -219,6 +265,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetListAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public async IAsyncEnumerable<string> GetListEnumerableAsync(string key, [EnumeratorCancellation] CancellationToken cancellationToken = default)
     {
         ImmutableList<string> list = await this.GetListAsync(key, cancellationToken);
@@ -228,6 +275,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         }
     }
 
+    /// <inheritdoc />
     public Task<T?> GetObjectBinaryAsync<T>(string key, CancellationToken cancellationToken = default) where T : IBinarySerializable, new()
     {
         if (this.memoryCache.TryGetValue(key, out object? value))
@@ -238,6 +286,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetObjectBinaryAsync<T>(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<T?> GetObjectJsonAsync<T>(string key, JsonSerializerOptions? jsonSerializerOptions = null, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? value))
@@ -248,9 +297,11 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetObjectJsonAsync<T>(key, jsonSerializerOptions, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default)
         => this.mimoriaClient.GetStatsAsync(cancellationToken);
 
+    /// <inheritdoc />
     public async Task<string?> GetStringAsync(string key, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? cachedValueObject))
@@ -268,6 +319,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return value;
     }
 
+    /// <inheritdoc />
     public Task RemoveListAsync(string key, string value, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? listObject))
@@ -281,6 +333,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.RemoveListAsync(key, value, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task SetObjectBinaryAsync(string key, IBinarySerializable? binarySerializable, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, binarySerializable, absoluteExpirationRelativeToNow: this.expiration);
@@ -289,6 +342,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetObjectBinaryAsync(key, binarySerializable, ttl, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task SetObjectJsonAsync<T>(string key, T? t, JsonSerializerOptions? jsonSerializerOptions = null, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, t, absoluteExpirationRelativeToNow: this.expiration);
@@ -297,6 +351,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetObjectJsonAsync(key, t, jsonSerializerOptions, ttl, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task SetStringAsync(string key, string? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
@@ -305,6 +360,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetStringAsync(key, value, ttl, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<byte[]?> GetBytesAsync(string key, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? valueObject))
@@ -318,6 +374,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetBytesAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task SetBytesAsync(string key, byte[]? value, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
@@ -326,6 +383,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetBytesAsync(key, value, ttl, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task SetCounterAsync(string key, long value, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, value, absoluteExpirationRelativeToNow: this.expiration);
@@ -334,15 +392,19 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetCounterAsync(key, value, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<long> IncrementCounterAsync(string key, long increment, bool fireAndForget = false, CancellationToken cancellationToken = default)
         => this.mimoriaClient.IncrementCounterAsync(key, increment, fireAndForget, cancellationToken);
 
+    /// <inheritdoc />
     public Task<long> DecrementCounterAsync(string key, long decrement, bool fireAndForget = false, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, -decrement, fireAndForget, cancellationToken);
 
+    /// <inheritdoc />
     public Task<long> GetCounterAsync(string key, CancellationToken cancellationToken = default)
         => this.IncrementCounterAsync(key, increment: 0, fireAndForget: false, cancellationToken);
 
+    /// <inheritdoc />
     public Task<MimoriaValue> GetMapValueAsync(string key, string subKey, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? mapObject))
@@ -359,6 +421,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetMapValueAsync(key, subKey, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task SetMapValueAsync(string key, string subKey, MimoriaValue subValue, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? mapObject))
@@ -378,6 +441,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetMapValueAsync(key, subKey, subValue, ttl, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task<Dictionary<string, MimoriaValue>> GetMapAsync(string key, CancellationToken cancellationToken = default)
     {
         if (this.memoryCache.TryGetValue(key, out object? mapObject))
@@ -391,6 +455,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.GetMapAsync(key, cancellationToken);
     }
 
+    /// <inheritdoc />
     public Task SetMapAsync(string key, Dictionary<string, MimoriaValue> map, TimeSpan ttl = default, bool fireAndForget = false, CancellationToken cancellationToken = default)
     {
         this.memoryCache.Set(key, map, absoluteExpirationRelativeToNow: this.expiration);
@@ -399,18 +464,23 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return this.mimoriaClient.SetMapAsync(key, map, ttl, fireAndForget, cancellationToken);
     }
 
+    /// <inheritdoc />
     public IBulkOperation Bulk()
         => this.mimoriaClient.Bulk();
 
+    /// <inheritdoc />
     public Task<Subscription> SubscribeAsync(string channel, CancellationToken cancellationToken = default)
         => this.mimoriaClient.SubscribeAsync(channel, cancellationToken);
 
+    /// <inheritdoc />
     public Task UnsubscribeAsync(string channel, CancellationToken cancellationToken = default)
         => this.mimoriaClient.UnsubscribeAsync(channel, cancellationToken);
 
+    /// <inheritdoc />
     public Task PublishAsync(string channel, MimoriaValue payload, CancellationToken cancellationToken = default)
         => this.mimoriaClient.PublishAsync(channel, payload, cancellationToken);
 
+    /// <inheritdoc />
     public Task<Stats> GetStatsAsync(int serverId, CancellationToken cancellationToken = default)
     {
         if (this.mimoriaClient is ShardedMimoriaClient s)
@@ -421,6 +491,7 @@ public sealed class MicrocacheMimoriaClient : IMimoriaClient, IShardedMimoriaCli
         return Task.FromResult<Stats>(default);
     }
 
+    /// <inheritdoc />
     public async ValueTask DisposeAsync()
         => await this.DisconnectAsync();
 }
