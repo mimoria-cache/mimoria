@@ -275,6 +275,22 @@ public class LazyConnectingMimoriaClient : IMimoriaClient
     }
 
     /// <inheritdoc />
+    public async Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        await this.EnsureConnectedAsync();
+
+        return await this.mimoriaClient.DeleteAsync(pattern, comparison, fireAndForget, cancellationToken);
+    }
+
+    /// <inheritdoc />
+    public async Task ClearAsync(bool fireAndForget = false, CancellationToken cancellationToken = default)
+    {
+        await this.EnsureConnectedAsync();
+
+        await this.mimoriaClient.ClearAsync(fireAndForget, cancellationToken);
+    }
+
+    /// <inheritdoc />
     public async Task<Stats> GetStatsAsync(CancellationToken cancellationToken = default)
     {
         await this.EnsureConnectedAsync();

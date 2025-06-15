@@ -125,9 +125,9 @@ public sealed class MimoriaServer : IMimoriaServer
                 var addresses = await Dns.GetHostAddressesAsync(node.Host!);
 
                 var clusterClient = new ClusterClient(this.loggerFactory.CreateLogger<ClusterClient>(), this.monitor.CurrentValue.Cluster.Id, addresses[0].ToString(), node.Port!.Value, this.bullyAlgorithm!, this.cache, this.monitor.CurrentValue.Cluster.Password!);
-                await clusterClient.ConnectAsync();
-                
                 this.clusterClients.Add(node.Id!.Value, clusterClient);
+                
+                await clusterClient.ConnectAsync();
             }
 
             this.logger.LogInformation("Waiting for node to be ready");
@@ -150,13 +150,12 @@ public sealed class MimoriaServer : IMimoriaServer
     private async Task HandleLeaderElectedAsync(int newLeaderId)
     {
         Debug.Assert(this.bullyAlgorithm is not null, "bullyAlgorithm is null");
+        Debug.Assert(this.bullyAlgorithm.Leader == newLeaderId, "Leader id mismatch");
 
         if (!this.clusterReadyTaskCompletionSource.Task.IsCompleted)
         {
         if (!this.bullyAlgorithm!.IsLeader)
         {
-            Debug.Assert(this.clusterClients.ContainsKey(this.bullyAlgorithm.Leader));
-
             this.logger.LogInformation("Sending resync request to leader '{Leader}'", this.bullyAlgorithm.Leader);
 
             if (this.clusterClients.TryGetValue(this.bullyAlgorithm.Leader, out ClusterClient? leaderClusterClient))
@@ -175,6 +174,10 @@ public sealed class MimoriaServer : IMimoriaServer
                             this.clusterReadyTaskCompletionSource.SetResult();
                     });
             }
+                else
+                {
+                    this.clusterReadyTaskCompletionSource.SetException(new InvalidOperationException($"Leader client '{this.bullyAlgorithm.Leader}' not found in cluster clients (cluster clients = '{string.Join(", ", this.clusterClients.Keys)}')"));
+                }
         }
         else
         {
@@ -190,7 +193,7 @@ public sealed class MimoriaServer : IMimoriaServer
         await this.pubSubService.UnsubscribeAsync(tcpConnection);
     }
 
-    public void Stop()
+    public async Task StopAsync()
     {
         if (this.clusterServer is not null)
         {
@@ -206,8 +209,7 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         this.mimoriaSocketServer.Disconnected -= HandleTcpConnectionDisconnectedAsync;
-        // TODO: Async stop
-        this.mimoriaSocketServer.StopAsync().GetAwaiter().GetResult();
+        await this.mimoriaSocketServer.StopAsync();
         this.pubSubService.Dispose();
         this.replicator?.Dispose();
         this.cache.Dispose();
@@ -252,7 +254,9 @@ public sealed class MimoriaServer : IMimoriaServer
             { Operation.Subscribe, this.HandleSubscribeAsync },
             { Operation.Unsubscribe, this.HandleUnsubscribeAsync },
             { Operation.Publish, this.HandlePublishAsync },
-            { Operation.GetStats, this.HandleGetStatsAsync }
+            { Operation.GetStats, this.HandleGetStatsAsync },
+            { Operation.DeletePattern, this.HandleDeletePatternAsync },
+            { Operation.Clear, this.HandleClearAsync },
         };
 
         this.mimoriaSocketServer.SetOperationHandlers(operationHandlers);
@@ -945,6 +949,42 @@ public sealed class MimoriaServer : IMimoriaServer
         }
 
         await SendOkResponseAsync(tcpConnection, Operation.SetMap, requestId, fireAndForget);
+    }
+
+    private async ValueTask HandleDeletePatternAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
+    {
+        string pattern = byteBuffer.ReadRequiredKey();
+        var comparison = (Comparison)byteBuffer.ReadByte();
+
+        ulong deleted = await this.cache.DeleteAsync(pattern, comparison);
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateDeletePatternAsync(pattern, comparison);
+        }
+
+        if (fireAndForget)
+        {
+            return;
+        }
+
+        IByteBuffer responseBuffer = PooledByteBuffer.FromPool(Operation.DeletePattern, requestId, StatusCode.Ok);
+        responseBuffer.WriteULong(deleted);
+        responseBuffer.EndPacket();
+
+        await tcpConnection.SendAsync(responseBuffer);
+    }
+
+    private async ValueTask HandleClearAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)
+    {
+        await this.cache.ClearAsync();
+
+        if (this.replicator is not null)
+        {
+            await this.replicator.ReplicateClearAsync();
+        }
+
+        await SendOkResponseAsync(tcpConnection, Operation.Clear, requestId, fireAndForget);
     }
 
     private async ValueTask HandleSubscribeAsync(uint requestId, TcpConnection tcpConnection, IByteBuffer byteBuffer, bool fireAndForget)

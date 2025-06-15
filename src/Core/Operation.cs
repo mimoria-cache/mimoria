@@ -106,6 +106,14 @@ public enum Operation : byte
     /// </summary>
     Publish = 23,
     /// <summary>
+    /// Deletes all keys matching a pattern with a given comparison.
+    /// </summary>
+    DeletePattern = 24,
+    /// <summary>
+    /// Clears the entire cache.
+    /// </summary>
+    Clear = 25,
+    /// <summary>
     /// Used to authenticate with a cluster.
     /// </summary>
     ClusterLogin = 248,

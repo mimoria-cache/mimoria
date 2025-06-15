@@ -28,7 +28,7 @@ public partial class MimoriaServerTests : IAsyncLifetime
         };
 
         // Act 1
-        this.mimoriaServerOne.Stop();
+        await this.mimoriaServerOne.StopAsync();
 
         await Task.Delay(1_000);
 

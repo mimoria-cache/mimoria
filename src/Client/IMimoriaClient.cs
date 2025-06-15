@@ -295,6 +295,26 @@ public interface IMimoriaClient : IAsyncDisposable
     Task DeleteAsync(string key, bool fireAndForget = false, CancellationToken cancellationToken = default);
 
     /// <summary>
+    /// Deletes keys matching a pattern with the given comparison (case-sensitive) from the server.
+    /// </summary>
+    /// <param name="pattern">The pattern to match.</param>
+    /// <param name="comparison">What <see cref="Comparison"/> to use.</param>
+    /// <param name="fireAndForget">If true, the methods returns instantly with the default value after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
+    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
+    /// <returns>A value task that represents the asynchronous operation. The task result contains the number of deleted keys.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
+    Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool fireAndForget = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Clears all keys from the server.
+    /// </summary>
+    /// <param name="fireAndForget">If true, the methods returns instantly after sending and does not wait for the acknowledge (server also does not send an acknowledge).</param>
+    /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>
+    /// <returns>A task that represents the asynchronous operation.</returns>
+    /// <exception cref="TimeoutException">The operation has timed out, even after retries.</exception>
+    Task ClearAsync(bool fireAndForget = false, CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Gets the server statistics.
     /// </summary>
     /// <param name="cancellationToken">The cancellation token to cancel the operation.</param>

@@ -89,7 +89,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
         // Act & Assert
         Assert.Equal(2, clusterMimoriaClient.ServerId);
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         await Task.Delay(6_000);
 
@@ -112,7 +112,7 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
             return ValueTask.CompletedTask;
         };
 
-        this.mimoriaServerTwo.Stop();
+        await this.mimoriaServerTwo.StopAsync();
 
         await Task.Delay(6_000);
 

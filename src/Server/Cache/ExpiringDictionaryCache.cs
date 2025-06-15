@@ -367,8 +367,83 @@ public sealed class ExpiringDictionaryCache : ICache
         await this.DeleteInternalAsync(key);
     }
 
+    public async Task<ulong> DeleteAsync(string pattern, Comparison comparison, bool takeLock = true)
+    {
+        ulong deleted = 0;
+
+        switch (comparison)
+        {
+            case Comparison.StartsWith:
+                foreach (string key in this.cache.Keys)
+                {
+                    if (key.AsSpan().StartsWith(pattern.AsSpan(), StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
+
+                    if (this.cache.TryRemove(key, out _))
+                    {
+                        deleted++;
+                    }
+                }
+
+                break;
+            case Comparison.EndsWith:
+                foreach (string key in this.cache.Keys)
+                {
+                    if (key.AsSpan().EndsWith(pattern.AsSpan(), StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
+
+                    if (this.cache.TryRemove(key, out _))
+                    {
+                        deleted++;
+                    }
+                }
+
+                break;
+            case Comparison.Contains:
+                foreach (string key in this.cache.Keys)
+                {
+                    if (key.AsSpan().Contains(pattern.AsSpan(), StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
+
+                    if (this.cache.TryRemove(key, out _))
+                    {
+                        deleted++;
+                    }
+                }
+
+                break;
+        }
+
+        this.logger.LogDebug("Deleted '{Count}' keys matching pattern '{Pattern}' with comparison '{Comparison}'", deleted, pattern, comparison);
+        return deleted;
+    }
+
+    public async Task ClearAsync(bool takeLock = true)
+    {
+        foreach (string key in this.cache.Keys)
+        {
+            using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(key, takeLock);
+
+            _ = this.cache.Remove(key, out _);
+        }
+
+        await this.pubSubService.PublishAsync(Channels.Clear, MimoriaValue.Null);
+    }
+
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private async ValueTask DeleteInternalAsync(string key)
+    private ValueTask DeleteInternalAsync(string key)
     {
         Debug.Assert(this.autoRemovingAsyncKeyedLocking.HasActiveLock(key), $"We do not have a lock for key '{key}'");
 
@@ -376,10 +451,10 @@ public sealed class ExpiringDictionaryCache : ICache
         if (!removed)
         {
             // Don't publish a key deletion again
-            return;
+            return ValueTask.CompletedTask;
         }
 
-        await this.pubSubService.PublishAsync(Channels.KeyDeletion, key);
+        return this.pubSubService.PublishAsync(Channels.KeyDeletion, key);
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]

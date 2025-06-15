@@ -25,4 +25,4 @@ jobs:
     - name: Test
       env:
         TESTCONTAINERS_RYUK_DISABLED: "true"
-      run: dotnet test --no-build --verbosity normal
+      run: dotnet test --logger:"console;verbosity=detailed" --no-build
