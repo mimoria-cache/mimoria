@@ -33,6 +33,6 @@ public static class SocketExtensions
         }
         while (offset < total);
 
-        Debug.Assert(offset == total, "All data should have been sent");
+        Debug.Assert(offset == total, $"All data should have been sent (offset: '{offset}', total: '{total}')");
     }
 }
