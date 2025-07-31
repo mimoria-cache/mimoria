@@ -47,9 +47,6 @@ public partial class MimoriaServerClusterTests : IAsyncLifetime
 
     public MimoriaServerClusterTests(ITestOutputHelper testOutputHelper)
     {
-        var optionsMock = Substitute.For<IOptionsMonitor<ConsoleLoggerOptions>>();
-        optionsMock.CurrentValue.Returns(new ConsoleLoggerOptions());
-
         this.loggerFactory = LoggerFactory.Create(builder =>
         {
             builder.SetMinimumLevel(LogLevel.Trace);

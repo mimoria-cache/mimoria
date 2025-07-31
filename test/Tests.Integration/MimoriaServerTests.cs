@@ -25,9 +25,9 @@ public partial class MimoriaServerTests : IAsyncLifetime
     private const string Ip = "127.0.0.1";
     private const string Password = "password";
 
-    private readonly ExpiringDictionaryCache cache;
     private readonly IMimoriaMetrics metrics;
     private readonly IPubSubService pubSubService;
+    private ExpiringDictionaryCache cache = null!;
     private MimoriaServer mimoriaServerOne = null!;
     private ushort port;
 
@@ -35,12 +35,11 @@ public partial class MimoriaServerTests : IAsyncLifetime
     {
         this.metrics = Substitute.For<IMimoriaMetrics>();
         this.pubSubService = new PubSubService(NullLogger<PubSubService>.Instance, this.metrics);
-        this.cache = new ExpiringDictionaryCache(NullLogger<ExpiringDictionaryCache>.Instance, this.metrics, this.pubSubService, TimeSpan.FromMinutes(5));
     }
 
     public async Task InitializeAsync()
     {
-        (this.mimoriaServerOne, port) = await this.CreateAndStartServerAsync();
+        (this.mimoriaServerOne, this.port) = await this.CreateAndStartServerAsync();
     }
 
     public async Task DisposeAsync()

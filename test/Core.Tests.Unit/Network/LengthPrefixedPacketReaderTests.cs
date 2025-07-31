@@ -21,7 +21,7 @@ public class LengthPrefixedPacketReaderTests : IDisposable
     {
         // Arrange
         var bytes = new ReadOnlyMemory<byte>([]);
-        
+
         // Act
         var packets = this.sut.TryRead(bytes, bytes.Length).ToList();
 
