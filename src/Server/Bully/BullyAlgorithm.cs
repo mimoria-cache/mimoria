@@ -1,4 +1,4 @@
-﻿// SPDX-FileCopyrightText: 2024 varelen
+﻿// SPDX-FileCopyrightText: 2025 varelen
 //
 // SPDX-License-Identifier: MIT
 
@@ -16,7 +16,7 @@ using Varelen.Mimoria.Server.Cluster;
 namespace Varelen.Mimoria.Server.Bully;
 
 /// <summary>
-/// Simple implementation of https://en.wikipedia.org/wiki/Bully_algorithm
+/// Simple implementation of https://en.wikipedia.org/wiki/Bully_algorithm.
 /// </summary>
 public sealed class BullyAlgorithm : IBullyAlgorithm
 {
@@ -48,7 +48,8 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
     public int Leader
     {
-        get => leader;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        get => this.leader;
         private set
         {
             this.previousLeaderId = this.leader;
@@ -102,16 +103,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
         if (hasHighest)
         {
-            this.logger.LogInformation("I am the leader");
-            this.IsLeader = true;
-            this.Leader = this.id;
-            this.leaderElected = true;
-
-            await this.SendVictoryMessageAsync();
-
-            await this.OnLeaderElectedAsync();
-
-            _ = this.StartLeaderHeartbeatAsync();
+            await this.HandleHighestNodeId();
         }
         else
         {
@@ -129,17 +121,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
 
             if (this.receivedAlives == 0)
             {
-                this.logger.LogInformation("I am the new leader, no other higher node answered");
-
-                this.IsLeader = true;
-                this.Leader = this.id;
-                this.leaderElected = true;
-
-                await this.SendVictoryMessageAsync();
-
-                await this.OnLeaderElectedAsync();
-
-                _ = this.StartLeaderHeartbeatAsync();
+                await this.HandleNoAlivesReceived();
             }
             else
             {
@@ -155,9 +137,42 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
                 this.logger.LogInformation("Received '{ReceivedAlives}' alives, I am a member and current leader is '{LeaderId}'", this.receivedAlives, this.Leader);
 
                 this.leaderElected = true;
+
                 await this.OnLeaderElectedAsync();
             }
         }
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async Task HandleHighestNodeId()
+    {
+        this.logger.LogInformation("I am the leader");
+
+        this.IsLeader = true;
+        this.Leader = this.id;
+        this.leaderElected = true;
+
+        await this.SendVictoryMessageAsync();
+
+        await this.OnLeaderElectedAsync();
+
+        _ = this.StartLeaderHeartbeatAsync();
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private async Task HandleNoAlivesReceived()
+    {
+        this.logger.LogInformation("I am the new leader, no other higher node answered");
+
+        this.IsLeader = true;
+        this.Leader = this.id;
+        this.leaderElected = true;
+
+        await this.SendVictoryMessageAsync();
+
+        await this.OnLeaderElectedAsync();
+
+        _ = this.StartLeaderHeartbeatAsync();
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -165,13 +180,14 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
     {
         if (this.LeaderElected is not null)
         {
-            foreach (var handler in this.LeaderElected.GetInvocationList().Cast<IBullyAlgorithm.LeaderElectedAsyncEvent>())
+            foreach (var handlerAsync in this.LeaderElected.GetInvocationList().Cast<IBullyAlgorithm.LeaderElectedAsyncEvent>())
             {
-                await handler(this.leader);
+                await handlerAsync(this.leader);
             }
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async ValueTask SendElectionMessageAsync()
     {
         using var electionMessageBuffer = PooledByteBuffer.FromPool(Operation.ElectionMessage, requestId: 0);
@@ -185,6 +201,7 @@ public sealed class BullyAlgorithm : IBullyAlgorithm
         }
     }
 
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private async ValueTask SendVictoryMessageAsync()
     {
         int victoryPreviousLeaderId = -1;
