@@ -102,7 +102,7 @@ public sealed class PubSubService : IPubSubService
 
         using var releaser = await this.autoRemovingAsyncKeyedLocking.LockAsync(channel);
 
-        using IByteBuffer byteBuffer = PooledByteBuffer.FromPool(Operation.Publish);
+        using var byteBuffer = PooledByteBuffer.FromPool(Operation.Publish);
         byteBuffer.WriteString(channel);
         byteBuffer.WriteValue(payload);
         byteBuffer.EndPacket();
