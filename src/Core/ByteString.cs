@@ -11,8 +11,10 @@ namespace Varelen.Mimoria.Core;
 /// </summary>
 public sealed class ByteString
 {
-    // TODO: Lazy initialization of the hash code?
-    private readonly int hashCode;
+    /// <summary>
+    /// The hash code of the byte array <see cref="Bytes"/>, computed lazily.
+    /// </summary>
+    private readonly Lazy<int> hashCodeLazy;
 
     /// <summary>
     /// Gets the UTF8 bytes of the string.
@@ -31,9 +33,12 @@ public sealed class ByteString
     public ByteString(byte[] bytes)
     {
         this.Bytes = bytes;
-        var hashCode = new HashCode();
-        hashCode.AddBytes(this.Bytes);
-        this.hashCode = hashCode.ToHashCode();
+        this.hashCodeLazy = new Lazy<int>(() =>
+        {
+            var hashCode = new HashCode();
+            hashCode.AddBytes(this.Bytes);
+            return hashCode.ToHashCode();
+        });
     }
 
     /// <summary>
@@ -83,10 +88,10 @@ public sealed class ByteString
             return false;
         }
 
-        return this.hashCode == byteString.hashCode;
+        return this.Bytes.AsSpan().SequenceEqual(byteString.Bytes.AsSpan());
     }
 
     /// <inheritdoc />
     public override int GetHashCode()
-        => this.hashCode;
+        => this.hashCodeLazy.Value;
 }

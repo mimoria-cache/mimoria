@@ -433,6 +433,7 @@ public sealed class PooledByteBuffer : IByteBuffer
             value |= (uint)(currentByte & 0x7F) << shift;
             shift += 7;
         } while ((currentByte & 0x80) != 0);
+
         return value;
     }
 
